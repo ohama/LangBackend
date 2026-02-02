@@ -1,0 +1,6 @@
+[submodule ".claude"]
+	path = .claude
+	url = git@github-ohama:ohama/Claude-Config.git
+[submodule "LangTutorial"]
+	path = LangTutorial
+	url = git@github-ohama:ohama/LangTutorial.git
