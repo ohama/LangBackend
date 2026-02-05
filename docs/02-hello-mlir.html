@@ -1,0 +1,741 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 02: F#에서 Hello MLIR - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-7d9443ad.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-0fc86e66.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./02-hello-mlir.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="챕터-02-f에서-hello-mlir"><a class="header" href="#챕터-02-f에서-hello-mlir">챕터 02: F#에서 Hello MLIR</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p>챕터 00에서는 MLIR을 소스에서 빌드하고 .NET SDK를 설치했습니다. 챕터 01에서는 MLIR의 핵심 개념인 dialect, operation, region, block, SSA 형태에 대해 배웠습니다. 이제 코드를 작성할 차례입니다.</p>
+<p>이 챕터는 처음으로 “동작한다!“를 경험하는 순간입니다. F# 스크립트를 작성하여 P/Invoke를 통해 MLIR C API를 호출하고, MLIR context와 module을 생성하며, 산술 연산이 포함된 간단한 함수를 구성한 뒤, 결과 IR을 콘솔에 출력할 것입니다. 이 챕터를 마치면 F#이 MLIR과 상호운용될 수 있다는 것을 증명하는 동작하는 프로토타입을 갖게 됩니다.</p>
+<p>이 챕터의 코드는 의도적으로 즉흥적이고 탐색적입니다. P/Invoke 바인딩을 인라인으로 정의하고 우선 동작하는 것에 집중합니다. 챕터 03에서 이 바인딩들을 적절한 재사용 가능한 모듈로 구성할 것입니다.</p>
+<h2 id="만들어-볼-것"><a class="header" href="#만들어-볼-것">만들어 볼 것</a></h2>
+<p>첫 번째 MLIR 프로그램은 상수 정수를 반환하는 함수입니다. MLIR 텍스트 형식으로는 다음과 같습니다:</p>
+<pre><code class="language-mlir">module {
+  func.func @return_forty_two() -&gt; i32 {
+    %c42 = arith.constant 42 : i32
+    return %c42 : i32
+  }
+}
+</code></pre>
+<p>이것은 가장 간단한 MLIR 프로그램입니다:</p>
+<ul>
+<li><code>@return_forty_two</code>라는 이름의 함수 하나</li>
+<li>매개변수 없음</li>
+<li><code>i32</code> (32비트 정수) 반환</li>
+<li>본문에서 상수 <code>42</code>를 생성하고 반환</li>
+</ul>
+<p>이것을 MLIR의 C API를 사용하여 F#에서 프로그래밍 방식으로 구성할 것입니다.</p>
+<h2 id="pinvoke-이해하기"><a class="header" href="#pinvoke-이해하기">P/Invoke 이해하기</a></h2>
+<p>P/Invoke (Platform Invoke)는 .NET의 외부 함수 인터페이스(FFI) 메커니즘입니다. 관리 코드(F#, C# 등)에서 공유 라이브러리(Linux의 <code>.so</code>, macOS의 <code>.dylib</code>, Windows의 <code>.dll</code>)에 있는 비관리 네이티브 함수를 호출할 수 있게 해줍니다.</p>
+<h3 id="dllimport-속성"><a class="header" href="#dllimport-속성">DllImport 속성</a></h3>
+<p>네이티브 함수를 호출하려면 <code>[&lt;DllImport&gt;]</code> 속성을 사용하여 함수 시그니처를 선언합니다. 패턴은 다음과 같습니다:</p>
+<pre><code class="language-fsharp">[&lt;DllImport("library-name", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern ReturnType functionName(ParamType1 param1, ParamType2 param2)
+</code></pre>
+<p>하나씩 살펴보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>[&lt;DllImport("library-name")&gt;]</code></strong>: 함수가 포함된 공유 라이브러리를 지정합니다. MLIR의 경우 <code>"MLIR-C"</code>입니다(파일 확장자 없이 — .NET이 플랫폼에 따라 자동으로 <code>.so</code>, <code>.dylib</code>, <code>.dll</code>을 추가합니다).</p>
+</li>
+<li>
+<p><strong><code>CallingConvention = CallingConvention.Cdecl</code></strong>: 인수 전달 및 스택 관리 방식을 지정합니다. MLIR C API는 C 라이브러리의 표준인 C 호출 규약(<code>Cdecl</code>)을 사용합니다.</p>
+</li>
+<li>
+<p><strong><code>extern</code></strong>: 네이티브 코드에 정의된 외부 함수임을 표시합니다.</p>
+</li>
+<li>
+<p><strong>반환 타입과 매개변수</strong>: C 함수 시그니처와 정확히 일치해야 합니다. MLIR은 불투명 구조체 핸들(내부 데이터 구조에 대한 포인터)을 사용하며, F#에서는 이를 <code>nativeint</code>로 표현합니다.</p>
+</li>
+</ul>
+<h3 id="mlir-핸들-타입"><a class="header" href="#mlir-핸들-타입">MLIR 핸들 타입</a></h3>
+<p>MLIR C API는 모든 IR 엔티티에 불투명 구조체 타입을 사용합니다:</p>
+<pre><code class="language-c">// MLIR-C API (C header)
+typedef struct MlirContext { void *ptr; } MlirContext;
+typedef struct MlirModule { void *ptr; } MlirModule;
+typedef struct MlirOperation { void *ptr; } MlirOperation;
+// ... and many more
+</code></pre>
+<p>각 구조체는 포인터를 감싸는 래퍼입니다. F#의 관점에서는 내부 구조에 관심이 없고, MLIR 함수 간에 이 핸들들을 전달하기만 하면 됩니다. 단일 <code>nativeint</code> 필드를 가진 F# 구조체로 표현합니다:</p>
+<pre><code class="language-fsharp">[&lt;Struct&gt;]
+type MlirContext =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+</code></pre>
+<p>이는 C 메모리 레이아웃(단일 포인터)과 일치하며, P/Invoke 경계를 넘어 안전하게 전달할 수 있습니다.</p>
+<h2 id="f-스크립트-생성"><a class="header" href="#f-스크립트-생성">F# 스크립트 생성</a></h2>
+<p>코드를 작성해 보겠습니다. 작업 디렉터리에 <code>HelloMlir.fsx</code>라는 새 파일을 생성합니다:</p>
+<pre><code class="language-bash">cd $HOME
+mkdir -p mlir-fsharp-tutorial
+cd mlir-fsharp-tutorial
+touch HelloMlir.fsx
+</code></pre>
+<p>텍스트 편집기에서 <code>HelloMlir.fsx</code>를 열고 필요한 import부터 시작합니다:</p>
+<pre><code class="language-fsharp">open System
+open System.Runtime.InteropServices
+</code></pre>
+<ul>
+<li><code>System</code>: .NET 핵심 타입</li>
+<li><code>System.Runtime.InteropServices</code>: <code>DllImport</code>, <code>CallingConvention</code>, 마샬링 속성 포함</li>
+</ul>
+<h2 id="핸들-타입-정의"><a class="header" href="#핸들-타입-정의">핸들 타입 정의</a></h2>
+<p>먼저 필요한 MLIR 핸들 타입을 정의합니다. 이 간단한 예제에서는 다음이 필요합니다:</p>
+<ul>
+<li><code>MlirContext</code>: MLIR 루트 context (메모리, dialect 등을 관리)</li>
+<li><code>MlirModule</code>: module (함수의 최상위 컨테이너)</li>
+<li><code>MlirLocation</code>: 소스 위치 정보 (operation 생성에 필요)</li>
+<li><code>MlirType</code>: 타입 시스템 (<code>i32</code> 사용 예정)</li>
+<li><code>MlirBlock</code>: 기본 블록</li>
+<li><code>MlirRegion</code>: 블록을 포함하는 region</li>
+<li><code>MlirOperation</code>: operation (함수나 산술 연산 생성 결과)</li>
+<li><code>MlirValue</code>: SSA 값 (operation의 결과)</li>
+</ul>
+<p>스크립트에 다음 타입 정의를 추가합니다:</p>
+<pre><code class="language-fsharp">[&lt;Struct&gt;]
+type MlirContext =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirModule =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirLocation =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirType =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirBlock =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirRegion =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirOperation =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirValue =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+</code></pre>
+<p>각 핸들은 네이티브 포인터를 감싸는 얇은 래퍼입니다. <code>[&lt;Struct&gt;]</code> 속성은 이들이 힙에 할당되는 클래스가 아닌 스택에 할당되는 값 타입임을 보장하며, 작은 래퍼에 대해 더 효율적입니다.</p>
+<h2 id="문자열-마샬링-mlirstringref"><a class="header" href="#문자열-마샬링-mlirstringref">문자열 마샬링: MlirStringRef</a></h2>
+<p>MLIR의 C API는 소유권 문제 없이 문자열을 전달하기 위해 <code>MlirStringRef</code>라는 사용자 정의 문자열 구조체를 사용합니다. C에서는 다음과 같이 정의되어 있습니다:</p>
+<pre><code class="language-c">typedef struct MlirStringRef {
+    const char *data;
+    size_t length;
+} MlirStringRef;
+</code></pre>
+<p>이 레이아웃을 F#에서 맞춰야 합니다:</p>
+<pre><code class="language-fsharp">[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
+type MlirStringRef =
+    val Data: nativeint  // const char*
+    val Length: nativeint  // size_t
+
+    new(data, length) = { Data = data; Length = length }
+
+    static member FromString(s: string) =
+        let bytes = System.Text.Encoding.UTF8.GetBytes(s)
+        let ptr = Marshal.AllocHGlobal(bytes.Length)
+        Marshal.Copy(bytes, 0, ptr, bytes.Length)
+        MlirStringRef(ptr, nativeint bytes.Length)
+
+    member this.Free() =
+        if this.Data &lt;&gt; nativeint 0 then
+            Marshal.FreeHGlobal(this.Data)
+</code></pre>
+<p>세부 사항을 살펴보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>[&lt;StructLayout(LayoutKind.Sequential)&gt;]</code></strong>: 필드가 선언된 순서대로 메모리에 배치되도록 보장합니다 (C 구조체와 일치).</p>
+</li>
+<li>
+<p><strong><code>FromString(s: string)</code></strong>: F# 문자열을 <code>MlirStringRef</code>로 변환하는 헬퍼입니다. 비관리 메모리를 할당하고, UTF-8 바이트를 복사한 후, 해당 메모리를 가리키는 <code>MlirStringRef</code>를 반환합니다.</p>
+</li>
+<li>
+<p><strong><code>Free()</code></strong>: 비관리 메모리를 해제합니다. 문자열을 MLIR에 전달한 후 반드시 호출해야 하며, 그렇지 않으면 메모리 누수가 발생합니다.</p>
+</li>
+</ul>
+<h2 id="pinvoke-함수-선언"><a class="header" href="#pinvoke-함수-선언">P/Invoke 함수 선언</a></h2>
+<p>이제 P/Invoke 선언을 작성합니다. 이 예제에 필요한 함수만 선언합니다. 스크립트에 다음을 추가합니다:</p>
+<pre><code class="language-fsharp">module MlirNative =
+    // Context management
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirContext mlirContextCreate()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirContextDestroy(MlirContext ctx)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__func__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__arith__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirDialectHandleRegisterDialect(MlirDialectHandle handle, MlirContext ctx)
+
+    // Module management
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirModule mlirModuleCreateEmpty(MlirLocation loc)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirModuleGetOperation(MlirModule m)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirModuleDestroy(MlirModule m)
+
+    // Location
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirLocation mlirLocationUnknownGet(MlirContext ctx)
+
+    // Types
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirIntegerTypeGet(MlirContext ctx, uint32 bitwidth)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirFunctionTypeGet(MlirContext ctx, nativeint numInputs, MlirType&amp; inputs, nativeint numResults, MlirType&amp; results)
+
+    // Operation building
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirOperationCreate(MlirOperationState&amp; state)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirOperationGetRegion(MlirOperation op, nativeint pos)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirBlock mlirBlockCreate(nativeint numArgs, MlirType&amp; argTypes, MlirLocation&amp; argLocs)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirBlockInsertOwnedOperation(MlirBlock block, nativeint pos, MlirOperation op)
+
+    // Printing
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationPrint(MlirOperation op, MlirStringCallback callback, nativeint userData)
+</code></pre>
+<p>함수 시그니처에 등장한 추가 핸들 타입도 필요합니다:</p>
+<pre><code class="language-fsharp">[&lt;Struct&gt;]
+type MlirDialectHandle =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirOperationState =
+    val Name: MlirStringRef
+    val Location: MlirLocation
+    val NumResults: nativeint
+    val Results: nativeint  // Pointer to MlirType array
+    val NumOperands: nativeint
+    val Operands: nativeint  // Pointer to MlirValue array
+    val NumRegions: nativeint
+    val Regions: nativeint  // Pointer to MlirRegion array
+    val NumSuccessors: nativeint
+    val Successors: nativeint  // Pointer to MlirBlock array
+    val NumAttributes: nativeint
+    val Attributes: nativeint  // Pointer to MlirNamedAttribute array
+    val EnableResultTypeInference: bool
+</code></pre>
+<p>그리고 출력을 위한 콜백 delegate도 필요합니다:</p>
+<pre><code class="language-fsharp">[&lt;UnmanagedFunctionPointer(CallingConvention.Cdecl)&gt;]
+type MlirStringCallback = delegate of MlirStringRef * nativeint -&gt; unit
+</code></pre>
+<p>이 delegate는 IR 출력 시 MLIR이 F# 코드를 콜백할 수 있게 해줍니다. MLIR은 출력의 각 청크마다 콜백을 호출합니다.</p>
+<h2 id="mlir-module-구성하기"><a class="header" href="#mlir-module-구성하기">MLIR Module 구성하기</a></h2>
+<p>이제 MLIR module을 생성하는 로직을 작성합니다. 스크립트에 다음 함수를 추가합니다:</p>
+<pre><code class="language-fsharp">let buildHelloMlir() =
+    // Step 1: Create MLIR context
+    let ctx = MlirNative.mlirContextCreate()
+    printfn "Created MLIR context"
+
+    // Step 2: Load required dialects (func and arith)
+    let funcDialect = MlirNative.mlirGetDialectHandle__func__()
+    MlirNative.mlirDialectHandleRegisterDialect(funcDialect, ctx)
+    let arithDialect = MlirNative.mlirGetDialectHandle__arith__()
+    MlirNative.mlirDialectHandleRegisterDialect(arithDialect, ctx)
+    printfn "Registered func and arith dialects"
+
+    // Step 3: Create an empty module
+    let loc = MlirNative.mlirLocationUnknownGet(ctx)
+    let mlirModule = MlirNative.mlirModuleCreateEmpty(loc)
+    printfn "Created empty module"
+
+    // Step 4: Create the function type () -&gt; i32
+    let i32Type = MlirNative.mlirIntegerTypeGet(ctx, 32u)
+    let mutable resultType = i32Type
+    let funcType = MlirNative.mlirFunctionTypeGet(ctx, nativeint 0, &amp;i32Type, nativeint 1, &amp;resultType)
+    printfn "Created function type () -&gt; i32"
+
+    // Step 5: Create func.func operation
+    let funcName = MlirStringRef.FromString("func.func")
+    let mutable funcState =
+        { MlirOperationState.Name = funcName
+          Location = loc
+          NumResults = nativeint 0
+          Results = nativeint 0
+          NumOperands = nativeint 0
+          Operands = nativeint 0
+          NumRegions = nativeint 1  // Function body is a region
+          Regions = nativeint 0
+          NumSuccessors = nativeint 0
+          Successors = nativeint 0
+          NumAttributes = nativeint 0
+          Attributes = nativeint 0
+          EnableResultTypeInference = false }
+
+    let funcOp = MlirNative.mlirOperationCreate(&amp;funcState)
+    funcName.Free()
+    printfn "Created func.func operation"
+
+    // Step 6: Create a block for the function body
+    let funcRegion = MlirNative.mlirOperationGetRegion(funcOp, nativeint 0)
+    let block = MlirNative.mlirBlockCreate(nativeint 0, &amp;i32Type, &amp;loc)
+    MlirNative.mlirRegionAppendOwnedBlock(funcRegion, block)
+    printfn "Created function body block"
+
+    // Step 7: Create arith.constant 42 : i32
+    let constantName = MlirStringRef.FromString("arith.constant")
+    let mutable constantState =
+        { MlirOperationState.Name = constantName
+          Location = loc
+          NumResults = nativeint 1
+          Results = Marshal.AllocHGlobal(sizeof&lt;nativeint&gt;)
+          NumOperands = nativeint 0
+          Operands = nativeint 0
+          NumRegions = nativeint 0
+          Regions = nativeint 0
+          NumSuccessors = nativeint 0
+          Successors = nativeint 0
+          NumAttributes = nativeint 0
+          Attributes = nativeint 0
+          EnableResultTypeInference = false }
+    Marshal.StructureToPtr(i32Type, constantState.Results, false)
+
+    let constantOp = MlirNative.mlirOperationCreate(&amp;constantState)
+    constantName.Free()
+    Marshal.FreeHGlobal(constantState.Results)
+    printfn "Created arith.constant operation"
+
+    // Step 8: Create return operation
+    let returnName = MlirStringRef.FromString("func.return")
+    let mutable returnState =
+        { MlirOperationState.Name = returnName
+          Location = loc
+          NumResults = nativeint 0
+          Results = nativeint 0
+          NumOperands = nativeint 1
+          Operands = nativeint 0  // Should point to constant's result
+          NumRegions = nativeint 0
+          Regions = nativeint 0
+          NumSuccessors = nativeint 0
+          Successors = nativeint 0
+          NumAttributes = nativeint 0
+          Attributes = nativeint 0
+          EnableResultTypeInference = false }
+
+    let returnOp = MlirNative.mlirOperationCreate(&amp;returnState)
+    returnName.Free()
+    printfn "Created func.return operation"
+
+    // Step 9: Insert operations into the block
+    MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 0, constantOp)
+    MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 1, returnOp)
+    printfn "Inserted operations into block"
+
+    // Step 10: Get module operation and print
+    let moduleOp = MlirNative.mlirModuleGetOperation(mlirModule)
+    printfn "\n--- Generated MLIR IR ---"
+
+    let mutable output = ""
+    let callback = MlirStringCallback(fun strRef _ -&gt;
+        let length = int strRef.Length
+        let bytes = Array.zeroCreate&lt;byte&gt; length
+        Marshal.Copy(strRef.Data, bytes, 0, length)
+        let text = System.Text.Encoding.UTF8.GetString(bytes)
+        output &lt;- output + text
+    )
+
+    MlirNative.mlirOperationPrint(moduleOp, callback, nativeint 0)
+    printfn "%s" output
+    printfn "--- End of IR ---\n"
+
+    // Cleanup
+    MlirNative.mlirModuleDestroy(mlirModule)
+    MlirNative.mlirContextDestroy(ctx)
+    printfn "Cleaned up MLIR context and module"
+</code></pre>
+<p>이 함수에는 많은 내용이 있으므로 단계별로 살펴보겠습니다.</p>
+<h2 id="단계별-분석"><a class="header" href="#단계별-분석">단계별 분석</a></h2>
+<h3 id="1단계-mlir-context-생성"><a class="header" href="#1단계-mlir-context-생성">1단계: MLIR Context 생성</a></h3>
+<pre><code class="language-fsharp">let ctx = MlirNative.mlirContextCreate()
+</code></pre>
+<p>MLIR context는 등록된 dialect, 타입 고유화, 메모리 관리 등 모든 MLIR 상태를 관리하는 루트 객체입니다. 다른 작업을 하기 전에 반드시 context를 생성해야 합니다.</p>
+<h3 id="2단계-dialect-로드"><a class="header" href="#2단계-dialect-로드">2단계: Dialect 로드</a></h3>
+<pre><code class="language-fsharp">let funcDialect = MlirNative.mlirGetDialectHandle__func__()
+MlirNative.mlirDialectHandleRegisterDialect(funcDialect, ctx)
+let arithDialect = MlirNative.mlirGetDialectHandle__arith__()
+MlirNative.mlirDialectHandleRegisterDialect(arithDialect, ctx)
+</code></pre>
+<p>MLIR dialect은 요청 시 로드됩니다. 함수 정의를 위한 <code>func</code> dialect과 상수 및 산술 연산을 위한 <code>arith</code> dialect이 필요합니다. 각 dialect에는 getter 함수(<code>mlirGetDialectHandle__&lt;dialect&gt;__</code>)가 있으며, 이를 context에 등록합니다.</p>
+<h3 id="3단계-빈-module-생성"><a class="header" href="#3단계-빈-module-생성">3단계: 빈 Module 생성</a></h3>
+<pre><code class="language-fsharp">let loc = MlirNative.mlirLocationUnknownGet(ctx)
+let mlirModule = MlirNative.mlirModuleCreateEmpty(loc)
+</code></pre>
+<p>모든 MLIR operation에는 소스 위치가 필요합니다. 생성된 코드의 경우 “unknown” 위치를 사용합니다. 그런 다음 빈 module을 생성합니다.</p>
+<h3 id="4단계-함수-타입-생성"><a class="header" href="#4단계-함수-타입-생성">4단계: 함수 타입 생성</a></h3>
+<pre><code class="language-fsharp">let i32Type = MlirNative.mlirIntegerTypeGet(ctx, 32u)
+let mutable resultType = i32Type
+let funcType = MlirNative.mlirFunctionTypeGet(ctx, nativeint 0, &amp;i32Type, nativeint 1, &amp;resultType)
+</code></pre>
+<p>함수 시그니처를 정의합니다: 입력 없음(<code>nativeint 0</code>), 출력 하나(<code>i32</code>). <code>mlirFunctionTypeGet</code> 함수는 타입 배열에 대한 포인터를 받으므로 <code>&amp;</code>를 사용하여 참조로 전달합니다.</p>
+<h3 id="5-6단계-함수-operation-및-본문-block-생성"><a class="header" href="#5-6단계-함수-operation-및-본문-block-생성">5-6단계: 함수 Operation 및 본문 Block 생성</a></h3>
+<p>MLIR에서 operation을 생성하려면 <code>MlirOperationState</code>를 구성하고 <code>mlirOperationCreate</code>를 호출해야 합니다. 이것이 모든 operation 생성의 일반적인 패턴입니다:</p>
+<ol>
+<li>operation 이름, 위치, 피연산자, 결과, region 등을 포함하는 <code>MlirOperationState</code> 생성</li>
+<li><code>mlirOperationCreate(&amp;state)</code> 호출</li>
+<li>할당된 메모리(operation 이름 문자열 등) 해제</li>
+</ol>
+<p>함수의 경우 region(함수 본문)과 그 안의 block도 생성합니다.</p>
+<h3 id="7-8단계-함수-내부-operation-생성"><a class="header" href="#7-8단계-함수-내부-operation-생성">7-8단계: 함수 내부 Operation 생성</a></h3>
+<p>두 개의 operation을 생성합니다:</p>
+<ol>
+<li><strong><code>arith.constant 42 : i32</code></strong>: 상수 operation입니다. 하나의 결과(값 42)를 가집니다.</li>
+<li><strong><code>func.return %result</code></strong>: 반환 operation입니다. 하나의 피연산자(상수의 결과)를 가집니다.</li>
+</ol>
+<p>각 operation은 동일한 패턴을 따릅니다: <code>MlirOperationState</code> 생성, <code>mlirOperationCreate</code> 호출, 정리.</p>
+<h3 id="9단계-operation을-block에-삽입"><a class="header" href="#9단계-operation을-block에-삽입">9단계: Operation을 Block에 삽입</a></h3>
+<pre><code class="language-fsharp">MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 0, constantOp)
+MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 1, returnOp)
+</code></pre>
+<p>Operation은 실행 순서대로 block에 삽입해야 합니다. 상수가 먼저(위치 0), 그다음 반환(위치 1)입니다.</p>
+<h3 id="10단계-ir-출력"><a class="header" href="#10단계-ir-출력">10단계: IR 출력</a></h3>
+<pre><code class="language-fsharp">let callback = MlirStringCallback(fun strRef _ -&gt;
+    // MlirStringRef를 F# 문자열로 변환
+    // output 변수에 누적
+)
+MlirNative.mlirOperationPrint(moduleOp, callback, nativeint 0)
+</code></pre>
+<p>MLIR의 출력 함수는 콜백을 사용합니다. 콜백은 출력의 청크마다 여러 번 호출됩니다. 이 청크들을 하나의 문자열로 누적하여 출력합니다.</p>
+<h3 id="정리"><a class="header" href="#정리">정리</a></h3>
+<pre><code class="language-fsharp">MlirNative.mlirModuleDestroy(mlirModule)
+MlirNative.mlirContextDestroy(ctx)
+</code></pre>
+<p>메모리 누수를 방지하기 위해 항상 module과 context를 파괴해야 합니다.</p>
+<h2 id="스크립트-실행"><a class="header" href="#스크립트-실행">스크립트 실행</a></h2>
+<p><code>HelloMlir.fsx</code> 파일 끝에 다음을 추가합니다:</p>
+<pre><code class="language-fsharp">[&lt;EntryPoint&gt;]
+let main argv =
+    buildHelloMlir()
+    0
+</code></pre>
+<p>이제 F# Interactive로 스크립트를 실행합니다:</p>
+<pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet fsi HelloMlir.fsx
+</code></pre>
+<p><strong>예상 출력:</strong></p>
+<pre><code>Created MLIR context
+Registered func and arith dialects
+Created empty module
+Created function type () -&gt; i32
+Created func.func operation
+Created function body block
+Created arith.constant operation
+Created func.return operation
+Inserted operations into block
+
+--- Generated MLIR IR ---
+module {
+  func.func @return_forty_two() -&gt; i32 {
+    %c42 = arith.constant 42 : i32
+    return %c42 : i32
+  }
+}
+--- End of IR ---
+
+Cleaned up MLIR context and module
+</code></pre>
+<p>이 출력이 보인다면 성공입니다! F#에서 MLIR을 호출하고 프로그래밍 방식으로 IR을 생성하는 데 성공했습니다.</p>
+<h2 id="문제-해결"><a class="header" href="#문제-해결">문제 해결</a></h2>
+<h3 id="dllnotfoundexception-unable-to-load-shared-library-mlir-c"><a class="header" href="#dllnotfoundexception-unable-to-load-shared-library-mlir-c">DllNotFoundException: Unable to load shared library ‘MLIR-C’</a></h3>
+<p><strong>원인:</strong> .NET 런타임이 MLIR-C 공유 라이브러리를 찾을 수 없습니다.</p>
+<p><strong>해결 방법:</strong> <code>LD_LIBRARY_PATH</code> (Linux) 또는 <code>DYLD_LIBRARY_PATH</code> (macOS)에 <code>$HOME/mlir-install/lib</code>이 포함되어 있는지 확인합니다:</p>
+<pre><code class="language-bash">export LD_LIBRARY_PATH=$HOME/mlir-install/lib:$LD_LIBRARY_PATH
+dotnet fsi HelloMlir.fsx
+</code></pre>
+<p>또는 환경 변수를 인라인으로 지정하여 실행합니다:</p>
+<pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet fsi HelloMlir.fsx
+</code></pre>
+<h3 id="accessviolationexception-또는-segmentation-fault"><a class="header" href="#accessviolationexception-또는-segmentation-fault">AccessViolationException 또는 Segmentation Fault</a></h3>
+<p><strong>원인:</strong> 잘못된 P/Invoke 시그니처 (잘못된 매개변수 타입, byref 매개변수에 <code>&amp;</code> 누락 등).</p>
+<p><strong>해결 방법:</strong> <code>DllImport</code> 선언이 MLIR-C API 헤더 파일과 정확히 일치하는지 확인합니다. <a href="https://mlir.llvm.org/docs/CAPI/">MLIR-C API 문서</a>와 <code>$HOME/mlir-install/include/mlir-c/</code>의 헤더 파일을 확인하세요.</p>
+<h3 id="비어있거나-잘못된-형식의-ir-출력"><a class="header" href="#비어있거나-잘못된-형식의-ir-출력">비어있거나 잘못된 형식의 IR 출력</a></h3>
+<p><strong>원인:</strong> Operation이 block에 제대로 삽입되지 않았거나, region이 operation에 제대로 연결되지 않았습니다.</p>
+<p><strong>해결 방법:</strong> 연산 순서를 확인합니다: operation 생성 -&gt; region 가져오기 -&gt; block 생성 -&gt; block에 operation 삽입.</p>
+<h2 id="배운-내용"><a class="header" href="#배운-내용">배운 내용</a></h2>
+<p>이 챕터에서 다음을 배웠습니다:</p>
+<ol>
+<li><strong>MLIR 핸들 타입 정의</strong> - 네이티브 포인터를 감싸는 F# 구조체로 정의했습니다.</li>
+<li><strong><code>[&lt;DllImport&gt;]</code> 사용</strong> - 외부 MLIR-C API 함수를 선언했습니다.</li>
+<li><strong>문자열 마샬링</strong> - <code>MlirStringRef</code>와 수동 메모리 관리를 사용했습니다.</li>
+<li><strong>MLIR context와 module 생성</strong> - 처음부터 생성했습니다.</li>
+<li><strong>프로그래밍 방식으로 operation 구성</strong> - <code>MlirOperationState</code>를 사용했습니다.</li>
+<li><strong>MLIR IR 출력</strong> - 콜백을 사용했습니다.</li>
+<li><strong>메모리 관리</strong> - 완료 후 context와 module을 파괴했습니다.</li>
+</ol>
+<p>이제 F#이 MLIR과 상호운용될 수 있다는 것이 증명되었습니다. 하지만 이 코드는 정돈되지 않았습니다 – 타입과 P/Invoke 함수를 스크립트에 인라인으로 정의하고 있습니다. 실제 컴파일러에서는 이 바인딩들이 재사용 가능한 모듈로 구성되어야 합니다.</p>
+<h2 id="다음-챕터"><a class="header" href="#다음-챕터">다음 챕터</a></h2>
+<p><a href="03-pinvoke-bindings.html">챕터 03: P/Invoke 바인딩</a>으로 이어서 이 바인딩들을 깔끔한 API와 MLIR-C API의 포괄적인 커버리지를 갖춘 적절한 F# 모듈로 구성하는 방법을 배웁니다.</p>
+<h2 id="추가-참고-자료"><a class="header" href="#추가-참고-자료">추가 참고 자료</a></h2>
+<ul>
+<li><a href="https://mlir.llvm.org/docs/CAPI/">MLIR C API Documentation</a> – MLIR C API 설계 및 사용 패턴에 대한 공식 가이드.</li>
+<li><a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke">.NET P/Invoke Documentation</a> – .NET에서의 Platform Invoke 종합 가이드.</li>
+<li><a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/type-marshalling">Marshalling in .NET</a> – .NET이 관리 타입과 비관리 타입 간에 변환하는 방법.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="01-mlir-primer.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="03-pinvoke-bindings.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="01-mlir-primer.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="03-pinvoke-bindings.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

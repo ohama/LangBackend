@@ -1,0 +1,2427 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>LangBackend Tutorial</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-7d9443ad.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-0fc86e66.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="langbackend-tutorial"><a class="header" href="#langbackend-tutorial">LangBackend Tutorial</a></h1>
+<p>MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼입니다.</p>
+<p>FunLang의 Typed AST를 MLIR을 거쳐 네이티브 바이너리로 컴파일하는 과정을 단계별로 다룹니다. 각 챕터마다 그때까지 다룬 기능이 모두 동작하는 컴파일러를 만들 수 있습니다.</p>
+<h2 id="시작하기"><a class="header" href="#시작하기">시작하기</a></h2>
+<p><a href="#chapter-00-사전-준비">Chapter 00: 사전 준비</a>부터 시작하세요.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="chapter-00-사전-준비"><a class="header" href="#chapter-00-사전-준비">Chapter 00: 사전 준비</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p>LangBackend 튜토리얼 시리즈에 오신 것을 환영합니다. 여러분은 LangTutorial을 완료하고 완전히 동작하는 FunLang 인터프리터를 구축했기 때문에 이 튜토리얼을 시작하게 되었을 것입니다. 이미 파서, Hindley-Milner 타입 추론을 갖춘 타입 체커, 그리고 트리 워킹 평가기를 갖추고 있습니다. 이제 FunLang을 다음 단계로 끌어올릴 차례입니다: 네이티브 머신 코드로 컴파일하는 것입니다.</p>
+<p>이 튜토리얼 시리즈에서는 타입이 지정된 FunLang AST를 실행 가능한 바이너리로 변환하는 MLIR 기반 컴파일러 백엔드를 구축하는 방법을 배웁니다. MLIR(Multi-Level Intermediate Representation)은 LLVM 프로젝트에서 제공하는 현대적인 컴파일러 프레임워크로, 구조화된 IR 연산, 타입 안전성, 플러그인 가능한 dialect, 그리고 고수준 의미론에서 머신 코드까지의 점진적 lowering 등 필요한 인프라를 제공합니다.</p>
+<p>이 장에서는 필수 사전 준비 설정을 다룹니다: C API를 활성화하여 LLVM/MLIR을 소스에서 빌드하고, F# 개발을 위한 .NET SDK를 설치하며, 두 시스템이 통신할 수 있도록 환경을 구성하는 것입니다. 이러한 기초가 없으면 나머지 튜토리얼을 진행할 수 없습니다.</p>
+<h2 id="시스템-요구-사항"><a class="header" href="#시스템-요구-사항">시스템 요구 사항</a></h2>
+<p>시작하기 전에 시스템이 다음 요구 사항을 충족하는지 확인하십시오:</p>
+<ul>
+<li><strong>디스크 공간:</strong> ~30 GB (LLVM 소스 + 빌드 산출물 + 설치)</li>
+<li><strong>RAM:</strong> 16 GB 권장 (빌드 병렬 처리를 줄이면 최소 8 GB)</li>
+<li><strong>빌드 시간:</strong> 최신 하드웨어 기준 30-60분 (4코어 이상, SSD)</li>
+<li><strong>지원 플랫폼:</strong>
+<ul>
+<li>Linux (Ubuntu 22.04+, Fedora 38+ 또는 이에 상응하는 배포판)</li>
+<li>macOS (13 Ventura 이상, Intel 및 Apple Silicon 모두 지원)</li>
+<li>Windows (Ubuntu 22.04+가 설치된 WSL2 권장; 네이티브 MSVC 빌드도 가능하지만 이 튜토리얼에서는 다루지 않습니다)</li>
+</ul>
+</li>
+</ul>
+<h2 id="c-api를-포함한-llvmmlir-빌드"><a class="header" href="#c-api를-포함한-llvmmlir-빌드">C API를 포함한 LLVM/MLIR 빌드</a></h2>
+<p>MLIR은 LLVM 프로젝트의 일부입니다. MLIR 팀은 F#과 같은 비-C++ 언어가 MLIR 인프라와 상호작용할 수 있도록 안정적인 C API를 제공합니다. 이 C API는 기본적으로 빌드되지 않으므로 CMake 구성 단계에서 명시적으로 활성화해야 합니다.</p>
+<h3 id="빌드-의존성-설치"><a class="header" href="#빌드-의존성-설치">빌드 의존성 설치</a></h3>
+<h4 id="linux-ubuntudebian"><a class="header" href="#linux-ubuntudebian">Linux (Ubuntu/Debian)</a></h4>
+<pre><code class="language-bash">sudo apt update
+sudo apt install -y \
+  build-essential \
+  cmake \
+  ninja-build \
+  clang \
+  lld \
+  python3 \
+  git
+</code></pre>
+<h4 id="macos"><a class="header" href="#macos">macOS</a></h4>
+<p>먼저 Xcode Command Line Tools가 설치되어 있지 않다면 설치합니다:</p>
+<pre><code class="language-bash">xcode-select --install
+</code></pre>
+<p>그런 다음 Homebrew를 통해 CMake와 Ninja를 설치합니다:</p>
+<pre><code class="language-bash">brew install cmake ninja
+</code></pre>
+<p>macOS에는 이미 Clang이 포함되어 있으므로 빌드할 준비가 된 것입니다.</p>
+<h4 id="windows-wsl2"><a class="header" href="#windows-wsl2">Windows (WSL2)</a></h4>
+<p>Ubuntu 22.04가 설치된 Windows Subsystem for Linux 2 (WSL2)를 사용하는 것을 권장합니다. <a href="https://learn.microsoft.com/en-us/windows/wsl/install">WSL2 설치 가이드</a>를 따른 후, 위의 Linux (Ubuntu) 의존성 설치 단계를 사용하십시오.</p>
+<blockquote>
+<p><strong>참고:</strong> MSVC를 사용한 네이티브 Windows 빌드도 가능하지만 다른 CMake 구성이 필요하며 이 튜토리얼의 범위를 벗어납니다. WSL2는 Windows에서 일관된 Linux 환경을 제공합니다.</p>
+</blockquote>
+<h3 id="llvm-클론"><a class="header" href="#llvm-클론">LLVM 클론</a></h3>
+<p>LLVM monorepo를 LLVM 19.x 안정 릴리스 브랜치에서 클론합니다. <code>--depth 1</code>을 사용하면 최신 커밋만 가져와 디스크 공간과 다운로드 시간을 절약할 수 있습니다:</p>
+<pre><code class="language-bash">cd $HOME
+git clone --depth 1 --branch release/19.x https://github.com/llvm/llvm-project.git
+cd llvm-project
+</code></pre>
+<p>shallow clone 후 저장소 크기는 약 2 GB입니다.</p>
+<h3 id="빌드-구성"><a class="header" href="#빌드-구성">빌드 구성</a></h3>
+<p>CMake 구성 단계는 매우 중요합니다. 각 플래그는 특정 목적을 가지고 있습니다:</p>
+<pre><code class="language-bash">cmake -S llvm -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS=mlir \
+  -DMLIR_BUILD_MLIR_C_DYLIB=ON \
+  -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+  -DCMAKE_INSTALL_PREFIX=$HOME/mlir-install
+</code></pre>
+<p><strong>플래그 설명:</strong></p>
+<ul>
+<li><code>-S llvm</code>: 소스 디렉터리 (저장소 내의 <code>llvm</code> 하위 디렉터리)</li>
+<li><code>-B build</code>: 빌드 디렉터리 (out-of-tree 빌드 권장)</li>
+<li><code>-G Ninja</code>: Ninja 빌드 시스템 사용 (Make보다 빠름)</li>
+<li><code>-DCMAKE_BUILD_TYPE=Release</code>: 디버그 심볼 없이 최적화된 빌드 (크기가 훨씬 작고 빠름)</li>
+<li><code>-DLLVM_ENABLE_PROJECTS=mlir</code>: LLVM과 함께 MLIR 빌드 (MLIR은 LLVM에 의존)</li>
+<li><strong><code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code></strong>: <strong>핵심 플래그</strong> — MLIR C API를 노출하는 <code>libMLIR-C</code> 공유 라이브러리를 빌드합니다</li>
+<li><code>-DLLVM_TARGETS_TO_BUILD="X86;AArch64"</code>: x86-64 및 ARM64 백엔드만 빌드 (빌드 시간 단축; 필요시 다른 타겟 추가)</li>
+<li><code>-DCMAKE_INSTALL_PREFIX=$HOME/mlir-install</code>: 설치 위치 (쓰기 가능한 디렉터리 사용)</li>
+</ul>
+<p>CMake 구성은 1-2분 내에 완료됩니다. 다음과 같은 출력이 표시됩니다:</p>
+<pre><code>-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+...
+-- Build files have been written to: /home/user/llvm-project/build
+</code></pre>
+<h3 id="빌드-및-설치"><a class="header" href="#빌드-및-설치">빌드 및 설치</a></h3>
+<p>사용 가능한 모든 CPU 코어를 활용하여 MLIR을 빌드합니다 (Ninja는 자동으로 병렬 처리를 사용합니다):</p>
+<pre><code class="language-bash">cmake --build build --target install
+</code></pre>
+<p>이 단계는 하드웨어에 따라 30-60분이 소요됩니다. 수천 줄의 컴파일 로그가 스크롤됩니다. 빌드 중 메모리가 부족해지면 (시스템이 응답하지 않는 경우), 빌드를 중지하고 (Ctrl+C) 병렬 처리를 줄여 다시 시작합니다:</p>
+<pre><code class="language-bash">cmake --build build --target install -- -j2
+</code></pre>
+<p><code>-j2</code> 플래그는 Ninja의 병렬 컴파일 작업을 2개로 제한하여, 빌드 시간이 느려지는 대신 최대 메모리 사용량을 줄입니다.</p>
+<p>빌드가 완료되면 다음과 같이 표시됩니다:</p>
+<pre><code>[100%] Built target install
+</code></pre>
+<h3 id="설치-확인"><a class="header" href="#설치-확인">설치 확인</a></h3>
+<p>MLIR C API 공유 라이브러리가 설치되었는지 확인합니다:</p>
+<pre><code class="language-bash">ls -lh $HOME/mlir-install/lib/libMLIR-C*
+</code></pre>
+<p><strong>예상 출력:</strong></p>
+<ul>
+<li><strong>Linux:</strong> <code>libMLIR-C.so</code> 및 <code>libMLIR-C.so.19</code> (버전이 지정된 라이브러리에 대한 심볼릭 링크)</li>
+<li><strong>macOS:</strong> <code>libMLIR-C.19.dylib</code> 및 <code>libMLIR-C.dylib</code> (심볼릭 링크)</li>
+<li><strong>Windows (WSL):</strong> Linux와 동일</li>
+</ul>
+<p><code>No such file or directory</code>가 표시되면 CMake 구성에 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>이 포함되어 있는지 확인하고 빌드 단계를 다시 실행하십시오.</p>
+<p><code>mlir-opt</code> 도구도 설치되어 있어야 합니다:</p>
+<pre><code class="language-bash">$HOME/mlir-install/bin/mlir-opt --version
+</code></pre>
+<p>예상 출력: <code>MLIR (http://mlir.llvm.org) version 19.1.x</code></p>
+<h2 id="net-sdk-설치"><a class="header" href="#net-sdk-설치">.NET SDK 설치</a></h2>
+<p>FunLang의 컴파일러 백엔드는 F#으로 구현됩니다. F# 프로그램을 컴파일하고 실행하려면 .NET SDK가 필요합니다.</p>
+<h3 id="linux-ubuntudebian-1"><a class="header" href="#linux-ubuntudebian-1">Linux (Ubuntu/Debian)</a></h3>
+<p>.NET 8.0 SDK (2026년 11월까지 지원되는 LTS 릴리스)를 설치합니다:</p>
+<pre><code class="language-bash">wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+chmod +x dotnet-install.sh
+./dotnet-install.sh --channel 8.0
+</code></pre>
+<p>스크립트는 .NET을 <code>$HOME/.dotnet</code>에 설치합니다. PATH에 추가합니다:</p>
+<pre><code class="language-bash">echo 'export PATH="$HOME/.dotnet:$PATH"' &gt;&gt; ~/.bashrc
+source ~/.bashrc
+</code></pre>
+<h3 id="macos-1"><a class="header" href="#macos-1">macOS</a></h3>
+<p><a href="https://dotnet.microsoft.com/download/dotnet/8.0">https://dotnet.microsoft.com/download/dotnet/8.0</a>에서 .NET 8.0 SDK 설치 프로그램을 다운로드하여 설치하거나, Homebrew를 사용합니다:</p>
+<pre><code class="language-bash">brew install --cask dotnet-sdk
+</code></pre>
+<h3 id="windows-wsl2-1"><a class="header" href="#windows-wsl2-1">Windows (WSL2)</a></h3>
+<p>WSL2 Ubuntu 환경에서 위의 Linux 설치 단계를 따르십시오.</p>
+<h3 id="net-설치-확인"><a class="header" href="#net-설치-확인">.NET 설치 확인</a></h3>
+<p>.NET 버전을 확인합니다:</p>
+<pre><code class="language-bash">dotnet --version
+</code></pre>
+<p>예상 출력: <code>8.0.x</code></p>
+<p>F# 컴파일러가 사용 가능한지 확인합니다:</p>
+<pre><code class="language-bash">dotnet fsi --version
+</code></pre>
+<p>예상 출력: <code>Microsoft (R) F# Interactive version 12.8.x.0</code></p>
+<p>모든 것이 정상적으로 작동하는지 확인하기 위해 테스트 F# 프로젝트를 생성합니다:</p>
+<pre><code class="language-bash">dotnet new console -lang F# -o test-fsharp
+cd test-fsharp
+dotnet run
+</code></pre>
+<p>다음과 같이 출력되어야 합니다:</p>
+<pre><code>Hello from F#
+</code></pre>
+<h2 id="라이브러리-검색-경로-설정"><a class="header" href="#라이브러리-검색-경로-설정">라이브러리 검색 경로 설정</a></h2>
+<p>F# 프로그램이 P/Invoke를 통해 MLIR C API 함수를 호출할 때, .NET 런타임은 런타임에 <code>libMLIR-C</code> 공유 라이브러리를 찾을 수 있어야 합니다. 표준적인 방법은 MLIR 설치 라이브러리 디렉터리를 시스템의 라이브러리 검색 경로에 추가하는 것입니다.</p>
+<h3 id="linux"><a class="header" href="#linux">Linux</a></h3>
+<p>MLIR 라이브러리 디렉터리를 <code>LD_LIBRARY_PATH</code>에 추가합니다:</p>
+<pre><code class="language-bash">echo 'export LD_LIBRARY_PATH="$HOME/mlir-install/lib:$LD_LIBRARY_PATH"' &gt;&gt; ~/.bashrc
+source ~/.bashrc
+</code></pre>
+<p>라이브러리가 검색 가능한지 확인합니다:</p>
+<pre><code class="language-bash">ldconfig -p | grep MLIR
+</code></pre>
+<p><code>libMLIR-C.so</code>에 대한 항목이 표시되어야 합니다.</p>
+<h3 id="macos-2"><a class="header" href="#macos-2">macOS</a></h3>
+<p>MLIR 라이브러리 디렉터리를 <code>DYLD_LIBRARY_PATH</code>에 추가합니다:</p>
+<pre><code class="language-bash">echo 'export DYLD_LIBRARY_PATH="$HOME/mlir-install/lib:$DYLD_LIBRARY_PATH"' &gt;&gt; ~/.zshrc
+source ~/.zshrc
+</code></pre>
+<blockquote>
+<p><strong>참고:</strong> macOS Catalina 이후 macOS는 기본적으로 zsh를 사용합니다. bash를 사용하고 있다면 <code>~/.bashrc</code>를 수정하십시오.</p>
+</blockquote>
+<p>라이브러리가 존재하는지 확인합니다:</p>
+<pre><code class="language-bash">ls -l $HOME/mlir-install/lib/libMLIR-C.dylib
+</code></pre>
+<h3 id="windows-wsl2-2"><a class="header" href="#windows-wsl2-2">Windows (WSL2)</a></h3>
+<p>WSL2에서 위의 Linux 지침을 따르십시오.</p>
+<h3 id="대안-프로젝트별-구성"><a class="header" href="#대안-프로젝트별-구성">대안: 프로젝트별 구성</a></h3>
+<p>전역 환경 변수를 설정하는 대신, F# 애플리케이션을 실행할 때 라이브러리 경로를 지정할 수 있습니다:</p>
+<pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
+</code></pre>
+<p>이 방법은 셸 프로파일을 수정하지 않고 테스트할 때 유용합니다.</p>
+<h2 id="자주-발생하는-문제-해결"><a class="header" href="#자주-발생하는-문제-해결">자주 발생하는 문제 해결</a></h2>
+<h3 id="빌드-중-메모리-부족"><a class="header" href="#빌드-중-메모리-부족">빌드 중 메모리 부족</a></h3>
+<p><strong>증상:</strong> MLIR 빌드 중 시스템이 응답하지 않음; 스왑 사용량이 100%.</p>
+<p><strong>해결 방법:</strong> 빌드 병렬 처리를 줄입니다:</p>
+<pre><code class="language-bash">cmake --build build --target install -- -j2
+</code></pre>
+<p>RAM이 8 GB인 시스템에서는 <code>-j1</code>이 필요할 수 있습니다.</p>
+<h3 id="mlir-c-library-not-found-런타임-오류"><a class="header" href="#mlir-c-library-not-found-런타임-오류">“MLIR-C library not found” 런타임 오류</a></h3>
+<p><strong>증상:</strong> F# 프로그램이 <code>DllNotFoundException: Unable to load shared library 'MLIR-C'</code>로 실패합니다.</p>
+<p><strong>해결 방법:</strong> 라이브러리 검색 경로가 구성되어 있는지 확인합니다:</p>
+<pre><code class="language-bash"># Linux
+echo $LD_LIBRARY_PATH
+# $HOME/mlir-install/lib이 포함되어 있어야 합니다
+
+# macOS
+echo $DYLD_LIBRARY_PATH
+</code></pre>
+<p>라이브러리 파일이 존재하는지 확인합니다:</p>
+<pre><code class="language-bash">ls $HOME/mlir-install/lib/libMLIR-C*
+</code></pre>
+<p>파일이 없다면 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>으로 다시 빌드하십시오.</p>
+<h3 id="cmake-버전이-너무-오래됨"><a class="header" href="#cmake-버전이-너무-오래됨">CMake 버전이 너무 오래됨</a></h3>
+<p><strong>증상:</strong> CMake 구성이 <code>CMake 3.20 or higher is required</code>로 실패합니다.</p>
+<p><strong>해결 방법:</strong> 최신 CMake를 설치합니다:</p>
+<pre><code class="language-bash"># Linux: 최신 CMake 바이너리 다운로드
+wget https://github.com/Kitware/CMake/releases/download/v3.28.0/cmake-3.28.0-linux-x86_64.sh
+sudo sh cmake-3.28.0-linux-x86_64.sh --prefix=/usr/local --skip-license
+
+# macOS
+brew upgrade cmake
+</code></pre>
+<h3 id="ninja-빌드-시스템-누락"><a class="header" href="#ninja-빌드-시스템-누락">Ninja 빌드 시스템 누락</a></h3>
+<p><strong>증상:</strong> CMake 구성이 <code>Could not find Ninja</code>로 실패합니다.</p>
+<p><strong>해결 방법:</strong> Ninja를 설치하거나 (위의 “빌드 의존성 설치” 참조), 대신 Unix Makefiles를 사용합니다 (더 느림):</p>
+<pre><code class="language-bash">cmake -S llvm -B build -G "Unix Makefiles" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS=mlir \
+  -DMLIR_BUILD_MLIR_C_DYLIB=ON \
+  -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+  -DCMAKE_INSTALL_PREFIX=$HOME/mlir-install
+
+make -C build install -j$(nproc)
+</code></pre>
+<h3 id="디스크-공간-부족"><a class="header" href="#디스크-공간-부족">디스크 공간 부족</a></h3>
+<p><strong>증상:</strong> 빌드가 <code>No space left on device</code>로 실패합니다.</p>
+<p><strong>해결 방법:</strong> LLVM 빌드에는 ~30 GB가 필요합니다. 공간을 확보하거나 다른 파티션에서 빌드하십시오. 설치 후 <code>build</code> 디렉터리를 삭제하면 ~20 GB를 회수할 수 있습니다:</p>
+<pre><code class="language-bash">rm -rf $HOME/llvm-project/build
+</code></pre>
+<h2 id="이-장에서-완료한-것"><a class="header" href="#이-장에서-완료한-것">이 장에서 완료한 것</a></h2>
+<p>이 시점에서 다음 항목이 준비되어 있습니다:</p>
+<ol>
+<li><strong>LLVM/MLIR 설치 완료</strong> — <code>$HOME/mlir-install</code>에 C API 공유 라이브러리(<code>libMLIR-C.so</code>, <code>libMLIR-C.dylib</code>, 또는 <code>MLIR-C.dll</code>) 포함</li>
+<li><strong>.NET 8.0 SDK</strong> — F# 컴파일러 및 런타임과 함께 설치 완료</li>
+<li><strong>라이브러리 검색 경로 구성 완료</strong> — .NET이 런타임에 MLIR을 찾을 수 있도록 설정</li>
+<li><strong>빌드 도구 검증 완료</strong> — 개발 준비 완료 (<code>mlir-opt</code>, <code>dotnet</code>)</li>
+</ol>
+<p>이제 MLIR과 상호작용하는 F# 코드를 작성할 준비가 되었습니다. 다음 장에서는 코드를 작성하기 전에 이해해야 할 핵심 MLIR 개념들을 살펴봅니다: dialect, operation, region, block, 그리고 SSA 형식입니다.</p>
+<h2 id="다음-장"><a class="header" href="#다음-장">다음 장</a></h2>
+<p><a href="#chapter-01-mlir-입문">Chapter 01: MLIR 입문</a>으로 이동하여 MLIR IR의 기본 개념을 학습합니다.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="chapter-01-mlir-입문"><a class="header" href="#chapter-01-mlir-입문">Chapter 01: MLIR 입문</a></h1>
+<h2 id="소개-1"><a class="header" href="#소개-1">소개</a></h2>
+<p>이전 챕터에서 LLVM/MLIR을 소스에서 빌드하고 .NET SDK를 설정했습니다. 필요한 도구는 모두 설치되었습니다. 하지만 MLIR을 생성하는 F# 코드를 작성하기 전에, MLIR이 무엇이고 프로그램을 어떻게 표현하는지 이해해야 합니다.</p>
+<p>MLIR은 전통적인 중간 표현(intermediate representation)과 다릅니다. 단순히 “하나의 IR“이 아니라, 서로 상호 운용할 수 있는 여러 IR(dialect이라고 부릅니다)을 구축하기 위한 프레임워크입니다. 이 다단계(multi-level) 철학이 MLIR을 컴파일러 개발에 강력하게 만드는 핵심입니다. 고수준 함수형 언어를 매우 저수준인 LLVM IR로 직접 변환하도록 강제하는 대신, MLIR은 언어의 의미론(semantics)을 필요한 만큼 보존하는 중간 표현을 정의한 다음, 단계적으로 점진적 하강(progressive lowering)할 수 있게 해줍니다.</p>
+<p>FunLang의 컴파일 파이프라인은 다음과 같습니다:</p>
+<pre><code>FunLang Typed AST
+    ↓
+High-Level MLIR (arith, func, scf dialects)
+    ↓
+Low-Level MLIR (LLVM dialect)
+    ↓
+LLVM IR
+    ↓
+Native Machine Code
+</code></pre>
+<p>이 챕터에서는 MLIR IR을 이해하기 위한 멘탈 모델을 제공합니다. 다섯 가지 핵심 개념 — <strong>dialect</strong>, <strong>operation</strong>, <strong>region</strong>, <strong>block</strong>, 그리고 <strong>SSA form</strong> — 을 구체적인 예제를 통해 배우게 됩니다. 챕터를 마치면 MLIR 텍스트 IR을 읽고, FunLang 프로그램이 MLIR 구조에 어떻게 매핑되는지 이해할 수 있을 것입니다.</p>
+<h2 id="mlir-ir-구조"><a class="header" href="#mlir-ir-구조">MLIR IR 구조</a></h2>
+<p>완전한 MLIR 프로그램을 보면서 각 부분을 분석해 보겠습니다. 다음은 두 개의 32비트 정수를 더하는 간단한 함수입니다:</p>
+<pre><code class="language-mlir">module {
+  func.func @add(%arg0: i32, %arg1: i32) -&gt; i32 {
+    %result = arith.addi %arg0, %arg1 : i32
+    return %result : i32
+  }
+}
+</code></pre>
+<p>한 줄씩 분석해 보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>module { ... }</code></strong>: 모든 MLIR 프로그램은 module에 포함됩니다. module은 모든 코드를 담는 최상위 컨테이너로, C의 컴파일 단위(compilation unit)나 .NET의 어셈블리와 유사합니다.</p>
+</li>
+<li>
+<p><strong><code>func.func @add(...) -&gt; i32 { ... }</code></strong>: <code>func</code> dialect의 operation으로, <code>@add</code>라는 이름의 함수를 정의합니다. <code>@</code> 접두사는 심볼(함수 이름)을 나타냅니다. 이 함수는 두 개의 인자를 받아 <code>i32</code>(32비트 정수)를 반환합니다.</p>
+</li>
+<li>
+<p><strong><code>%arg0: i32, %arg1: i32</code></strong>: 함수 매개변수입니다. 각 매개변수는 타입 어노테이션(<code>: i32</code>)을 가진 SSA 값(<code>%</code>로 시작)입니다. 이것이 함수의 입력입니다.</p>
+</li>
+<li>
+<p><strong><code>%result = arith.addi %arg0, %arg1 : i32</code></strong>: <code>arith</code> dialect의 산술 덧셈 operation입니다. 두 피연산자(<code>%arg0</code>과 <code>%arg1</code>)를 받아 더한 후, 새로운 SSA 값 <code>%result</code>를 생성합니다. <code>: i32</code> 접미사는 결과 타입을 지정합니다.</p>
+</li>
+<li>
+<p><strong><code>return %result : i32</code></strong>: 함수의 return operation입니다. <code>%result</code> 값을 호출자에게 반환합니다. <code>: i32</code> 타입 어노테이션은 타입 안전성을 보장합니다.</p>
+</li>
+</ul>
+<p>MLIR의 모든 요소에는 목적과 타입이 있습니다. 암시적 변환이나 정의되지 않은 동작(undefined behavior)은 없습니다. 이러한 엄격함이 MLIR이 공격적인 최적화와 검증을 수행할 수 있게 해주는 것입니다.</p>
+<h2 id="dialect"><a class="header" href="#dialect">Dialect</a></h2>
+<p><strong>Dialect</strong>은 관련된 operation, 타입, attribute를 그룹화하는 네임스페이스입니다. Dialect은 MLIR의 확장성 메커니즘입니다 — 모든 가능한 operation을 하나의 거대한 IR에 넣는 대신, MLIR은 도메인에 맞는 커스텀 dialect을 정의할 수 있게 해줍니다.</p>
+<h3 id="사용할-내장-dialect"><a class="header" href="#사용할-내장-dialect">사용할 내장 Dialect</a></h3>
+<p>FunLang 컴파일러에서는 주로 다음 표준 dialect들을 사용합니다:</p>
+<ol>
+<li>
+<p><strong><code>arith</code></strong> — 산술 연산</p>
+<ul>
+<li><code>arith.addi</code>, <code>arith.subi</code>, <code>arith.muli</code>, <code>arith.divsi</code> (부호 있는 정수 산술)</li>
+<li><code>arith.cmpi</code> (정수 비교: <code>&lt;</code>, <code>&gt;</code>, <code>==</code> 등)</li>
+<li><code>arith.constant</code> (정수 및 부동소수점 상수)</li>
+</ul>
+</li>
+<li>
+<p><strong><code>func</code></strong> — 함수 정의 및 호출</p>
+<ul>
+<li><code>func.func</code> (함수 정의)</li>
+<li><code>func.call</code> (함수 호출)</li>
+<li><code>func.return</code> (함수에서 반환)</li>
+</ul>
+</li>
+<li>
+<p><strong><code>scf</code></strong> — 구조적 제어 흐름(Structured Control Flow)</p>
+<ul>
+<li><code>scf.if</code> (조건부 실행)</li>
+<li><code>scf.for</code> (카운트 루프)</li>
+<li><code>scf.while</code> (조건 루프)</li>
+</ul>
+</li>
+<li>
+<p><strong><code>llvm</code></strong> — LLVM dialect (lowering 대상)</p>
+<ul>
+<li><code>llvm.func</code>, <code>llvm.call</code>, <code>llvm.add</code> 등</li>
+<li>이 dialect은 LLVM IR 구성 요소와 1:1로 매핑됩니다</li>
+</ul>
+</li>
+</ol>
+<h3 id="커스텀-dialect"><a class="header" href="#커스텀-dialect">커스텀 Dialect</a></h3>
+<p>이 튜토리얼 시리즈의 후반부(Chapter 10-11)에서는 다음과 같은 operation을 가진 <strong>FunLang dialect</strong>을 정의하게 됩니다:</p>
+<ul>
+<li><code>funlang.closure</code> (클로저 생성)</li>
+<li><code>funlang.apply</code> (클로저에 인자를 적용)</li>
+<li><code>funlang.match</code> (패턴 매칭)</li>
+</ul>
+<p>커스텀 dialect을 사용하면 컴파일 과정에서 고수준 의미론을 보존할 수 있습니다. FunLang 클로저를 즉시 저수준 구조체 할당과 함수 포인터로 변환하는 대신, 고수준 <code>funlang.closure</code> operation으로 표현합니다. 이렇게 하면 최적화를 작성하고 이해하기가 더 쉬워집니다.</p>
+<h3 id="dialect-명명-규칙"><a class="header" href="#dialect-명명-규칙">Dialect 명명 규칙</a></h3>
+<p>Operation은 항상 자신이 속한 dialect 이름을 접두사로 가지며, 점(.)으로 구분됩니다:</p>
+<pre><code class="language-mlir">arith.addi   // "arith" dialect의 "addi" operation
+func.call    // "func" dialect의 "call" operation
+llvm.load    // "llvm" dialect의 "load" operation
+</code></pre>
+<p>이를 통해 이름 충돌을 방지합니다. <code>arith</code> dialect의 <code>addi</code>는 가상의 <code>mydialect.addi</code>와 구별됩니다.</p>
+<h2 id="operation"><a class="header" href="#operation">Operation</a></h2>
+<p><strong>Operation</strong>은 MLIR IR의 기본 단위입니다. MLIR에서는 함수 정의, 산술 명령어, 제어 흐름 등 모든 것이 operation으로 표현됩니다. 심지어 타입과 attribute도 operation에 첨부됩니다.</p>
+<h3 id="operation의-구조"><a class="header" href="#operation의-구조">Operation의 구조</a></h3>
+<p>텍스트 형식에서 operation은 다음과 같은 구조를 가집니다:</p>
+<pre><code class="language-mlir">%results = dialect.opname(%operands) {attributes} : (types) -&gt; result_type
+</code></pre>
+<p>덧셈 예제에서 각 구성 요소를 살펴보겠습니다:</p>
+<pre><code class="language-mlir">%result = arith.addi %arg0, %arg1 : i32
+</code></pre>
+<ul>
+<li>
+<p><strong><code>%result</code></strong>: 이 operation이 생성하는 SSA 값입니다. 이 값은 이후 operation에서 사용할 수 있습니다. <code>%</code> 접두사는 SSA 값을 심볼(<code>@function_name</code>)과 구별합니다.</p>
+</li>
+<li>
+<p><strong><code>arith.addi</code></strong>: operation 이름(dialect + opname)입니다.</p>
+</li>
+<li>
+<p><strong><code>%arg0, %arg1</code></strong>: 피연산자(operation의 입력)입니다. 이전에 정의된 SSA 값(이 경우 함수 인자)입니다.</p>
+</li>
+<li>
+<p><strong><code>: i32</code></strong>: 타입 제약 조건입니다. 이 operation은 32비트 정수에 대해 동작합니다.</p>
+</li>
+</ul>
+<p>모든 operation이 결과를 생성하는 것은 아닙니다. 예를 들어, <code>return</code>은 함수를 종료하는 operation이지만 이후에 사용할 값을 생성하지는 않습니다:</p>
+<pre><code class="language-mlir">return %result : i32
+</code></pre>
+<h3 id="복수-결과를-가진-operation"><a class="header" href="#복수-결과를-가진-operation">복수 결과를 가진 Operation</a></h3>
+<p>일부 operation은 여러 값을 생성합니다. 예를 들어, 몫과 나머지를 모두 반환하는 나눗셈 operation이 있습니다:</p>
+<pre><code class="language-mlir">%quot, %rem = arith.divrem %dividend, %divisor : i32
+</code></pre>
+<p>이제 <code>%quot</code>과 <code>%rem</code> 모두 사용 가능한 SSA 값입니다.</p>
+<h3 id="attribute를-가진-operation"><a class="header" href="#attribute를-가진-operation">Attribute를 가진 Operation</a></h3>
+<p>Attribute는 컴파일 타임 상수 메타데이터를 제공합니다. 예를 들어, 정수 상수는 다음과 같습니다:</p>
+<pre><code class="language-mlir">%zero = arith.constant 0 : i32
+</code></pre>
+<p><code>0</code>은 attribute(상수 값)이고, <code>i32</code>는 타입입니다. Attribute는 런타임 값이 아니라 컴파일 타임에 IR에 내장되는 것입니다.</p>
+<h2 id="region과-block"><a class="header" href="#region과-block">Region과 Block</a></h2>
+<p>MLIR operation은 <strong>region</strong>을 포함할 수 있고, region은 <strong>block</strong>을 포함합니다. 이것이 MLIR이 중첩된 스코프와 제어 흐름을 표현하는 방식입니다.</p>
+<h3 id="region"><a class="header" href="#region">Region</a></h3>
+<p><strong>Region</strong>은 block의 목록입니다. 함수 본문은 region입니다. <code>scf.if</code>와 같은 제어 흐름 operation에는 “then“과 “else” 분기를 위한 region이 있습니다.</p>
+<p>다음은 하나의 region에 하나의 block을 포함하는 함수입니다:</p>
+<pre><code class="language-mlir">func.func @example() -&gt; i32 {
+  %one = arith.constant 1 : i32
+  return %one : i32
+}
+</code></pre>
+<p>중괄호 <code>{ ... }</code>가 함수의 region을 구분합니다. region 내부에는 두 개의 operation(상수와 return)을 가진 하나의 block이 있습니다.</p>
+<h3 id="block"><a class="header" href="#block">Block</a></h3>
+<p><strong>Block</strong>은 선형적으로 실행되는 operation의 시퀀스입니다. 모든 block은 <strong>terminator</strong> operation — 제어를 다른 곳으로 이전하는 operation(return, branch 등) — 으로 끝나야 합니다. Block을 “통과(fall through)“할 수 없습니다.</p>
+<p>제어 흐름이 있을 때 block이 필수적이 됩니다. 다음은 두 개의 block을 가진 함수입니다:</p>
+<pre><code class="language-mlir">func.func @conditional(%cond: i1, %a: i32, %b: i32) -&gt; i32 {
+  cf.cond_br %cond, ^then_block, ^else_block
+
+^then_block:
+  return %a : i32
+
+^else_block:
+  return %b : i32
+}
+</code></pre>
+<p>분석해 보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>cf.cond_br %cond, ^then_block, ^else_block</code></strong>: 조건 분기 operation(<code>cf</code> control-flow dialect)입니다. <code>%cond</code>가 참이면 <code>^then_block</code>으로, 그렇지 않으면 <code>^else_block</code>으로 점프합니다. 이것이 entry block의 terminator입니다.</p>
+</li>
+<li>
+<p><strong><code>^then_block:</code></strong>: block 레이블입니다. <code>^</code> 접두사는 block을 나타냅니다. block 이름은 함수 내에서 로컬입니다.</p>
+</li>
+<li>
+<p><strong><code>return %a : i32</code></strong>: <code>^then_block</code>의 terminator입니다. <code>%a</code>를 호출자에게 반환합니다.</p>
+</li>
+<li>
+<p><strong><code>^else_block:</code></strong>: 또 다른 block 레이블입니다.</p>
+</li>
+<li>
+<p><strong><code>return %b : i32</code></strong>: <code>^else_block</code>의 terminator입니다. <code>%b</code>를 반환합니다.</p>
+</li>
+</ul>
+<h3 id="block-인자-mlir의-phi-node-처리-방식"><a class="header" href="#block-인자-mlir의-phi-node-처리-방식">Block 인자 (MLIR의 Phi Node 처리 방식)</a></h3>
+<p>MLIR은 LLVM의 phi node 대신 <strong>block 인자</strong>를 사용합니다. LLVM IR에서는 여러 선행 block의 값을 병합하기 위해 phi node를 사용합니다. MLIR에서는 block으로 분기할 때 값을 인자로 전달합니다.</p>
+<p>다음은 두 값을 병합하는 예제입니다:</p>
+<pre><code class="language-mlir">func.func @merge_example(%cond: i1, %a: i32, %b: i32) -&gt; i32 {
+  cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)
+
+^merge(%result: i32):
+  return %result : i32
+}
+</code></pre>
+<p>무슨 일이 일어나는지 살펴보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)</code></strong>: <code>^merge</code> block으로 분기하되, 조건이 참이면 <code>%a</code>를, 거짓이면 <code>%b</code>를 전달합니다.</p>
+</li>
+<li>
+<p><strong><code>^merge(%result: i32):</code></strong>: <code>^merge</code> block은 <code>i32</code> 타입의 인자 하나를 기대한다고 선언합니다. 어느 분기가 선택되든, 전달된 값이 이 block 내에서 <code>%result</code>가 됩니다.</p>
+</li>
+</ul>
+<p>이 방식은 LLVM의 phi node보다 깔끔합니다. 데이터 흐름이 분기 지점에서 명시적으로 표현되며, 사후에 재구성할 필요가 없기 때문입니다.</p>
+<h2 id="ssa-form-static-single-assignment"><a class="header" href="#ssa-form-static-single-assignment">SSA Form (Static Single Assignment)</a></h2>
+<p>MLIR은 <strong>SSA form</strong>을 사용합니다. 즉, 모든 값은 정확히 한 번만 정의되고 절대 변경되지 않습니다. <code>%x</code>를 정의하면 다시 할당할 수 없습니다. 이 속성 덕분에 “지금 어떤 버전의 변수를 보고 있는 것인가?“를 추적할 필요가 없어 최적화가 단순해집니다.</p>
+<h3 id="ssa-동작-예시"><a class="header" href="#ssa-동작-예시">SSA 동작 예시</a></h3>
+<p>다음 FunLang 코드를 살펴보겠습니다:</p>
+<pre><code class="language-fsharp">let x = 5
+let y = x + 3
+let z = y * 2
+z
+</code></pre>
+<p>MLIR SSA form에서 각 let 바인딩은 새로운 SSA 값이 됩니다:</p>
+<pre><code class="language-mlir">func.func @example() -&gt; i32 {
+  %x = arith.constant 5 : i32
+  %three = arith.constant 3 : i32
+  %y = arith.addi %x, %three : i32
+  %two = arith.constant 2 : i32
+  %z = arith.muli %y, %two : i32
+  return %z : i32
+}
+</code></pre>
+<p>주목할 점:</p>
+<ul>
+<li>각 <code>let</code> 바인딩은 새로운 SSA 값(<code>%x</code>, <code>%y</code>, <code>%z</code>)이 됩니다.</li>
+<li>상수는 값을 생성하는 operation(<code>arith.constant</code>)입니다.</li>
+<li>어떤 값도 재할당되지 않습니다.</li>
+</ul>
+<h3 id="ssa와-가변성mutability"><a class="header" href="#ssa와-가변성mutability">SSA와 가변성(Mutability)</a></h3>
+<p>FunLang은 불변(immutable)이므로 SSA와 자연스럽게 매핑됩니다. 하지만 변이(mutation)가 있는 명령형 코드는 어떨까요? 다음을 살펴보겠습니다:</p>
+<pre><code class="language-c">int x = 1;
+x = x + 1;
+return x;
+</code></pre>
+<p>SSA에서는 <code>x</code>를 변경할 수 없습니다. 대신, 새로운 버전을 생성합니다:</p>
+<pre><code class="language-mlir">%x0 = arith.constant 1 : i32
+%one = arith.constant 1 : i32
+%x1 = arith.addi %x0, %one : i32
+return %x1 : i32
+</code></pre>
+<p>각 “변이“는 새로운 SSA 값(<code>%x0</code>, <code>%x1</code> 등)을 생성합니다. 이 변환을 <strong>SSA conversion</strong>이라고 하며, 명령형 언어의 컴파일러에서 자동으로 처리됩니다.</p>
+<p>FunLang은 함수형이므로 이 작업은 필요하지 않습니다 — 모든 <code>let</code> 바인딩이 이미 새로운 이름을 도입하기 때문입니다.</p>
+<h3 id="핵심-통찰-ssa는-최적화를-가능하게-한다"><a class="header" href="#핵심-통찰-ssa는-최적화를-가능하게-한다">핵심 통찰: SSA는 최적화를 가능하게 한다</a></h3>
+<p>SSA form은 많은 컴파일러 최적화를 간단하게 만들어 줍니다. 예를 들어:</p>
+<ul>
+<li><strong>Dead code elimination(죽은 코드 제거):</strong> SSA 값이 정의되었지만 사용되지 않으면, 해당 값을 정의하는 operation을 삭제합니다.</li>
+<li><strong>Constant propagation(상수 전파):</strong> <code>%x</code>가 <code>arith.constant 5</code>로 정의되었다면, <code>%x</code>의 모든 사용을 <code>5</code>로 대체합니다.</li>
+<li><strong>Common subexpression elimination(공통 하위 표현식 제거):</strong> 두 operation이 같은 값을 계산하면, 하나를 재사용하고 다른 하나를 삭제합니다.</li>
+</ul>
+<p>이 모든 최적화는 값이 정의 후 절대 변경되지 않는다는 보장에 의존합니다.</p>
+<h2 id="mlir의-타입"><a class="header" href="#mlir의-타입">MLIR의 타입</a></h2>
+<p>MLIR은 강타입(strongly typed)입니다. 모든 SSA 값, operation, 함수에는 타입이 있습니다. 타입 시스템은 확장 가능하며(dialect이 커스텀 타입을 정의할 수 있음), 다음은 사용하게 될 내장 타입입니다:</p>
+<h3 id="정수-타입"><a class="header" href="#정수-타입">정수 타입</a></h3>
+<ul>
+<li><code>i1</code> — 1비트 정수 (boolean)</li>
+<li><code>i32</code> — 32비트 부호 있는 정수</li>
+<li><code>i64</code> — 64비트 부호 있는 정수</li>
+<li><code>i8</code>, <code>i16</code>, <code>i128</code> 등 — 임의 비트 너비 정수</li>
+</ul>
+<h3 id="부동소수점-타입"><a class="header" href="#부동소수점-타입">부동소수점 타입</a></h3>
+<ul>
+<li><code>f32</code> — 32비트 IEEE 754 float</li>
+<li><code>f64</code> — 64비트 IEEE 754 double</li>
+</ul>
+<h3 id="index-타입"><a class="header" href="#index-타입">Index 타입</a></h3>
+<ul>
+<li><code>index</code> — 배열 인덱싱을 위한 플랫폼 의존 정수 (대상 아키텍처에 따라 일반적으로 32비트 또는 64비트)</li>
+</ul>
+<h3 id="메모리-타입"><a class="header" href="#메모리-타입">메모리 타입</a></h3>
+<ul>
+<li><code>memref&lt;4xi32&gt;</code> — 메모리상의 4개 <code>i32</code> 값 배열에 대한 참조</li>
+<li><code>memref&lt;*xf64&gt;</code> — <code>f64</code> 값에 대한 unranked(동적) 메모리 참조</li>
+</ul>
+<h3 id="함수-타입"><a class="header" href="#함수-타입">함수 타입</a></h3>
+<ul>
+<li><code>(i32, i32) -&gt; i32</code> — 두 개의 <code>i32</code> 인자를 받아 <code>i32</code>를 반환하는 함수</li>
+</ul>
+<h3 id="funlang-타입-매핑"><a class="header" href="#funlang-타입-매핑">FunLang 타입 매핑</a></h3>
+<p>FunLang 타입이 MLIR 타입에 어떻게 매핑되는지 정리하면 다음과 같습니다:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>FunLang 타입</th><th>MLIR 타입</th><th>비고</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Int</code></td><td><code>i64</code></td><td>FunLang 정수는 인터프리터에서 임의 정밀도이지만, 64비트로 컴파일합니다</td></tr>
+<tr><td><code>Bool</code></td><td><code>i1</code></td><td>True = 1, False = 0</td></tr>
+<tr><td><code>String</code></td><td><code>!llvm.ptr</code> (LLVM dialect 포인터)</td><td>문자열은 힙에 할당된 null 종료 C 문자열입니다</td></tr>
+<tr><td><code>Float</code></td><td><code>f64</code></td><td>배정밀도 부동소수점</td></tr>
+<tr><td><code>List&lt;'a&gt;</code></td><td><code>!llvm.ptr</code></td><td>리스트는 힙에 할당된 연결 구조입니다</td></tr>
+<tr><td><code>Tuple&lt;'a, 'b, ...&gt;</code></td><td><code>!llvm.struct&lt;...&gt;</code></td><td>튜플은 LLVM struct로 컴파일됩니다</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>!</code> 접두사는 dialect에서 정의된 타입을 나타냅니다 (예: <code>!llvm.ptr</code>는 LLVM dialect의 포인터 타입).</p>
+<h2 id="progressive-lowering"><a class="header" href="#progressive-lowering">Progressive Lowering</a></h2>
+<p>MLIR의 강력함은 <strong>progressive lowering</strong>에 있습니다: 한 번에 크게 변환하는 대신, 고수준 operation을 여러 단계에 걸쳐 저수준 operation으로 변환하는 방식입니다.</p>
+<h3 id="funlang-컴파일-파이프라인"><a class="header" href="#funlang-컴파일-파이프라인">FunLang 컴파일 파이프라인</a></h3>
+<p>이 튜토리얼에서 구축할 파이프라인은 다음과 같습니다:</p>
+<pre><code>Stage 1: AST → High-Level MLIR
+    FunLang AST (타입 검사기에서 전달)
+    ↓
+    arith, func, scf dialect을 사용하여 MLIR로 변환
+    예: `let x = 1 + 2`는 `%x = arith.addi ...`가 됩니다
+
+Stage 2: High-Level MLIR → LLVM Dialect
+    `arith.addi` 같은 operation이 `llvm.add`로 lowering됩니다
+    구조적 제어 흐름(`scf.if`)은 basic block과 branch로 lowering됩니다
+
+Stage 3: LLVM Dialect → LLVM IR
+    MLIR의 LLVM dialect이 텍스트 LLVM IR로 변환됩니다
+
+Stage 4: LLVM IR → Native Code
+    LLVM 백엔드(llc)가 대상 플랫폼의 머신 코드로 컴파일합니다
+</code></pre>
+<p>각 lowering 단계는 <strong>pass</strong> — IR을 재작성하는 변환 — 입니다. MLIR은 pass 정의, 패턴 기반 재작성, 각 단계 후 검증을 위한 인프라를 제공합니다.</p>
+<h3 id="progressive-lowering이-중요한-이유"><a class="header" href="#progressive-lowering이-중요한-이유">Progressive Lowering이 중요한 이유</a></h3>
+<p>FunLang의 패턴 매칭을 컴파일하는 경우를 생각해 보겠습니다. LLVM IR로 직접 lowering해야 한다면, 즉시 basic block, phi node, 메모리 로드로 이루어진 복잡한 결정 트리로 확장해야 합니다. 하지만 progressive lowering을 사용하면:</p>
+<ol>
+<li><strong>고수준:</strong> 패턴 매칭을 구조를 보존하는 <code>funlang.match</code> operation으로 표현합니다.</li>
+<li><strong>중간 수준:</strong> <code>funlang.match</code>를 <code>scf.if</code>와 <code>scf.while</code>(구조적 제어 흐름)로 lowering합니다.</li>
+<li><strong>저수준:</strong> <code>scf.if</code>를 LLVM basic block과 branch로 lowering합니다.</li>
+</ol>
+<p>각 단계에서 해당 추상화 수준에 맞는 최적화를 수행할 수 있습니다. 패턴 매칭 최적화(중복 검사 제거)는 고수준에서 이루어지고, LLVM 수준 최적화(레지스터 할당, 명령어 스케줄링)는 저수준에서 이루어집니다.</p>
+<h2 id="종합-예제"><a class="header" href="#종합-예제">종합 예제</a></h2>
+<p>여러 개념을 함께 사용하는 좀 더 현실적인 MLIR 예제를 살펴보겠습니다:</p>
+<pre><code class="language-mlir">module {
+  func.func @factorial(%n: i64) -&gt; i64 {
+    %c0 = arith.constant 0 : i64
+    %c1 = arith.constant 1 : i64
+    %is_zero = arith.cmpi eq, %n, %c0 : i64
+    cf.cond_br %is_zero, ^base_case, ^recursive_case
+
+  ^base_case:
+    return %c1 : i64
+
+  ^recursive_case:
+    %n_minus_1 = arith.subi %n, %c1 : i64
+    %rec_result = func.call @factorial(%n_minus_1) : (i64) -&gt; i64
+    %result = arith.muli %n, %rec_result : i64
+    return %result : i64
+  }
+}
+</code></pre>
+<p>이 코드를 추적해 보겠습니다:</p>
+<ol>
+<li>
+<p><strong><code>func.func @factorial(%n: i64) -&gt; i64</code></strong>: 하나의 64비트 정수를 받아 64비트 정수를 반환하는 <code>@factorial</code> 함수를 정의합니다.</p>
+</li>
+<li>
+<p><strong><code>%c0 = arith.constant 0 : i64</code></strong>: 상수 <code>0</code>을 생성합니다.</p>
+</li>
+<li>
+<p><strong><code>%c1 = arith.constant 1 : i64</code></strong>: 상수 <code>1</code>을 생성합니다.</p>
+</li>
+<li>
+<p><strong><code>%is_zero = arith.cmpi eq, %n, %c0 : i64</code></strong>: <code>%n</code>과 <code>0</code>을 동등성 비교합니다. 결과는 <code>i1</code>(boolean)입니다.</p>
+</li>
+<li>
+<p><strong><code>cf.cond_br %is_zero, ^base_case, ^recursive_case</code></strong>: 참이면 <code>^base_case</code>로, 아니면 <code>^recursive_case</code>로 분기합니다.</p>
+</li>
+<li>
+<p><strong><code>^base_case:</code></strong>: n == 0이면 1을 반환합니다.</p>
+</li>
+<li>
+<p><strong><code>^recursive_case:</code></strong>: n &gt; 0이면 <code>n * factorial(n - 1)</code>을 계산합니다:</p>
+<ul>
+<li><code>%n_minus_1 = arith.subi %n, %c1</code>: <code>n - 1</code>을 계산합니다.</li>
+<li><code>%rec_result = func.call @factorial(%n_minus_1)</code>: 재귀 호출입니다.</li>
+<li><code>%result = arith.muli %n, %rec_result</code>: <code>n</code>과 재귀 결과를 곱합니다.</li>
+<li><code>return %result</code>: 결과를 반환합니다.</li>
+</ul>
+</li>
+</ol>
+<p>이 예제는 다음을 보여줍니다:</p>
+<ul>
+<li><strong>SSA form:</strong> 모든 값(<code>%c0</code>, <code>%n_minus_1</code> 등)이 한 번만 정의됩니다.</li>
+<li><strong>Operation:</strong> 상수, 비교, 산술, 함수 호출.</li>
+<li><strong>Region과 block:</strong> 함수 본문은 세 개의 block(entry, <code>^base_case</code>, <code>^recursive_case</code>)을 가진 region입니다.</li>
+<li><strong>Terminator:</strong> 모든 block이 terminator(<code>cf.cond_br</code> 또는 <code>return</code>)로 끝납니다.</li>
+<li><strong>Dialect:</strong> <code>arith</code>, <code>func</code>, <code>cf</code> dialect을 사용합니다.</li>
+</ul>
+<h2 id="학습-내용-정리"><a class="header" href="#학습-내용-정리">학습 내용 정리</a></h2>
+<p>이제 MLIR의 다섯 가지 핵심 개념을 이해하게 되었습니다:</p>
+<ol>
+<li><strong>Dialect:</strong> operation, 타입, attribute의 네임스페이스 (예: <code>arith</code>, <code>func</code>, <code>llvm</code>).</li>
+<li><strong>Operation:</strong> MLIR IR의 기본 단위 (예: <code>arith.addi</code>, <code>func.call</code>).</li>
+<li><strong>Region:</strong> block의 목록 (예: 함수 본문).</li>
+<li><strong>Block:</strong> terminator로 끝나는 operation 시퀀스 (예: 제어 흐름의 basic block).</li>
+<li><strong>SSA form:</strong> 모든 값이 정확히 한 번만 정의되며 불변.</li>
+</ol>
+<p>구체적인 예제(산술, 제어 흐름, 재귀)를 통해 이 개념들이 어떻게 함께 작동하는지 살펴보았습니다. 또한 progressive lowering — IR을 한 번에 큰 점프가 아닌 단계적으로 변환하는 철학 — 을 이해하게 되었습니다.</p>
+<h2 id="다음-단계"><a class="header" href="#다음-단계">다음 단계</a></h2>
+<p>다음 챕터에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성합니다. P/Invoke를 사용하여 MLIR의 C API를 호출하고, 컴파일러의 “Hello, World“인 상수 정수를 반환하는 프로그램을 생성할 것입니다.</p>
+<p>**Chapter 02: Hello MLIR from F#**로 계속됩니다 (작성 예정).</p>
+<h2 id="참고-자료"><a class="header" href="#참고-자료">참고 자료</a></h2>
+<ul>
+<li><a href="https://mlir.llvm.org/docs/LangRef/">MLIR Language Reference</a> — MLIR의 텍스트 형식, dialect, 의미론에 대한 공식 사양.</li>
+<li><a href="https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/">Understanding MLIR IR Structure</a> — operation, region, block에 대한 심층 분석.</li>
+<li><a href="https://mlir.llvm.org/docs/Tutorials/Toy/">MLIR Toy Tutorial</a> — MLIR을 사용하여 “Toy” 언어의 컴파일러를 구축하는 완전한 튜토리얼.</li>
+<li><a href="https://mlir.llvm.org/docs/Dialects/">Dialects Documentation</a> — 내장 dialect(arith, func, scf, llvm 등)에 대한 참조 문서.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="챕터-02-f에서-hello-mlir"><a class="header" href="#챕터-02-f에서-hello-mlir">챕터 02: F#에서 Hello MLIR</a></h1>
+<h2 id="소개-2"><a class="header" href="#소개-2">소개</a></h2>
+<p>챕터 00에서는 MLIR을 소스에서 빌드하고 .NET SDK를 설치했습니다. 챕터 01에서는 MLIR의 핵심 개념인 dialect, operation, region, block, SSA 형태에 대해 배웠습니다. 이제 코드를 작성할 차례입니다.</p>
+<p>이 챕터는 처음으로 “동작한다!“를 경험하는 순간입니다. F# 스크립트를 작성하여 P/Invoke를 통해 MLIR C API를 호출하고, MLIR context와 module을 생성하며, 산술 연산이 포함된 간단한 함수를 구성한 뒤, 결과 IR을 콘솔에 출력할 것입니다. 이 챕터를 마치면 F#이 MLIR과 상호운용될 수 있다는 것을 증명하는 동작하는 프로토타입을 갖게 됩니다.</p>
+<p>이 챕터의 코드는 의도적으로 즉흥적이고 탐색적입니다. P/Invoke 바인딩을 인라인으로 정의하고 우선 동작하는 것에 집중합니다. 챕터 03에서 이 바인딩들을 적절한 재사용 가능한 모듈로 구성할 것입니다.</p>
+<h2 id="만들어-볼-것"><a class="header" href="#만들어-볼-것">만들어 볼 것</a></h2>
+<p>첫 번째 MLIR 프로그램은 상수 정수를 반환하는 함수입니다. MLIR 텍스트 형식으로는 다음과 같습니다:</p>
+<pre><code class="language-mlir">module {
+  func.func @return_forty_two() -&gt; i32 {
+    %c42 = arith.constant 42 : i32
+    return %c42 : i32
+  }
+}
+</code></pre>
+<p>이것은 가장 간단한 MLIR 프로그램입니다:</p>
+<ul>
+<li><code>@return_forty_two</code>라는 이름의 함수 하나</li>
+<li>매개변수 없음</li>
+<li><code>i32</code> (32비트 정수) 반환</li>
+<li>본문에서 상수 <code>42</code>를 생성하고 반환</li>
+</ul>
+<p>이것을 MLIR의 C API를 사용하여 F#에서 프로그래밍 방식으로 구성할 것입니다.</p>
+<h2 id="pinvoke-이해하기"><a class="header" href="#pinvoke-이해하기">P/Invoke 이해하기</a></h2>
+<p>P/Invoke (Platform Invoke)는 .NET의 외부 함수 인터페이스(FFI) 메커니즘입니다. 관리 코드(F#, C# 등)에서 공유 라이브러리(Linux의 <code>.so</code>, macOS의 <code>.dylib</code>, Windows의 <code>.dll</code>)에 있는 비관리 네이티브 함수를 호출할 수 있게 해줍니다.</p>
+<h3 id="dllimport-속성"><a class="header" href="#dllimport-속성">DllImport 속성</a></h3>
+<p>네이티브 함수를 호출하려면 <code>[&lt;DllImport&gt;]</code> 속성을 사용하여 함수 시그니처를 선언합니다. 패턴은 다음과 같습니다:</p>
+<pre><code class="language-fsharp">[&lt;DllImport("library-name", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern ReturnType functionName(ParamType1 param1, ParamType2 param2)
+</code></pre>
+<p>하나씩 살펴보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>[&lt;DllImport("library-name")&gt;]</code></strong>: 함수가 포함된 공유 라이브러리를 지정합니다. MLIR의 경우 <code>"MLIR-C"</code>입니다(파일 확장자 없이 — .NET이 플랫폼에 따라 자동으로 <code>.so</code>, <code>.dylib</code>, <code>.dll</code>을 추가합니다).</p>
+</li>
+<li>
+<p><strong><code>CallingConvention = CallingConvention.Cdecl</code></strong>: 인수 전달 및 스택 관리 방식을 지정합니다. MLIR C API는 C 라이브러리의 표준인 C 호출 규약(<code>Cdecl</code>)을 사용합니다.</p>
+</li>
+<li>
+<p><strong><code>extern</code></strong>: 네이티브 코드에 정의된 외부 함수임을 표시합니다.</p>
+</li>
+<li>
+<p><strong>반환 타입과 매개변수</strong>: C 함수 시그니처와 정확히 일치해야 합니다. MLIR은 불투명 구조체 핸들(내부 데이터 구조에 대한 포인터)을 사용하며, F#에서는 이를 <code>nativeint</code>로 표현합니다.</p>
+</li>
+</ul>
+<h3 id="mlir-핸들-타입"><a class="header" href="#mlir-핸들-타입">MLIR 핸들 타입</a></h3>
+<p>MLIR C API는 모든 IR 엔티티에 불투명 구조체 타입을 사용합니다:</p>
+<pre><code class="language-c">// MLIR-C API (C header)
+typedef struct MlirContext { void *ptr; } MlirContext;
+typedef struct MlirModule { void *ptr; } MlirModule;
+typedef struct MlirOperation { void *ptr; } MlirOperation;
+// ... and many more
+</code></pre>
+<p>각 구조체는 포인터를 감싸는 래퍼입니다. F#의 관점에서는 내부 구조에 관심이 없고, MLIR 함수 간에 이 핸들들을 전달하기만 하면 됩니다. 단일 <code>nativeint</code> 필드를 가진 F# 구조체로 표현합니다:</p>
+<pre><code class="language-fsharp">[&lt;Struct&gt;]
+type MlirContext =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+</code></pre>
+<p>이는 C 메모리 레이아웃(단일 포인터)과 일치하며, P/Invoke 경계를 넘어 안전하게 전달할 수 있습니다.</p>
+<h2 id="f-스크립트-생성"><a class="header" href="#f-스크립트-생성">F# 스크립트 생성</a></h2>
+<p>코드를 작성해 보겠습니다. 작업 디렉터리에 <code>HelloMlir.fsx</code>라는 새 파일을 생성합니다:</p>
+<pre><code class="language-bash">cd $HOME
+mkdir -p mlir-fsharp-tutorial
+cd mlir-fsharp-tutorial
+touch HelloMlir.fsx
+</code></pre>
+<p>텍스트 편집기에서 <code>HelloMlir.fsx</code>를 열고 필요한 import부터 시작합니다:</p>
+<pre><code class="language-fsharp">open System
+open System.Runtime.InteropServices
+</code></pre>
+<ul>
+<li><code>System</code>: .NET 핵심 타입</li>
+<li><code>System.Runtime.InteropServices</code>: <code>DllImport</code>, <code>CallingConvention</code>, 마샬링 속성 포함</li>
+</ul>
+<h2 id="핸들-타입-정의"><a class="header" href="#핸들-타입-정의">핸들 타입 정의</a></h2>
+<p>먼저 필요한 MLIR 핸들 타입을 정의합니다. 이 간단한 예제에서는 다음이 필요합니다:</p>
+<ul>
+<li><code>MlirContext</code>: MLIR 루트 context (메모리, dialect 등을 관리)</li>
+<li><code>MlirModule</code>: module (함수의 최상위 컨테이너)</li>
+<li><code>MlirLocation</code>: 소스 위치 정보 (operation 생성에 필요)</li>
+<li><code>MlirType</code>: 타입 시스템 (<code>i32</code> 사용 예정)</li>
+<li><code>MlirBlock</code>: 기본 블록</li>
+<li><code>MlirRegion</code>: 블록을 포함하는 region</li>
+<li><code>MlirOperation</code>: operation (함수나 산술 연산 생성 결과)</li>
+<li><code>MlirValue</code>: SSA 값 (operation의 결과)</li>
+</ul>
+<p>스크립트에 다음 타입 정의를 추가합니다:</p>
+<pre><code class="language-fsharp">[&lt;Struct&gt;]
+type MlirContext =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirModule =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirLocation =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirType =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirBlock =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirRegion =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirOperation =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirValue =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+</code></pre>
+<p>각 핸들은 네이티브 포인터를 감싸는 얇은 래퍼입니다. <code>[&lt;Struct&gt;]</code> 속성은 이들이 힙에 할당되는 클래스가 아닌 스택에 할당되는 값 타입임을 보장하며, 작은 래퍼에 대해 더 효율적입니다.</p>
+<h2 id="문자열-마샬링-mlirstringref"><a class="header" href="#문자열-마샬링-mlirstringref">문자열 마샬링: MlirStringRef</a></h2>
+<p>MLIR의 C API는 소유권 문제 없이 문자열을 전달하기 위해 <code>MlirStringRef</code>라는 사용자 정의 문자열 구조체를 사용합니다. C에서는 다음과 같이 정의되어 있습니다:</p>
+<pre><code class="language-c">typedef struct MlirStringRef {
+    const char *data;
+    size_t length;
+} MlirStringRef;
+</code></pre>
+<p>이 레이아웃을 F#에서 맞춰야 합니다:</p>
+<pre><code class="language-fsharp">[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
+type MlirStringRef =
+    val Data: nativeint  // const char*
+    val Length: nativeint  // size_t
+
+    new(data, length) = { Data = data; Length = length }
+
+    static member FromString(s: string) =
+        let bytes = System.Text.Encoding.UTF8.GetBytes(s)
+        let ptr = Marshal.AllocHGlobal(bytes.Length)
+        Marshal.Copy(bytes, 0, ptr, bytes.Length)
+        MlirStringRef(ptr, nativeint bytes.Length)
+
+    member this.Free() =
+        if this.Data &lt;&gt; nativeint 0 then
+            Marshal.FreeHGlobal(this.Data)
+</code></pre>
+<p>세부 사항을 살펴보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>[&lt;StructLayout(LayoutKind.Sequential)&gt;]</code></strong>: 필드가 선언된 순서대로 메모리에 배치되도록 보장합니다 (C 구조체와 일치).</p>
+</li>
+<li>
+<p><strong><code>FromString(s: string)</code></strong>: F# 문자열을 <code>MlirStringRef</code>로 변환하는 헬퍼입니다. 비관리 메모리를 할당하고, UTF-8 바이트를 복사한 후, 해당 메모리를 가리키는 <code>MlirStringRef</code>를 반환합니다.</p>
+</li>
+<li>
+<p><strong><code>Free()</code></strong>: 비관리 메모리를 해제합니다. 문자열을 MLIR에 전달한 후 반드시 호출해야 하며, 그렇지 않으면 메모리 누수가 발생합니다.</p>
+</li>
+</ul>
+<h2 id="pinvoke-함수-선언"><a class="header" href="#pinvoke-함수-선언">P/Invoke 함수 선언</a></h2>
+<p>이제 P/Invoke 선언을 작성합니다. 이 예제에 필요한 함수만 선언합니다. 스크립트에 다음을 추가합니다:</p>
+<pre><code class="language-fsharp">module MlirNative =
+    // Context management
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirContext mlirContextCreate()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirContextDestroy(MlirContext ctx)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__func__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__arith__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirDialectHandleRegisterDialect(MlirDialectHandle handle, MlirContext ctx)
+
+    // Module management
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirModule mlirModuleCreateEmpty(MlirLocation loc)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirModuleGetOperation(MlirModule m)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirModuleDestroy(MlirModule m)
+
+    // Location
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirLocation mlirLocationUnknownGet(MlirContext ctx)
+
+    // Types
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirIntegerTypeGet(MlirContext ctx, uint32 bitwidth)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirFunctionTypeGet(MlirContext ctx, nativeint numInputs, MlirType&amp; inputs, nativeint numResults, MlirType&amp; results)
+
+    // Operation building
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirOperationCreate(MlirOperationState&amp; state)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirOperationGetRegion(MlirOperation op, nativeint pos)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirBlock mlirBlockCreate(nativeint numArgs, MlirType&amp; argTypes, MlirLocation&amp; argLocs)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirBlockInsertOwnedOperation(MlirBlock block, nativeint pos, MlirOperation op)
+
+    // Printing
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationPrint(MlirOperation op, MlirStringCallback callback, nativeint userData)
+</code></pre>
+<p>함수 시그니처에 등장한 추가 핸들 타입도 필요합니다:</p>
+<pre><code class="language-fsharp">[&lt;Struct&gt;]
+type MlirDialectHandle =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+[&lt;Struct&gt;]
+type MlirOperationState =
+    val Name: MlirStringRef
+    val Location: MlirLocation
+    val NumResults: nativeint
+    val Results: nativeint  // Pointer to MlirType array
+    val NumOperands: nativeint
+    val Operands: nativeint  // Pointer to MlirValue array
+    val NumRegions: nativeint
+    val Regions: nativeint  // Pointer to MlirRegion array
+    val NumSuccessors: nativeint
+    val Successors: nativeint  // Pointer to MlirBlock array
+    val NumAttributes: nativeint
+    val Attributes: nativeint  // Pointer to MlirNamedAttribute array
+    val EnableResultTypeInference: bool
+</code></pre>
+<p>그리고 출력을 위한 콜백 delegate도 필요합니다:</p>
+<pre><code class="language-fsharp">[&lt;UnmanagedFunctionPointer(CallingConvention.Cdecl)&gt;]
+type MlirStringCallback = delegate of MlirStringRef * nativeint -&gt; unit
+</code></pre>
+<p>이 delegate는 IR 출력 시 MLIR이 F# 코드를 콜백할 수 있게 해줍니다. MLIR은 출력의 각 청크마다 콜백을 호출합니다.</p>
+<h2 id="mlir-module-구성하기"><a class="header" href="#mlir-module-구성하기">MLIR Module 구성하기</a></h2>
+<p>이제 MLIR module을 생성하는 로직을 작성합니다. 스크립트에 다음 함수를 추가합니다:</p>
+<pre><code class="language-fsharp">let buildHelloMlir() =
+    // Step 1: Create MLIR context
+    let ctx = MlirNative.mlirContextCreate()
+    printfn "Created MLIR context"
+
+    // Step 2: Load required dialects (func and arith)
+    let funcDialect = MlirNative.mlirGetDialectHandle__func__()
+    MlirNative.mlirDialectHandleRegisterDialect(funcDialect, ctx)
+    let arithDialect = MlirNative.mlirGetDialectHandle__arith__()
+    MlirNative.mlirDialectHandleRegisterDialect(arithDialect, ctx)
+    printfn "Registered func and arith dialects"
+
+    // Step 3: Create an empty module
+    let loc = MlirNative.mlirLocationUnknownGet(ctx)
+    let mlirModule = MlirNative.mlirModuleCreateEmpty(loc)
+    printfn "Created empty module"
+
+    // Step 4: Create the function type () -&gt; i32
+    let i32Type = MlirNative.mlirIntegerTypeGet(ctx, 32u)
+    let mutable resultType = i32Type
+    let funcType = MlirNative.mlirFunctionTypeGet(ctx, nativeint 0, &amp;i32Type, nativeint 1, &amp;resultType)
+    printfn "Created function type () -&gt; i32"
+
+    // Step 5: Create func.func operation
+    let funcName = MlirStringRef.FromString("func.func")
+    let mutable funcState =
+        { MlirOperationState.Name = funcName
+          Location = loc
+          NumResults = nativeint 0
+          Results = nativeint 0
+          NumOperands = nativeint 0
+          Operands = nativeint 0
+          NumRegions = nativeint 1  // Function body is a region
+          Regions = nativeint 0
+          NumSuccessors = nativeint 0
+          Successors = nativeint 0
+          NumAttributes = nativeint 0
+          Attributes = nativeint 0
+          EnableResultTypeInference = false }
+
+    let funcOp = MlirNative.mlirOperationCreate(&amp;funcState)
+    funcName.Free()
+    printfn "Created func.func operation"
+
+    // Step 6: Create a block for the function body
+    let funcRegion = MlirNative.mlirOperationGetRegion(funcOp, nativeint 0)
+    let block = MlirNative.mlirBlockCreate(nativeint 0, &amp;i32Type, &amp;loc)
+    MlirNative.mlirRegionAppendOwnedBlock(funcRegion, block)
+    printfn "Created function body block"
+
+    // Step 7: Create arith.constant 42 : i32
+    let constantName = MlirStringRef.FromString("arith.constant")
+    let mutable constantState =
+        { MlirOperationState.Name = constantName
+          Location = loc
+          NumResults = nativeint 1
+          Results = Marshal.AllocHGlobal(sizeof&lt;nativeint&gt;)
+          NumOperands = nativeint 0
+          Operands = nativeint 0
+          NumRegions = nativeint 0
+          Regions = nativeint 0
+          NumSuccessors = nativeint 0
+          Successors = nativeint 0
+          NumAttributes = nativeint 0
+          Attributes = nativeint 0
+          EnableResultTypeInference = false }
+    Marshal.StructureToPtr(i32Type, constantState.Results, false)
+
+    let constantOp = MlirNative.mlirOperationCreate(&amp;constantState)
+    constantName.Free()
+    Marshal.FreeHGlobal(constantState.Results)
+    printfn "Created arith.constant operation"
+
+    // Step 8: Create return operation
+    let returnName = MlirStringRef.FromString("func.return")
+    let mutable returnState =
+        { MlirOperationState.Name = returnName
+          Location = loc
+          NumResults = nativeint 0
+          Results = nativeint 0
+          NumOperands = nativeint 1
+          Operands = nativeint 0  // Should point to constant's result
+          NumRegions = nativeint 0
+          Regions = nativeint 0
+          NumSuccessors = nativeint 0
+          Successors = nativeint 0
+          NumAttributes = nativeint 0
+          Attributes = nativeint 0
+          EnableResultTypeInference = false }
+
+    let returnOp = MlirNative.mlirOperationCreate(&amp;returnState)
+    returnName.Free()
+    printfn "Created func.return operation"
+
+    // Step 9: Insert operations into the block
+    MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 0, constantOp)
+    MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 1, returnOp)
+    printfn "Inserted operations into block"
+
+    // Step 10: Get module operation and print
+    let moduleOp = MlirNative.mlirModuleGetOperation(mlirModule)
+    printfn "\n--- Generated MLIR IR ---"
+
+    let mutable output = ""
+    let callback = MlirStringCallback(fun strRef _ -&gt;
+        let length = int strRef.Length
+        let bytes = Array.zeroCreate&lt;byte&gt; length
+        Marshal.Copy(strRef.Data, bytes, 0, length)
+        let text = System.Text.Encoding.UTF8.GetString(bytes)
+        output &lt;- output + text
+    )
+
+    MlirNative.mlirOperationPrint(moduleOp, callback, nativeint 0)
+    printfn "%s" output
+    printfn "--- End of IR ---\n"
+
+    // Cleanup
+    MlirNative.mlirModuleDestroy(mlirModule)
+    MlirNative.mlirContextDestroy(ctx)
+    printfn "Cleaned up MLIR context and module"
+</code></pre>
+<p>이 함수에는 많은 내용이 있으므로 단계별로 살펴보겠습니다.</p>
+<h2 id="단계별-분석"><a class="header" href="#단계별-분석">단계별 분석</a></h2>
+<h3 id="1단계-mlir-context-생성"><a class="header" href="#1단계-mlir-context-생성">1단계: MLIR Context 생성</a></h3>
+<pre><code class="language-fsharp">let ctx = MlirNative.mlirContextCreate()
+</code></pre>
+<p>MLIR context는 등록된 dialect, 타입 고유화, 메모리 관리 등 모든 MLIR 상태를 관리하는 루트 객체입니다. 다른 작업을 하기 전에 반드시 context를 생성해야 합니다.</p>
+<h3 id="2단계-dialect-로드"><a class="header" href="#2단계-dialect-로드">2단계: Dialect 로드</a></h3>
+<pre><code class="language-fsharp">let funcDialect = MlirNative.mlirGetDialectHandle__func__()
+MlirNative.mlirDialectHandleRegisterDialect(funcDialect, ctx)
+let arithDialect = MlirNative.mlirGetDialectHandle__arith__()
+MlirNative.mlirDialectHandleRegisterDialect(arithDialect, ctx)
+</code></pre>
+<p>MLIR dialect은 요청 시 로드됩니다. 함수 정의를 위한 <code>func</code> dialect과 상수 및 산술 연산을 위한 <code>arith</code> dialect이 필요합니다. 각 dialect에는 getter 함수(<code>mlirGetDialectHandle__&lt;dialect&gt;__</code>)가 있으며, 이를 context에 등록합니다.</p>
+<h3 id="3단계-빈-module-생성"><a class="header" href="#3단계-빈-module-생성">3단계: 빈 Module 생성</a></h3>
+<pre><code class="language-fsharp">let loc = MlirNative.mlirLocationUnknownGet(ctx)
+let mlirModule = MlirNative.mlirModuleCreateEmpty(loc)
+</code></pre>
+<p>모든 MLIR operation에는 소스 위치가 필요합니다. 생성된 코드의 경우 “unknown” 위치를 사용합니다. 그런 다음 빈 module을 생성합니다.</p>
+<h3 id="4단계-함수-타입-생성"><a class="header" href="#4단계-함수-타입-생성">4단계: 함수 타입 생성</a></h3>
+<pre><code class="language-fsharp">let i32Type = MlirNative.mlirIntegerTypeGet(ctx, 32u)
+let mutable resultType = i32Type
+let funcType = MlirNative.mlirFunctionTypeGet(ctx, nativeint 0, &amp;i32Type, nativeint 1, &amp;resultType)
+</code></pre>
+<p>함수 시그니처를 정의합니다: 입력 없음(<code>nativeint 0</code>), 출력 하나(<code>i32</code>). <code>mlirFunctionTypeGet</code> 함수는 타입 배열에 대한 포인터를 받으므로 <code>&amp;</code>를 사용하여 참조로 전달합니다.</p>
+<h3 id="5-6단계-함수-operation-및-본문-block-생성"><a class="header" href="#5-6단계-함수-operation-및-본문-block-생성">5-6단계: 함수 Operation 및 본문 Block 생성</a></h3>
+<p>MLIR에서 operation을 생성하려면 <code>MlirOperationState</code>를 구성하고 <code>mlirOperationCreate</code>를 호출해야 합니다. 이것이 모든 operation 생성의 일반적인 패턴입니다:</p>
+<ol>
+<li>operation 이름, 위치, 피연산자, 결과, region 등을 포함하는 <code>MlirOperationState</code> 생성</li>
+<li><code>mlirOperationCreate(&amp;state)</code> 호출</li>
+<li>할당된 메모리(operation 이름 문자열 등) 해제</li>
+</ol>
+<p>함수의 경우 region(함수 본문)과 그 안의 block도 생성합니다.</p>
+<h3 id="7-8단계-함수-내부-operation-생성"><a class="header" href="#7-8단계-함수-내부-operation-생성">7-8단계: 함수 내부 Operation 생성</a></h3>
+<p>두 개의 operation을 생성합니다:</p>
+<ol>
+<li><strong><code>arith.constant 42 : i32</code></strong>: 상수 operation입니다. 하나의 결과(값 42)를 가집니다.</li>
+<li><strong><code>func.return %result</code></strong>: 반환 operation입니다. 하나의 피연산자(상수의 결과)를 가집니다.</li>
+</ol>
+<p>각 operation은 동일한 패턴을 따릅니다: <code>MlirOperationState</code> 생성, <code>mlirOperationCreate</code> 호출, 정리.</p>
+<h3 id="9단계-operation을-block에-삽입"><a class="header" href="#9단계-operation을-block에-삽입">9단계: Operation을 Block에 삽입</a></h3>
+<pre><code class="language-fsharp">MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 0, constantOp)
+MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 1, returnOp)
+</code></pre>
+<p>Operation은 실행 순서대로 block에 삽입해야 합니다. 상수가 먼저(위치 0), 그다음 반환(위치 1)입니다.</p>
+<h3 id="10단계-ir-출력"><a class="header" href="#10단계-ir-출력">10단계: IR 출력</a></h3>
+<pre><code class="language-fsharp">let callback = MlirStringCallback(fun strRef _ -&gt;
+    // MlirStringRef를 F# 문자열로 변환
+    // output 변수에 누적
+)
+MlirNative.mlirOperationPrint(moduleOp, callback, nativeint 0)
+</code></pre>
+<p>MLIR의 출력 함수는 콜백을 사용합니다. 콜백은 출력의 청크마다 여러 번 호출됩니다. 이 청크들을 하나의 문자열로 누적하여 출력합니다.</p>
+<h3 id="정리"><a class="header" href="#정리">정리</a></h3>
+<pre><code class="language-fsharp">MlirNative.mlirModuleDestroy(mlirModule)
+MlirNative.mlirContextDestroy(ctx)
+</code></pre>
+<p>메모리 누수를 방지하기 위해 항상 module과 context를 파괴해야 합니다.</p>
+<h2 id="스크립트-실행"><a class="header" href="#스크립트-실행">스크립트 실행</a></h2>
+<p><code>HelloMlir.fsx</code> 파일 끝에 다음을 추가합니다:</p>
+<pre><code class="language-fsharp">[&lt;EntryPoint&gt;]
+let main argv =
+    buildHelloMlir()
+    0
+</code></pre>
+<p>이제 F# Interactive로 스크립트를 실행합니다:</p>
+<pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet fsi HelloMlir.fsx
+</code></pre>
+<p><strong>예상 출력:</strong></p>
+<pre><code>Created MLIR context
+Registered func and arith dialects
+Created empty module
+Created function type () -&gt; i32
+Created func.func operation
+Created function body block
+Created arith.constant operation
+Created func.return operation
+Inserted operations into block
+
+--- Generated MLIR IR ---
+module {
+  func.func @return_forty_two() -&gt; i32 {
+    %c42 = arith.constant 42 : i32
+    return %c42 : i32
+  }
+}
+--- End of IR ---
+
+Cleaned up MLIR context and module
+</code></pre>
+<p>이 출력이 보인다면 성공입니다! F#에서 MLIR을 호출하고 프로그래밍 방식으로 IR을 생성하는 데 성공했습니다.</p>
+<h2 id="문제-해결"><a class="header" href="#문제-해결">문제 해결</a></h2>
+<h3 id="dllnotfoundexception-unable-to-load-shared-library-mlir-c"><a class="header" href="#dllnotfoundexception-unable-to-load-shared-library-mlir-c">DllNotFoundException: Unable to load shared library ‘MLIR-C’</a></h3>
+<p><strong>원인:</strong> .NET 런타임이 MLIR-C 공유 라이브러리를 찾을 수 없습니다.</p>
+<p><strong>해결 방법:</strong> <code>LD_LIBRARY_PATH</code> (Linux) 또는 <code>DYLD_LIBRARY_PATH</code> (macOS)에 <code>$HOME/mlir-install/lib</code>이 포함되어 있는지 확인합니다:</p>
+<pre><code class="language-bash">export LD_LIBRARY_PATH=$HOME/mlir-install/lib:$LD_LIBRARY_PATH
+dotnet fsi HelloMlir.fsx
+</code></pre>
+<p>또는 환경 변수를 인라인으로 지정하여 실행합니다:</p>
+<pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet fsi HelloMlir.fsx
+</code></pre>
+<h3 id="accessviolationexception-또는-segmentation-fault"><a class="header" href="#accessviolationexception-또는-segmentation-fault">AccessViolationException 또는 Segmentation Fault</a></h3>
+<p><strong>원인:</strong> 잘못된 P/Invoke 시그니처 (잘못된 매개변수 타입, byref 매개변수에 <code>&amp;</code> 누락 등).</p>
+<p><strong>해결 방법:</strong> <code>DllImport</code> 선언이 MLIR-C API 헤더 파일과 정확히 일치하는지 확인합니다. <a href="https://mlir.llvm.org/docs/CAPI/">MLIR-C API 문서</a>와 <code>$HOME/mlir-install/include/mlir-c/</code>의 헤더 파일을 확인하세요.</p>
+<h3 id="비어있거나-잘못된-형식의-ir-출력"><a class="header" href="#비어있거나-잘못된-형식의-ir-출력">비어있거나 잘못된 형식의 IR 출력</a></h3>
+<p><strong>원인:</strong> Operation이 block에 제대로 삽입되지 않았거나, region이 operation에 제대로 연결되지 않았습니다.</p>
+<p><strong>해결 방법:</strong> 연산 순서를 확인합니다: operation 생성 -&gt; region 가져오기 -&gt; block 생성 -&gt; block에 operation 삽입.</p>
+<h2 id="배운-내용"><a class="header" href="#배운-내용">배운 내용</a></h2>
+<p>이 챕터에서 다음을 배웠습니다:</p>
+<ol>
+<li><strong>MLIR 핸들 타입 정의</strong> - 네이티브 포인터를 감싸는 F# 구조체로 정의했습니다.</li>
+<li><strong><code>[&lt;DllImport&gt;]</code> 사용</strong> - 외부 MLIR-C API 함수를 선언했습니다.</li>
+<li><strong>문자열 마샬링</strong> - <code>MlirStringRef</code>와 수동 메모리 관리를 사용했습니다.</li>
+<li><strong>MLIR context와 module 생성</strong> - 처음부터 생성했습니다.</li>
+<li><strong>프로그래밍 방식으로 operation 구성</strong> - <code>MlirOperationState</code>를 사용했습니다.</li>
+<li><strong>MLIR IR 출력</strong> - 콜백을 사용했습니다.</li>
+<li><strong>메모리 관리</strong> - 완료 후 context와 module을 파괴했습니다.</li>
+</ol>
+<p>이제 F#이 MLIR과 상호운용될 수 있다는 것이 증명되었습니다. 하지만 이 코드는 정돈되지 않았습니다 – 타입과 P/Invoke 함수를 스크립트에 인라인으로 정의하고 있습니다. 실제 컴파일러에서는 이 바인딩들이 재사용 가능한 모듈로 구성되어야 합니다.</p>
+<h2 id="다음-챕터"><a class="header" href="#다음-챕터">다음 챕터</a></h2>
+<p><a href="#chapter-03-pinvoke-바인딩">챕터 03: P/Invoke 바인딩</a>으로 이어서 이 바인딩들을 깔끔한 API와 MLIR-C API의 포괄적인 커버리지를 갖춘 적절한 F# 모듈로 구성하는 방법을 배웁니다.</p>
+<h2 id="추가-참고-자료"><a class="header" href="#추가-참고-자료">추가 참고 자료</a></h2>
+<ul>
+<li><a href="https://mlir.llvm.org/docs/CAPI/">MLIR C API Documentation</a> – MLIR C API 설계 및 사용 패턴에 대한 공식 가이드.</li>
+<li><a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke">.NET P/Invoke Documentation</a> – .NET에서의 Platform Invoke 종합 가이드.</li>
+<li><a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/type-marshalling">Marshalling in .NET</a> – .NET이 관리 타입과 비관리 타입 간에 변환하는 방법.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="chapter-03-pinvoke-바인딩"><a class="header" href="#chapter-03-pinvoke-바인딩">Chapter 03: P/Invoke 바인딩</a></h1>
+<h2 id="소개-3"><a class="header" href="#소개-3">소개</a></h2>
+<p>Chapter 02에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성했습니다. 핸들 타입을 정의하고, <code>DllImport</code> 선언을 작성하며, MLIR C API를 성공적으로 호출하여 간단한 함수를 만들었습니다. 하지만 그 코드는 탐색적이고 임시방편적이었습니다 – 모든 바인딩이 스크립트 내에 인라인으로 정의되어 있었습니다.</p>
+<p>실제 컴파일러에는 체계적이고 재사용 가능한 바인딩이 필요합니다. 이 장에서는 Chapter 02에서 배운 모든 것을 가져와 적절한 F# 모듈인 <code>MlirBindings.fs</code>로 체계화합니다. 이 모듈은 이후 모든 장의 기반이 됩니다. 이 장에서 배울 내용은 다음과 같습니다:</p>
+<ul>
+<li>기능 영역별(context, module, type, operation 등)로 MLIR C API 바인딩을 구성하는 방법</li>
+<li>문자열 마샬링을 올바르고 안전하게 처리하는 방법</li>
+<li>IR 출력을 위한 콜백 처리 방법</li>
+<li>크로스 플랫폼 고려 사항 (Linux, macOS, Windows)</li>
+</ul>
+<p>이 장을 마치면 MLIR C API에 대한 완전하고 프로덕션에 사용할 수 있는 바인딩 레이어를 갖추게 됩니다.</p>
+<h2 id="설계-철학"><a class="header" href="#설계-철학">설계 철학</a></h2>
+<p>바인딩 레이어는 다음 원칙을 따릅니다:</p>
+<ol>
+<li><strong>얇은 래퍼:</strong> C API 위에 최소한의 추상화만 적용합니다. 각 F# 함수는 C 함수에 직접 대응됩니다.</li>
+<li><strong>타입 안전성:</strong> MLIR 핸들에 F# struct 타입을 사용하여 컴파일 시점에 타입 오류를 잡습니다.</li>
+<li><strong>메모리 안전성:</strong> 안전한 문자열 마샬링과 정리를 위한 유틸리티를 제공하되, destroy 함수를 호출해야 하는 필요성을 숨기지 않습니다.</li>
+<li><strong>완전성:</strong> 컴파일러에 필요한 모든 MLIR C API 함수를 다룹니다 (context, module, type, operation, region, block, location, attribute, value).</li>
+<li><strong>문서화:</strong> 모든 함수에 목적과 MLIR C API 대응 관계를 설명하는 주석이 있습니다.</li>
+</ol>
+<h2 id="프로젝트-구조"><a class="header" href="#프로젝트-구조">프로젝트 구조</a></h2>
+<p>코드를 작성하기 전에 적절한 F# 프로젝트를 설정하겠습니다. Chapter 02에서는 스크립트(<code>.fsx</code>)를 사용했지만, 이제 라이브러리 프로젝트를 만들겠습니다:</p>
+<pre><code class="language-bash">cd $HOME/mlir-fsharp-tutorial
+dotnet new classlib -lang F# -o MlirBindings
+cd MlirBindings
+</code></pre>
+<p>이렇게 하면 다음과 같은 구조의 새 F# 라이브러리 프로젝트가 생성됩니다:</p>
+<pre><code>MlirBindings/
+├── MlirBindings.fsproj
+└── Library.fs
+</code></pre>
+<p>기본 <code>Library.fs</code>를 삭제합니다:</p>
+<pre><code class="language-bash">rm Library.fs
+</code></pre>
+<p><code>MlirBindings.fs</code>를 처음부터 새로 만들겠습니다.</p>
+<h2 id="모듈-구성"><a class="header" href="#모듈-구성">모듈 구성</a></h2>
+<p>바인딩 모듈은 다음과 같은 논리적 섹션으로 구성됩니다:</p>
+<ol>
+<li><strong>핸들 타입:</strong> MLIR 불투명 타입을 나타내는 F# struct</li>
+<li><strong>문자열 마샬링:</strong> <code>MlirStringRef</code>와 헬퍼 함수</li>
+<li><strong>콜백 델리게이트:</strong> MLIR 콜백을 위한 함수 포인터 타입</li>
+<li><strong>Context 관리:</strong> Context 생성, 소멸, dialect 로딩</li>
+<li><strong>Module 관리:</strong> Module 생성, 연산, 출력</li>
+<li><strong>Location:</strong> 소스 위치 유틸리티</li>
+<li><strong>타입 시스템:</strong> 정수 타입, 함수 타입, LLVM 타입</li>
+<li><strong>Operation 빌딩:</strong> Operation state 생성 및 조립</li>
+<li><strong>Region과 Block:</strong> Region 및 Block 생성과 관리</li>
+<li><strong>Value와 Attribute:</strong> SSA value 및 attribute 처리</li>
+</ol>
+<p>단계별로 구축해 보겠습니다.</p>
+<h2 id="핸들-타입"><a class="header" href="#핸들-타입">핸들 타입</a></h2>
+<p><code>MlirBindings</code> 디렉토리에 새 파일 <code>MlirBindings.fs</code>를 생성합니다:</p>
+<pre><code class="language-bash">touch MlirBindings.fs
+</code></pre>
+<p>프로젝트 파일 <code>MlirBindings.fsproj</code>를 편집하여 파일을 추가합니다. 내용을 다음으로 교체합니다:</p>
+<pre><code class="language-xml">&lt;Project Sdk="Microsoft.NET.Sdk"&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;
+  &lt;/PropertyGroup&gt;
+
+  &lt;ItemGroup&gt;
+    &lt;Compile Include="MlirBindings.fs" /&gt;
+  &lt;/ItemGroup&gt;
+
+&lt;/Project&gt;
+</code></pre>
+<p>이제 <code>MlirBindings.fs</code>를 열고 namespace와 import부터 시작합니다:</p>
+<pre><code class="language-fsharp">namespace MlirBindings
+
+open System
+open System.Runtime.InteropServices
+</code></pre>
+<p>필요한 모든 핸들 타입을 정의합니다. 이것들은 MLIR 내부 구조체에 대한 불투명 포인터입니다:</p>
+<pre><code class="language-fsharp">/// MLIR context - manages dialects, types, and global state
+[&lt;Struct&gt;]
+type MlirContext =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR module - top-level container for functions and global data
+[&lt;Struct&gt;]
+type MlirModule =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR operation - fundamental IR unit (instructions, functions, etc.)
+[&lt;Struct&gt;]
+type MlirOperation =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR type - represents value types (i32, f64, pointers, etc.)
+[&lt;Struct&gt;]
+type MlirType =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR location - source code location for diagnostics
+[&lt;Struct&gt;]
+type MlirLocation =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR region - contains a list of blocks
+[&lt;Struct&gt;]
+type MlirRegion =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR block - basic block containing a sequence of operations
+[&lt;Struct&gt;]
+type MlirBlock =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR value - SSA value produced by an operation
+[&lt;Struct&gt;]
+type MlirValue =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR attribute - compile-time constant metadata
+[&lt;Struct&gt;]
+type MlirAttribute =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR named attribute - key-value pair (name: attribute)
+[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
+type MlirNamedAttribute =
+    val Name: MlirStringRef
+    val Attribute: MlirAttribute
+
+/// MLIR dialect handle - opaque handle to a registered dialect
+[&lt;Struct&gt;]
+type MlirDialectHandle =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR identifier - interned string for operation names, attribute keys, etc.
+[&lt;Struct&gt;]
+type MlirIdentifier =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+</code></pre>
+<p>각 핸들 타입에는 목적을 설명하는 문서 주석이 포함되어 있습니다. <code>[&lt;Struct&gt;]</code> 어트리뷰트는 이들이 스택에 할당되는 값 타입임을 보장합니다.</p>
+<h2 id="문자열-마샬링"><a class="header" href="#문자열-마샬링">문자열 마샬링</a></h2>
+<p>MLIR은 소유권 의미 없이 문자열을 전달하기 위해 <code>MlirStringRef</code>를 사용합니다. 헬퍼 유틸리티와 함께 정의합니다:</p>
+<pre><code class="language-fsharp">/// MLIR string reference - non-owning pointer to string data
+[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
+type MlirStringRef =
+    val Data: nativeint  // const char*
+    val Length: nativeint  // size_t
+
+    new(data, length) = { Data = data; Length = length }
+
+    /// Convert F# string to MlirStringRef (allocates unmanaged memory)
+    static member FromString(s: string) =
+        if String.IsNullOrEmpty(s) then
+            MlirStringRef(nativeint 0, nativeint 0)
+        else
+            let bytes = System.Text.Encoding.UTF8.GetBytes(s)
+            let ptr = Marshal.AllocHGlobal(bytes.Length)
+            Marshal.Copy(bytes, 0, ptr, bytes.Length)
+            MlirStringRef(ptr, nativeint bytes.Length)
+
+    /// Convert MlirStringRef to F# string
+    member this.ToString() =
+        if this.Data = nativeint 0 || this.Length = nativeint 0 then
+            String.Empty
+        else
+            let length = int this.Length
+            let bytes = Array.zeroCreate&lt;byte&gt; length
+            Marshal.Copy(this.Data, bytes, 0, length)
+            System.Text.Encoding.UTF8.GetString(bytes)
+
+    /// Free unmanaged memory (call after passing to MLIR)
+    member this.Free() =
+        if this.Data &lt;&gt; nativeint 0 then
+            Marshal.FreeHGlobal(this.Data)
+
+    /// Create from string, use it, and automatically free
+    static member WithString(s: string, f: MlirStringRef -&gt; 'a) =
+        let strRef = MlirStringRef.FromString(s)
+        try
+            f strRef
+        finally
+            strRef.Free()
+</code></pre>
+<p><code>WithString</code> 헬퍼는 특히 유용합니다 – 할당과 정리를 자동으로 처리합니다:</p>
+<pre><code class="language-fsharp">// 이렇게 하는 대신:
+let strRef = MlirStringRef.FromString("func.func")
+let op = createOp strRef
+strRef.Free()
+
+// 다음과 같이 작성할 수 있습니다:
+MlirStringRef.WithString "func.func" (fun strRef -&gt;
+    createOp strRef
+)
+</code></pre>
+<h2 id="콜백-델리게이트"><a class="header" href="#콜백-델리게이트">콜백 델리게이트</a></h2>
+<p>MLIR은 출력과 문자열 처리를 위해 콜백을 사용합니다. 델리게이트 타입을 정의합니다:</p>
+<pre><code class="language-fsharp">/// Callback for MLIR IR printing (invoked with chunks of output)
+[&lt;UnmanagedFunctionPointer(CallingConvention.Cdecl)&gt;]
+type MlirStringCallback = delegate of MlirStringRef * nativeint -&gt; unit
+
+/// Callback for diagnostic handlers
+[&lt;UnmanagedFunctionPointer(CallingConvention.Cdecl)&gt;]
+type MlirDiagnosticCallback = delegate of MlirDiagnostic * nativeint -&gt; MlirLogicalResult
+
+/// MLIR diagnostic handle
+[&lt;Struct&gt;]
+type MlirDiagnostic =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR logical result (success/failure)
+[&lt;Struct&gt;]
+type MlirLogicalResult =
+    val Value: int8
+    new(value) = { Value = value }
+    member this.IsSuccess = this.Value &lt;&gt; 0y
+    member this.IsFailure = this.Value = 0y
+</code></pre>
+<h2 id="operation-state"><a class="header" href="#operation-state">Operation State</a></h2>
+<p><code>MlirOperationState</code> struct는 operation을 빌드하는 데 사용됩니다. 배열에 대한 포인터를 포함하기 때문에 복잡합니다:</p>
+<pre><code class="language-fsharp">/// MLIR operation state - used to construct operations
+[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
+type MlirOperationState =
+    val mutable Name: MlirStringRef
+    val mutable Location: MlirLocation
+    val mutable NumResults: nativeint
+    val mutable Results: nativeint  // Pointer to MlirType array
+    val mutable NumOperands: nativeint
+    val mutable Operands: nativeint  // Pointer to MlirValue array
+    val mutable NumRegions: nativeint
+    val mutable Regions: nativeint  // Pointer to MlirRegion array
+    val mutable NumSuccessors: nativeint
+    val mutable Successors: nativeint  // Pointer to MlirBlock array
+    val mutable NumAttributes: nativeint
+    val mutable Attributes: nativeint  // Pointer to MlirNamedAttribute array
+    val mutable EnableResultTypeInference: bool
+</code></pre>
+<p>참고: <code>mlirOperationCreate</code>에 전달하기 전에 수정해야 하므로 모든 필드가 mutable입니다.</p>
+<h2 id="pinvoke-선언"><a class="header" href="#pinvoke-선언">P/Invoke 선언</a></h2>
+<p>이제 핵심 부분입니다: MLIR C API에 대한 P/Invoke 선언입니다. 모듈로 구성합니다:</p>
+<pre><code class="language-fsharp">module MlirNative =
+
+    //==========================================================================
+    // Context 관리
+    //==========================================================================
+
+    /// Create an MLIR context
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirContext mlirContextCreate()
+
+    /// Destroy an MLIR context (frees all owned IR)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirContextDestroy(MlirContext ctx)
+
+    /// Check if two contexts are equal
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2)
+
+    /// Get dialect handle for the 'func' dialect
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__func__()
+
+    /// Get dialect handle for the 'arith' dialect
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__arith__()
+
+    /// Get dialect handle for the 'scf' (structured control flow) dialect
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__scf__()
+
+    /// Get dialect handle for the 'cf' (control flow) dialect
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__cf__()
+
+    /// Get dialect handle for the 'llvm' dialect
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__llvm__()
+
+    /// Register a dialect with a context
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirDialectHandleRegisterDialect(MlirDialectHandle handle, MlirContext ctx)
+
+    //==========================================================================
+    // Module 관리
+    //==========================================================================
+
+    /// Create an empty MLIR module
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirModule mlirModuleCreateEmpty(MlirLocation loc)
+
+    /// Create an MLIR module from parsing a string
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirModule mlirModuleCreateParse(MlirContext ctx, MlirStringRef mlir)
+
+    /// Get the top-level operation of a module
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirModuleGetOperation(MlirModule m)
+
+    /// Get the body (region) of a module
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirModuleGetBody(MlirModule m)
+
+    /// Destroy a module (frees all owned IR)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirModuleDestroy(MlirModule m)
+
+    //==========================================================================
+    // Location
+    //==========================================================================
+
+    /// Create an unknown location (for generated code)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirLocation mlirLocationUnknownGet(MlirContext ctx)
+
+    /// Create a file-line-column location
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirLocation mlirLocationFileLineColGet(MlirContext ctx, MlirStringRef filename, uint32 line, uint32 col)
+
+    /// Create a fused location (combination of multiple locations)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirLocation mlirLocationFusedGet(MlirContext ctx, nativeint numLocs, MlirLocation&amp; locs, MlirAttribute metadata)
+
+    //==========================================================================
+    // 타입 시스템
+    //==========================================================================
+
+    /// Create an integer type with specified bit width
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirIntegerTypeGet(MlirContext ctx, uint32 bitwidth)
+
+    /// Create a signed integer type
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirIntegerTypeSignedGet(MlirContext ctx, uint32 bitwidth)
+
+    /// Create an unsigned integer type
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirIntegerTypeUnsignedGet(MlirContext ctx, uint32 bitwidth)
+
+    /// Create a floating-point type (f32, f64, etc.)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirF32TypeGet(MlirContext ctx)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirF64TypeGet(MlirContext ctx)
+
+    /// Create the index type (platform-dependent integer for indexing)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirIndexTypeGet(MlirContext ctx)
+
+    /// Create a function type
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirFunctionTypeGet(MlirContext ctx, nativeint numInputs, MlirType&amp; inputs, nativeint numResults, MlirType&amp; results)
+
+    /// Get the number of inputs for a function type
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern nativeint mlirFunctionTypeGetNumInputs(MlirType funcType)
+
+    /// Get the number of results for a function type
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern nativeint mlirFunctionTypeGetNumResults(MlirType funcType)
+
+    /// Create an LLVM pointer type
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirLLVMPointerTypeGet(MlirContext ctx, uint32 addressSpace)
+
+    /// Create an LLVM void type
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirLLVMVoidTypeGet(MlirContext ctx)
+
+    /// Create an LLVM struct type
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirLLVMStructTypeLiteralGet(MlirContext ctx, nativeint numFieldTypes, MlirType&amp; fieldTypes, bool isPacked)
+
+    //==========================================================================
+    // Attribute 시스템
+    //==========================================================================
+
+    /// Create an integer attribute
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirIntegerAttrGet(MlirType typ, int64 value)
+
+    /// Create a float attribute
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx, MlirType typ, float64 value)
+
+    /// Create a string attribute
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirStringAttrGet(MlirContext ctx, MlirStringRef str)
+
+    /// Create a type attribute
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirTypeAttrGet(MlirType typ)
+
+    /// Create a symbol reference attribute
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol)
+
+    /// Create an array attribute
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirArrayAttrGet(MlirContext ctx, nativeint numElements, MlirAttribute&amp; elements)
+
+    /// Get an identifier from a string
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirIdentifier mlirIdentifierGet(MlirContext ctx, MlirStringRef str)
+
+    /// Create a named attribute
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name, MlirAttribute attr)
+
+    //==========================================================================
+    // Operation 빌딩
+    //==========================================================================
+
+    /// Create an operation state
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperationState mlirOperationStateGet(MlirStringRef name, MlirLocation loc)
+
+    /// Create an operation from an operation state
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirOperationCreate(MlirOperationState&amp; state)
+
+    /// Destroy an operation (if not owned by a block)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationDestroy(MlirOperation op)
+
+    /// Get the name of an operation
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirIdentifier mlirOperationGetName(MlirOperation op)
+
+    /// Get the number of regions in an operation
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern nativeint mlirOperationGetNumRegions(MlirOperation op)
+
+    /// Get a region from an operation by index
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirOperationGetRegion(MlirOperation op, nativeint pos)
+
+    /// Get the number of results an operation produces
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern nativeint mlirOperationGetNumResults(MlirOperation op)
+
+    /// Get a result value from an operation by index
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirValue mlirOperationGetResult(MlirOperation op, nativeint pos)
+
+    /// Get the number of operands an operation takes
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern nativeint mlirOperationGetNumOperands(MlirOperation op)
+
+    /// Get an operand value from an operation by index
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirValue mlirOperationGetOperand(MlirOperation op, nativeint pos)
+
+    /// Set an operand of an operation
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationSetOperand(MlirOperation op, nativeint pos, MlirValue value)
+
+    /// Print an operation to a callback
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationPrint(MlirOperation op, MlirStringCallback callback, nativeint userData)
+
+    /// Verify an operation (check IR well-formedness)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern bool mlirOperationVerify(MlirOperation op)
+
+    //==========================================================================
+    // Region 관리
+    //==========================================================================
+
+    /// Create a new region
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirRegionCreate()
+
+    /// Destroy a region (if not owned by an operation)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirRegionDestroy(MlirRegion region)
+
+    /// Append a block to a region (region takes ownership)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block)
+
+    /// Insert a block into a region at position (region takes ownership)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirRegionInsertOwnedBlock(MlirRegion region, nativeint pos, MlirBlock block)
+
+    /// Get the first block in a region
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirBlock mlirRegionGetFirstBlock(MlirRegion region)
+
+    //==========================================================================
+    // Block 관리
+    //==========================================================================
+
+    /// Create a new block with arguments
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirBlock mlirBlockCreate(nativeint numArgs, MlirType&amp; argTypes, MlirLocation&amp; argLocs)
+
+    /// Destroy a block (if not owned by a region)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirBlockDestroy(MlirBlock block)
+
+    /// Get the number of arguments a block has
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern nativeint mlirBlockGetNumArguments(MlirBlock block)
+
+    /// Get a block argument by index
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirValue mlirBlockGetArgument(MlirBlock block, nativeint pos)
+
+    /// Append an operation to a block (block takes ownership)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation op)
+
+    /// Insert an operation into a block at position (block takes ownership)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirBlockInsertOwnedOperation(MlirBlock block, nativeint pos, MlirOperation op)
+
+    /// Get the first operation in a block
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirBlockGetFirstOperation(MlirBlock block)
+
+    //==========================================================================
+    // Value
+    //==========================================================================
+
+    /// Get the type of a value
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirValueGetType(MlirValue value)
+
+    /// Print a value
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirValuePrint(MlirValue value, MlirStringCallback callback, nativeint userData)
+</code></pre>
+<p>이것은 컴파일러 구축에 필요한 모든 MLIR C API 함수를 다루는 포괄적인 바인딩 레이어입니다. 각 함수에는 목적을 설명하는 문서가 포함되어 있습니다.</p>
+<h2 id="크로스-플랫폼-라이브러리-로딩"><a class="header" href="#크로스-플랫폼-라이브러리-로딩">크로스 플랫폼 라이브러리 로딩</a></h2>
+<p>중요한 세부 사항이 하나 있습니다: 라이브러리 이름 <code>"MLIR-C"</code>는 .NET이 자동으로 올바른 확장자를 추가하기 때문에 플랫폼 간에 동작합니다:</p>
+<ul>
+<li><strong>Linux:</strong> <code>libMLIR-C.so</code></li>
+<li><strong>macOS:</strong> <code>libMLIR-C.dylib</code></li>
+<li><strong>Windows:</strong> <code>MLIR-C.dll</code></li>
+</ul>
+<p>그러나 .NET은 런타임에 라이브러리를 어디서 찾을 수 있는지 알아야 합니다. 이 내용은 Chapter 00에서 다루었습니다 (<code>LD_LIBRARY_PATH</code> 또는 <code>DYLD_LIBRARY_PATH</code> 설정). 프로덕션 애플리케이션의 경우 여러 가지 옵션이 있습니다:</p>
+<h3 id="옵션-1-환경-변수-개발-시"><a class="header" href="#옵션-1-환경-변수-개발-시">옵션 1: 환경 변수 (개발 시)</a></h3>
+<p>실행 전에 라이브러리 경로를 설정합니다:</p>
+<pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
+</code></pre>
+<h3 id="옵션-2-nativelibrarysetdllimportresolver-런타임"><a class="header" href="#옵션-2-nativelibrarysetdllimportresolver-런타임">옵션 2: NativeLibrary.SetDllImportResolver (런타임)</a></h3>
+<p>.NET의 <code>NativeLibrary</code> API를 사용하여 커스텀 검색 경로를 지정합니다:</p>
+<pre><code class="language-fsharp">open System.Runtime.InteropServices
+
+module LibraryLoader =
+    let initialize() =
+        NativeLibrary.SetDllImportResolver(
+            typeof&lt;MlirContext&gt;.Assembly,
+            fun libraryName assemblyPath searchPath -&gt;
+                if libraryName = "MLIR-C" then
+                    let customPath = Environment.GetEnvironmentVariable("MLIR_INSTALL_PATH")
+                    if not (String.IsNullOrEmpty(customPath)) then
+                        let libPath =
+                            if RuntimeInformation.IsOSPlatform(OSPlatform.Linux) then
+                                System.IO.Path.Combine(customPath, "lib", "libMLIR-C.so")
+                            elif RuntimeInformation.IsOSPlatform(OSPlatform.OSX) then
+                                System.IO.Path.Combine(customPath, "lib", "libMLIR-C.dylib")
+                            else
+                                System.IO.Path.Combine(customPath, "bin", "MLIR-C.dll")
+                        NativeLibrary.Load(libPath)
+                    else
+                        nativeint 0
+                else
+                    nativeint 0
+        )
+</code></pre>
+<p>MLIR 함수를 호출하기 전에 <code>LibraryLoader.initialize()</code>를 호출합니다.</p>
+<h3 id="옵션-3-rpath-linuxmacos-바이너리"><a class="header" href="#옵션-3-rpath-linuxmacos-바이너리">옵션 3: rpath (Linux/macOS 바이너리)</a></h3>
+<p>컴파일된 바이너리의 경우, rpath를 사용하여 실행 파일에 라이브러리 검색 경로를 내장합니다. 이 방법은 이 튜토리얼의 범위를 벗어나지만, 배포 애플리케이션의 표준 솔루션입니다.</p>
+<h2 id="헬퍼-유틸리티"><a class="header" href="#헬퍼-유틸리티">헬퍼 유틸리티</a></h2>
+<p>자주 사용되는 패턴을 위한 고수준 헬퍼 함수를 추가합니다:</p>
+<pre><code class="language-fsharp">module MlirHelpers =
+    /// Print an operation to a string
+    let operationToString (op: MlirOperation) : string =
+        let mutable output = ""
+        let callback = MlirStringCallback(fun strRef _ -&gt;
+            output &lt;- output + strRef.ToString()
+        )
+        MlirNative.mlirOperationPrint(op, callback, nativeint 0)
+        output
+
+    /// Print a module to a string
+    let moduleToString (m: MlirModule) : string =
+        let op = MlirNative.mlirModuleGetOperation(m)
+        operationToString op
+
+    /// Print a value to a string
+    let valueToString (v: MlirValue) : string =
+        let mutable output = ""
+        let callback = MlirStringCallback(fun strRef _ -&gt;
+            output &lt;- output + strRef.ToString()
+        )
+        MlirNative.mlirValuePrint(v, callback, nativeint 0)
+        output
+
+    /// Create a context with common dialects registered
+    let createContextWithDialects() : MlirContext =
+        let ctx = MlirNative.mlirContextCreate()
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__func__(), ctx)
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__arith__(), ctx)
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__scf__(), ctx)
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__cf__(), ctx)
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__llvm__(), ctx)
+        ctx
+
+    /// Create a block with no arguments
+    let createEmptyBlock(ctx: MlirContext) : MlirBlock =
+        let loc = MlirNative.mlirLocationUnknownGet(ctx)
+        let mutable dummyType = MlirType()
+        let mutable dummyLoc = loc
+        MlirNative.mlirBlockCreate(nativeint 0, &amp;dummyType, &amp;dummyLoc)
+</code></pre>
+<p>이 유틸리티들은 일반적인 작업을 래핑하여 사용자 코드에서 보일러플레이트를 줄여 줍니다.</p>
+<h2 id="전체-mlirbindingsfs-목록"><a class="header" href="#전체-mlirbindingsfs-목록">전체 MlirBindings.fs 목록</a></h2>
+<p>다음은 모든 섹션이 통합된 완전한 <code>MlirBindings.fs</code> 파일입니다:</p>
+<pre><code class="language-fsharp">namespace MlirBindings
+
+open System
+open System.Runtime.InteropServices
+
+//=============================================================================
+// Handle Types
+//=============================================================================
+
+/// MLIR context - manages dialects, types, and global state
+[&lt;Struct&gt;]
+type MlirContext =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR module - top-level container for functions and global data
+[&lt;Struct&gt;]
+type MlirModule =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR operation - fundamental IR unit (instructions, functions, etc.)
+[&lt;Struct&gt;]
+type MlirOperation =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR type - represents value types (i32, f64, pointers, etc.)
+[&lt;Struct&gt;]
+type MlirType =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR location - source code location for diagnostics
+[&lt;Struct&gt;]
+type MlirLocation =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR region - contains a list of blocks
+[&lt;Struct&gt;]
+type MlirRegion =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR block - basic block containing a sequence of operations
+[&lt;Struct&gt;]
+type MlirBlock =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR value - SSA value produced by an operation
+[&lt;Struct&gt;]
+type MlirValue =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR attribute - compile-time constant metadata
+[&lt;Struct&gt;]
+type MlirAttribute =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR dialect handle - opaque handle to a registered dialect
+[&lt;Struct&gt;]
+type MlirDialectHandle =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR identifier - interned string for operation names, attribute keys, etc.
+[&lt;Struct&gt;]
+type MlirIdentifier =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR diagnostic handle
+[&lt;Struct&gt;]
+type MlirDiagnostic =
+    val Handle: nativeint
+    new(handle) = { Handle = handle }
+
+/// MLIR logical result (success/failure)
+[&lt;Struct&gt;]
+type MlirLogicalResult =
+    val Value: int8
+    new(value) = { Value = value }
+    member this.IsSuccess = this.Value &lt;&gt; 0y
+    member this.IsFailure = this.Value = 0y
+
+//=============================================================================
+// String Marshalling
+//=============================================================================
+
+/// MLIR string reference - non-owning pointer to string data
+[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
+type MlirStringRef =
+    val Data: nativeint
+    val Length: nativeint
+
+    new(data, length) = { Data = data; Length = length }
+
+    static member FromString(s: string) =
+        if String.IsNullOrEmpty(s) then
+            MlirStringRef(nativeint 0, nativeint 0)
+        else
+            let bytes = System.Text.Encoding.UTF8.GetBytes(s)
+            let ptr = Marshal.AllocHGlobal(bytes.Length)
+            Marshal.Copy(bytes, 0, ptr, bytes.Length)
+            MlirStringRef(ptr, nativeint bytes.Length)
+
+    member this.ToString() =
+        if this.Data = nativeint 0 || this.Length = nativeint 0 then
+            String.Empty
+        else
+            let length = int this.Length
+            let bytes = Array.zeroCreate&lt;byte&gt; length
+            Marshal.Copy(this.Data, bytes, 0, length)
+            System.Text.Encoding.UTF8.GetString(bytes)
+
+    member this.Free() =
+        if this.Data &lt;&gt; nativeint 0 then
+            Marshal.FreeHGlobal(this.Data)
+
+    static member WithString(s: string, f: MlirStringRef -&gt; 'a) =
+        let strRef = MlirStringRef.FromString(s)
+        try
+            f strRef
+        finally
+            strRef.Free()
+
+/// MLIR named attribute - key-value pair
+[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
+type MlirNamedAttribute =
+    val Name: MlirStringRef
+    val Attribute: MlirAttribute
+
+//=============================================================================
+// Callback Delegates
+//=============================================================================
+
+/// Callback for MLIR IR printing
+[&lt;UnmanagedFunctionPointer(CallingConvention.Cdecl)&gt;]
+type MlirStringCallback = delegate of MlirStringRef * nativeint -&gt; unit
+
+/// Callback for diagnostic handlers
+[&lt;UnmanagedFunctionPointer(CallingConvention.Cdecl)&gt;]
+type MlirDiagnosticCallback = delegate of MlirDiagnostic * nativeint -&gt; MlirLogicalResult
+
+//=============================================================================
+// Operation State
+//=============================================================================
+
+/// MLIR operation state - used to construct operations
+[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
+type MlirOperationState =
+    val mutable Name: MlirStringRef
+    val mutable Location: MlirLocation
+    val mutable NumResults: nativeint
+    val mutable Results: nativeint
+    val mutable NumOperands: nativeint
+    val mutable Operands: nativeint
+    val mutable NumRegions: nativeint
+    val mutable Regions: nativeint
+    val mutable NumSuccessors: nativeint
+    val mutable Successors: nativeint
+    val mutable NumAttributes: nativeint
+    val mutable Attributes: nativeint
+    val mutable EnableResultTypeInference: bool
+
+//=============================================================================
+// P/Invoke Declarations
+//=============================================================================
+
+module MlirNative =
+
+    // Context Management
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirContext mlirContextCreate()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirContextDestroy(MlirContext ctx)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__func__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__arith__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__scf__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__cf__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirDialectHandle mlirGetDialectHandle__llvm__()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirDialectHandleRegisterDialect(MlirDialectHandle handle, MlirContext ctx)
+
+    // Module Management
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirModule mlirModuleCreateEmpty(MlirLocation loc)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirModule mlirModuleCreateParse(MlirContext ctx, MlirStringRef mlir)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirModuleGetOperation(MlirModule m)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirModuleGetBody(MlirModule m)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirModuleDestroy(MlirModule m)
+
+    // Location
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirLocation mlirLocationUnknownGet(MlirContext ctx)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirLocation mlirLocationFileLineColGet(MlirContext ctx, MlirStringRef filename, uint32 line, uint32 col)
+
+    // Type System
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirIntegerTypeGet(MlirContext ctx, uint32 bitwidth)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirF32TypeGet(MlirContext ctx)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirF64TypeGet(MlirContext ctx)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirIndexTypeGet(MlirContext ctx)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirFunctionTypeGet(MlirContext ctx, nativeint numInputs, MlirType&amp; inputs, nativeint numResults, MlirType&amp; results)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirLLVMPointerTypeGet(MlirContext ctx, uint32 addressSpace)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirLLVMVoidTypeGet(MlirContext ctx)
+
+    // Attributes
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirIntegerAttrGet(MlirType typ, int64 value)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirStringAttrGet(MlirContext ctx, MlirStringRef str)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirAttribute mlirTypeAttrGet(MlirType typ)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirIdentifier mlirIdentifierGet(MlirContext ctx, MlirStringRef str)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name, MlirAttribute attr)
+
+    // Operation Building
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperationState mlirOperationStateGet(MlirStringRef name, MlirLocation loc)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirOperationCreate(MlirOperationState&amp; state)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationDestroy(MlirOperation op)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirOperationGetRegion(MlirOperation op, nativeint pos)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern nativeint mlirOperationGetNumResults(MlirOperation op)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirValue mlirOperationGetResult(MlirOperation op, nativeint pos)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationSetOperand(MlirOperation op, nativeint pos, MlirValue value)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationPrint(MlirOperation op, MlirStringCallback callback, nativeint userData)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern bool mlirOperationVerify(MlirOperation op)
+
+    // Region Management
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirRegionCreate()
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirBlock mlirRegionGetFirstBlock(MlirRegion region)
+
+    // Block Management
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirBlock mlirBlockCreate(nativeint numArgs, MlirType&amp; argTypes, MlirLocation&amp; argLocs)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern nativeint mlirBlockGetNumArguments(MlirBlock block)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirValue mlirBlockGetArgument(MlirBlock block, nativeint pos)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation op)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirBlockInsertOwnedOperation(MlirBlock block, nativeint pos, MlirOperation op)
+
+    // Value
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirValueGetType(MlirValue value)
+
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirValuePrint(MlirValue value, MlirStringCallback callback, nativeint userData)
+
+//=============================================================================
+// Helper Utilities
+//=============================================================================
+
+module MlirHelpers =
+    let operationToString (op: MlirOperation) : string =
+        let mutable output = ""
+        let callback = MlirStringCallback(fun strRef _ -&gt;
+            output &lt;- output + strRef.ToString()
+        )
+        MlirNative.mlirOperationPrint(op, callback, nativeint 0)
+        output
+
+    let moduleToString (m: MlirModule) : string =
+        let op = MlirNative.mlirModuleGetOperation(m)
+        operationToString op
+
+    let valueToString (v: MlirValue) : string =
+        let mutable output = ""
+        let callback = MlirStringCallback(fun strRef _ -&gt;
+            output &lt;- output + strRef.ToString()
+        )
+        MlirNative.mlirValuePrint(v, callback, nativeint 0)
+        output
+
+    let createContextWithDialects() : MlirContext =
+        let ctx = MlirNative.mlirContextCreate()
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__func__(), ctx)
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__arith__(), ctx)
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__scf__(), ctx)
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__cf__(), ctx)
+        MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__llvm__(), ctx)
+        ctx
+</code></pre>
+<p>이것이 완전하고 프로덕션에 사용할 수 있는 MLIR 바인딩 레이어입니다.</p>
+<h2 id="라이브러리-빌드"><a class="header" href="#라이브러리-빌드">라이브러리 빌드</a></h2>
+<p>라이브러리 프로젝트를 빌드합니다:</p>
+<pre><code class="language-bash">cd $HOME/mlir-fsharp-tutorial/MlirBindings
+dotnet build
+</code></pre>
+<p>예상 출력:</p>
+<pre><code>Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+</code></pre>
+<p>컴파일된 라이브러리는 <code>bin/Debug/net8.0/MlirBindings.dll</code>에 위치합니다.</p>
+<h2 id="바인딩-사용하기"><a class="header" href="#바인딩-사용하기">바인딩 사용하기</a></h2>
+<p>새 바인딩을 사용하여 Chapter 02의 hello-world 예제를 다시 작성해 보겠습니다. 새 콘솔 프로젝트를 생성합니다:</p>
+<pre><code class="language-bash">cd $HOME/mlir-fsharp-tutorial
+dotnet new console -lang F# -o HelloMlirWithBindings
+cd HelloMlirWithBindings
+dotnet add reference ../MlirBindings/MlirBindings.fsproj
+</code></pre>
+<p><code>Program.fs</code>의 내용을 다음으로 교체합니다:</p>
+<pre><code class="language-fsharp">open System
+open MlirBindings
+
+[&lt;EntryPoint&gt;]
+let main argv =
+    // Create context with dialects
+    let ctx = MlirHelpers.createContextWithDialects()
+    printfn "Created MLIR context with dialects loaded"
+
+    // Create empty module
+    let loc = MlirNative.mlirLocationUnknownGet(ctx)
+    let mlirModule = MlirNative.mlirModuleCreateEmpty(loc)
+    printfn "Created empty module"
+
+    // Print the module
+    printfn "\nGenerated MLIR IR:"
+    printfn "%s" (MlirHelpers.moduleToString mlirModule)
+
+    // Cleanup
+    MlirNative.mlirModuleDestroy(mlirModule)
+    MlirNative.mlirContextDestroy(ctx)
+    printfn "\nCleaned up"
+
+    0
+</code></pre>
+<p>실행합니다:</p>
+<pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
+</code></pre>
+<p>예상 출력:</p>
+<pre><code>Created MLIR context with dialects loaded
+Created empty module
+
+Generated MLIR IR:
+module {
+}
+
+Cleaned up
+</code></pre>
+<p>Chapter 02보다 훨씬 깔끔합니다! 바인딩 모듈이 모든 마샬링과 보일러플레이트를 처리합니다.</p>
+<h2 id="이-장에서-배운-내용"><a class="header" href="#이-장에서-배운-내용">이 장에서 배운 내용</a></h2>
+<p>이 장에서는 다음을 수행했습니다:</p>
+<ol>
+<li><strong>MLIR 바인딩을 구성하여</strong> 논리적 섹션으로 나뉜 재사용 가능한 F# 라이브러리 모듈을 만들었습니다.</li>
+<li><strong>포괄적인 핸들 타입을 정의하여</strong> 모든 MLIR 엔티티(context, module, operation, type, region, block, value, attribute)를 다루었습니다.</li>
+<li><strong>안전한 문자열 마샬링을 구현하여</strong> <code>MlirStringRef</code>와 헬퍼 유틸리티를 만들었습니다.</li>
+<li><strong>P/Invoke 바인딩을 선언하여</strong> 컴파일에 필요한 MLIR C API의 전체 표면적을 다루었습니다.</li>
+<li><strong>헬퍼 유틸리티를 생성하여</strong> 보일러플레이트를 줄였습니다 (출력, context 생성).</li>
+<li><strong>크로스 플랫폼 고려 사항을</strong> 이해하여 라이브러리 로딩을 다루었습니다.</li>
+<li><strong>바인딩 라이브러리를 빌드하고 사용하여</strong> 별도의 프로젝트에서 활용했습니다.</li>
+</ol>
+<p>이제 MLIR에 대한 완전하고 프로덕션에 사용할 수 있는 바인딩 레이어를 갖추었습니다. 이 <code>MlirBindings</code> 모듈은 FunLang 컴파일러를 구축하는 이후 모든 장의 기반이 됩니다.</p>
+<h2 id="다음-장-1"><a class="header" href="#다음-장-1">다음 장</a></h2>
+<p>다음 장에서는 FunLang 컴파일러 백엔드 구축을 시작합니다. 타입이 지정된 FunLang AST를 F#에서 표현하기 위한 데이터 구조를 정의하고, 여기서 만든 바인딩을 사용하여 FunLang 표현식을 MLIR operation으로 변환하는 코드 생성 로직을 작성하기 시작합니다.</p>
+<p><strong>Chapter 04: FunLang AST에서 MLIR로</strong> (작성 예정)로 이어집니다.</p>
+<h2 id="참고-자료-1"><a class="header" href="#참고-자료-1">참고 자료</a></h2>
+<ul>
+<li><a href="https://mlir.llvm.org/docs/CAPI/">MLIR C API Documentation</a> – 공식 C API 가이드</li>
+<li><a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/best-practices">P/Invoke Best Practices</a> – 안전하고 고성능의 interop을 위한 Microsoft의 가이드라인</li>
+<li><a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/tutorial-custom-marshaller">Memory Management in P/Invoke</a> – 관리/비관리 메모리 경계 이해</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>

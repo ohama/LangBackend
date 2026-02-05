@@ -1,0 +1,633 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 01: MLIR 입문 - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-7d9443ad.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-0fc86e66.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./01-mlir-primer.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-01-mlir-입문"><a class="header" href="#chapter-01-mlir-입문">Chapter 01: MLIR 입문</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p>이전 챕터에서 LLVM/MLIR을 소스에서 빌드하고 .NET SDK를 설정했습니다. 필요한 도구는 모두 설치되었습니다. 하지만 MLIR을 생성하는 F# 코드를 작성하기 전에, MLIR이 무엇이고 프로그램을 어떻게 표현하는지 이해해야 합니다.</p>
+<p>MLIR은 전통적인 중간 표현(intermediate representation)과 다릅니다. 단순히 “하나의 IR“이 아니라, 서로 상호 운용할 수 있는 여러 IR(dialect이라고 부릅니다)을 구축하기 위한 프레임워크입니다. 이 다단계(multi-level) 철학이 MLIR을 컴파일러 개발에 강력하게 만드는 핵심입니다. 고수준 함수형 언어를 매우 저수준인 LLVM IR로 직접 변환하도록 강제하는 대신, MLIR은 언어의 의미론(semantics)을 필요한 만큼 보존하는 중간 표현을 정의한 다음, 단계적으로 점진적 하강(progressive lowering)할 수 있게 해줍니다.</p>
+<p>FunLang의 컴파일 파이프라인은 다음과 같습니다:</p>
+<pre><code>FunLang Typed AST
+    ↓
+High-Level MLIR (arith, func, scf dialects)
+    ↓
+Low-Level MLIR (LLVM dialect)
+    ↓
+LLVM IR
+    ↓
+Native Machine Code
+</code></pre>
+<p>이 챕터에서는 MLIR IR을 이해하기 위한 멘탈 모델을 제공합니다. 다섯 가지 핵심 개념 — <strong>dialect</strong>, <strong>operation</strong>, <strong>region</strong>, <strong>block</strong>, 그리고 <strong>SSA form</strong> — 을 구체적인 예제를 통해 배우게 됩니다. 챕터를 마치면 MLIR 텍스트 IR을 읽고, FunLang 프로그램이 MLIR 구조에 어떻게 매핑되는지 이해할 수 있을 것입니다.</p>
+<h2 id="mlir-ir-구조"><a class="header" href="#mlir-ir-구조">MLIR IR 구조</a></h2>
+<p>완전한 MLIR 프로그램을 보면서 각 부분을 분석해 보겠습니다. 다음은 두 개의 32비트 정수를 더하는 간단한 함수입니다:</p>
+<pre><code class="language-mlir">module {
+  func.func @add(%arg0: i32, %arg1: i32) -&gt; i32 {
+    %result = arith.addi %arg0, %arg1 : i32
+    return %result : i32
+  }
+}
+</code></pre>
+<p>한 줄씩 분석해 보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>module { ... }</code></strong>: 모든 MLIR 프로그램은 module에 포함됩니다. module은 모든 코드를 담는 최상위 컨테이너로, C의 컴파일 단위(compilation unit)나 .NET의 어셈블리와 유사합니다.</p>
+</li>
+<li>
+<p><strong><code>func.func @add(...) -&gt; i32 { ... }</code></strong>: <code>func</code> dialect의 operation으로, <code>@add</code>라는 이름의 함수를 정의합니다. <code>@</code> 접두사는 심볼(함수 이름)을 나타냅니다. 이 함수는 두 개의 인자를 받아 <code>i32</code>(32비트 정수)를 반환합니다.</p>
+</li>
+<li>
+<p><strong><code>%arg0: i32, %arg1: i32</code></strong>: 함수 매개변수입니다. 각 매개변수는 타입 어노테이션(<code>: i32</code>)을 가진 SSA 값(<code>%</code>로 시작)입니다. 이것이 함수의 입력입니다.</p>
+</li>
+<li>
+<p><strong><code>%result = arith.addi %arg0, %arg1 : i32</code></strong>: <code>arith</code> dialect의 산술 덧셈 operation입니다. 두 피연산자(<code>%arg0</code>과 <code>%arg1</code>)를 받아 더한 후, 새로운 SSA 값 <code>%result</code>를 생성합니다. <code>: i32</code> 접미사는 결과 타입을 지정합니다.</p>
+</li>
+<li>
+<p><strong><code>return %result : i32</code></strong>: 함수의 return operation입니다. <code>%result</code> 값을 호출자에게 반환합니다. <code>: i32</code> 타입 어노테이션은 타입 안전성을 보장합니다.</p>
+</li>
+</ul>
+<p>MLIR의 모든 요소에는 목적과 타입이 있습니다. 암시적 변환이나 정의되지 않은 동작(undefined behavior)은 없습니다. 이러한 엄격함이 MLIR이 공격적인 최적화와 검증을 수행할 수 있게 해주는 것입니다.</p>
+<h2 id="dialect"><a class="header" href="#dialect">Dialect</a></h2>
+<p><strong>Dialect</strong>은 관련된 operation, 타입, attribute를 그룹화하는 네임스페이스입니다. Dialect은 MLIR의 확장성 메커니즘입니다 — 모든 가능한 operation을 하나의 거대한 IR에 넣는 대신, MLIR은 도메인에 맞는 커스텀 dialect을 정의할 수 있게 해줍니다.</p>
+<h3 id="사용할-내장-dialect"><a class="header" href="#사용할-내장-dialect">사용할 내장 Dialect</a></h3>
+<p>FunLang 컴파일러에서는 주로 다음 표준 dialect들을 사용합니다:</p>
+<ol>
+<li>
+<p><strong><code>arith</code></strong> — 산술 연산</p>
+<ul>
+<li><code>arith.addi</code>, <code>arith.subi</code>, <code>arith.muli</code>, <code>arith.divsi</code> (부호 있는 정수 산술)</li>
+<li><code>arith.cmpi</code> (정수 비교: <code>&lt;</code>, <code>&gt;</code>, <code>==</code> 등)</li>
+<li><code>arith.constant</code> (정수 및 부동소수점 상수)</li>
+</ul>
+</li>
+<li>
+<p><strong><code>func</code></strong> — 함수 정의 및 호출</p>
+<ul>
+<li><code>func.func</code> (함수 정의)</li>
+<li><code>func.call</code> (함수 호출)</li>
+<li><code>func.return</code> (함수에서 반환)</li>
+</ul>
+</li>
+<li>
+<p><strong><code>scf</code></strong> — 구조적 제어 흐름(Structured Control Flow)</p>
+<ul>
+<li><code>scf.if</code> (조건부 실행)</li>
+<li><code>scf.for</code> (카운트 루프)</li>
+<li><code>scf.while</code> (조건 루프)</li>
+</ul>
+</li>
+<li>
+<p><strong><code>llvm</code></strong> — LLVM dialect (lowering 대상)</p>
+<ul>
+<li><code>llvm.func</code>, <code>llvm.call</code>, <code>llvm.add</code> 등</li>
+<li>이 dialect은 LLVM IR 구성 요소와 1:1로 매핑됩니다</li>
+</ul>
+</li>
+</ol>
+<h3 id="커스텀-dialect"><a class="header" href="#커스텀-dialect">커스텀 Dialect</a></h3>
+<p>이 튜토리얼 시리즈의 후반부(Chapter 10-11)에서는 다음과 같은 operation을 가진 <strong>FunLang dialect</strong>을 정의하게 됩니다:</p>
+<ul>
+<li><code>funlang.closure</code> (클로저 생성)</li>
+<li><code>funlang.apply</code> (클로저에 인자를 적용)</li>
+<li><code>funlang.match</code> (패턴 매칭)</li>
+</ul>
+<p>커스텀 dialect을 사용하면 컴파일 과정에서 고수준 의미론을 보존할 수 있습니다. FunLang 클로저를 즉시 저수준 구조체 할당과 함수 포인터로 변환하는 대신, 고수준 <code>funlang.closure</code> operation으로 표현합니다. 이렇게 하면 최적화를 작성하고 이해하기가 더 쉬워집니다.</p>
+<h3 id="dialect-명명-규칙"><a class="header" href="#dialect-명명-규칙">Dialect 명명 규칙</a></h3>
+<p>Operation은 항상 자신이 속한 dialect 이름을 접두사로 가지며, 점(.)으로 구분됩니다:</p>
+<pre><code class="language-mlir">arith.addi   // "arith" dialect의 "addi" operation
+func.call    // "func" dialect의 "call" operation
+llvm.load    // "llvm" dialect의 "load" operation
+</code></pre>
+<p>이를 통해 이름 충돌을 방지합니다. <code>arith</code> dialect의 <code>addi</code>는 가상의 <code>mydialect.addi</code>와 구별됩니다.</p>
+<h2 id="operation"><a class="header" href="#operation">Operation</a></h2>
+<p><strong>Operation</strong>은 MLIR IR의 기본 단위입니다. MLIR에서는 함수 정의, 산술 명령어, 제어 흐름 등 모든 것이 operation으로 표현됩니다. 심지어 타입과 attribute도 operation에 첨부됩니다.</p>
+<h3 id="operation의-구조"><a class="header" href="#operation의-구조">Operation의 구조</a></h3>
+<p>텍스트 형식에서 operation은 다음과 같은 구조를 가집니다:</p>
+<pre><code class="language-mlir">%results = dialect.opname(%operands) {attributes} : (types) -&gt; result_type
+</code></pre>
+<p>덧셈 예제에서 각 구성 요소를 살펴보겠습니다:</p>
+<pre><code class="language-mlir">%result = arith.addi %arg0, %arg1 : i32
+</code></pre>
+<ul>
+<li>
+<p><strong><code>%result</code></strong>: 이 operation이 생성하는 SSA 값입니다. 이 값은 이후 operation에서 사용할 수 있습니다. <code>%</code> 접두사는 SSA 값을 심볼(<code>@function_name</code>)과 구별합니다.</p>
+</li>
+<li>
+<p><strong><code>arith.addi</code></strong>: operation 이름(dialect + opname)입니다.</p>
+</li>
+<li>
+<p><strong><code>%arg0, %arg1</code></strong>: 피연산자(operation의 입력)입니다. 이전에 정의된 SSA 값(이 경우 함수 인자)입니다.</p>
+</li>
+<li>
+<p><strong><code>: i32</code></strong>: 타입 제약 조건입니다. 이 operation은 32비트 정수에 대해 동작합니다.</p>
+</li>
+</ul>
+<p>모든 operation이 결과를 생성하는 것은 아닙니다. 예를 들어, <code>return</code>은 함수를 종료하는 operation이지만 이후에 사용할 값을 생성하지는 않습니다:</p>
+<pre><code class="language-mlir">return %result : i32
+</code></pre>
+<h3 id="복수-결과를-가진-operation"><a class="header" href="#복수-결과를-가진-operation">복수 결과를 가진 Operation</a></h3>
+<p>일부 operation은 여러 값을 생성합니다. 예를 들어, 몫과 나머지를 모두 반환하는 나눗셈 operation이 있습니다:</p>
+<pre><code class="language-mlir">%quot, %rem = arith.divrem %dividend, %divisor : i32
+</code></pre>
+<p>이제 <code>%quot</code>과 <code>%rem</code> 모두 사용 가능한 SSA 값입니다.</p>
+<h3 id="attribute를-가진-operation"><a class="header" href="#attribute를-가진-operation">Attribute를 가진 Operation</a></h3>
+<p>Attribute는 컴파일 타임 상수 메타데이터를 제공합니다. 예를 들어, 정수 상수는 다음과 같습니다:</p>
+<pre><code class="language-mlir">%zero = arith.constant 0 : i32
+</code></pre>
+<p><code>0</code>은 attribute(상수 값)이고, <code>i32</code>는 타입입니다. Attribute는 런타임 값이 아니라 컴파일 타임에 IR에 내장되는 것입니다.</p>
+<h2 id="region과-block"><a class="header" href="#region과-block">Region과 Block</a></h2>
+<p>MLIR operation은 <strong>region</strong>을 포함할 수 있고, region은 <strong>block</strong>을 포함합니다. 이것이 MLIR이 중첩된 스코프와 제어 흐름을 표현하는 방식입니다.</p>
+<h3 id="region"><a class="header" href="#region">Region</a></h3>
+<p><strong>Region</strong>은 block의 목록입니다. 함수 본문은 region입니다. <code>scf.if</code>와 같은 제어 흐름 operation에는 “then“과 “else” 분기를 위한 region이 있습니다.</p>
+<p>다음은 하나의 region에 하나의 block을 포함하는 함수입니다:</p>
+<pre><code class="language-mlir">func.func @example() -&gt; i32 {
+  %one = arith.constant 1 : i32
+  return %one : i32
+}
+</code></pre>
+<p>중괄호 <code>{ ... }</code>가 함수의 region을 구분합니다. region 내부에는 두 개의 operation(상수와 return)을 가진 하나의 block이 있습니다.</p>
+<h3 id="block"><a class="header" href="#block">Block</a></h3>
+<p><strong>Block</strong>은 선형적으로 실행되는 operation의 시퀀스입니다. 모든 block은 <strong>terminator</strong> operation — 제어를 다른 곳으로 이전하는 operation(return, branch 등) — 으로 끝나야 합니다. Block을 “통과(fall through)“할 수 없습니다.</p>
+<p>제어 흐름이 있을 때 block이 필수적이 됩니다. 다음은 두 개의 block을 가진 함수입니다:</p>
+<pre><code class="language-mlir">func.func @conditional(%cond: i1, %a: i32, %b: i32) -&gt; i32 {
+  cf.cond_br %cond, ^then_block, ^else_block
+
+^then_block:
+  return %a : i32
+
+^else_block:
+  return %b : i32
+}
+</code></pre>
+<p>분석해 보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>cf.cond_br %cond, ^then_block, ^else_block</code></strong>: 조건 분기 operation(<code>cf</code> control-flow dialect)입니다. <code>%cond</code>가 참이면 <code>^then_block</code>으로, 그렇지 않으면 <code>^else_block</code>으로 점프합니다. 이것이 entry block의 terminator입니다.</p>
+</li>
+<li>
+<p><strong><code>^then_block:</code></strong>: block 레이블입니다. <code>^</code> 접두사는 block을 나타냅니다. block 이름은 함수 내에서 로컬입니다.</p>
+</li>
+<li>
+<p><strong><code>return %a : i32</code></strong>: <code>^then_block</code>의 terminator입니다. <code>%a</code>를 호출자에게 반환합니다.</p>
+</li>
+<li>
+<p><strong><code>^else_block:</code></strong>: 또 다른 block 레이블입니다.</p>
+</li>
+<li>
+<p><strong><code>return %b : i32</code></strong>: <code>^else_block</code>의 terminator입니다. <code>%b</code>를 반환합니다.</p>
+</li>
+</ul>
+<h3 id="block-인자-mlir의-phi-node-처리-방식"><a class="header" href="#block-인자-mlir의-phi-node-처리-방식">Block 인자 (MLIR의 Phi Node 처리 방식)</a></h3>
+<p>MLIR은 LLVM의 phi node 대신 <strong>block 인자</strong>를 사용합니다. LLVM IR에서는 여러 선행 block의 값을 병합하기 위해 phi node를 사용합니다. MLIR에서는 block으로 분기할 때 값을 인자로 전달합니다.</p>
+<p>다음은 두 값을 병합하는 예제입니다:</p>
+<pre><code class="language-mlir">func.func @merge_example(%cond: i1, %a: i32, %b: i32) -&gt; i32 {
+  cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)
+
+^merge(%result: i32):
+  return %result : i32
+}
+</code></pre>
+<p>무슨 일이 일어나는지 살펴보겠습니다:</p>
+<ul>
+<li>
+<p><strong><code>cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)</code></strong>: <code>^merge</code> block으로 분기하되, 조건이 참이면 <code>%a</code>를, 거짓이면 <code>%b</code>를 전달합니다.</p>
+</li>
+<li>
+<p><strong><code>^merge(%result: i32):</code></strong>: <code>^merge</code> block은 <code>i32</code> 타입의 인자 하나를 기대한다고 선언합니다. 어느 분기가 선택되든, 전달된 값이 이 block 내에서 <code>%result</code>가 됩니다.</p>
+</li>
+</ul>
+<p>이 방식은 LLVM의 phi node보다 깔끔합니다. 데이터 흐름이 분기 지점에서 명시적으로 표현되며, 사후에 재구성할 필요가 없기 때문입니다.</p>
+<h2 id="ssa-form-static-single-assignment"><a class="header" href="#ssa-form-static-single-assignment">SSA Form (Static Single Assignment)</a></h2>
+<p>MLIR은 <strong>SSA form</strong>을 사용합니다. 즉, 모든 값은 정확히 한 번만 정의되고 절대 변경되지 않습니다. <code>%x</code>를 정의하면 다시 할당할 수 없습니다. 이 속성 덕분에 “지금 어떤 버전의 변수를 보고 있는 것인가?“를 추적할 필요가 없어 최적화가 단순해집니다.</p>
+<h3 id="ssa-동작-예시"><a class="header" href="#ssa-동작-예시">SSA 동작 예시</a></h3>
+<p>다음 FunLang 코드를 살펴보겠습니다:</p>
+<pre><code class="language-fsharp">let x = 5
+let y = x + 3
+let z = y * 2
+z
+</code></pre>
+<p>MLIR SSA form에서 각 let 바인딩은 새로운 SSA 값이 됩니다:</p>
+<pre><code class="language-mlir">func.func @example() -&gt; i32 {
+  %x = arith.constant 5 : i32
+  %three = arith.constant 3 : i32
+  %y = arith.addi %x, %three : i32
+  %two = arith.constant 2 : i32
+  %z = arith.muli %y, %two : i32
+  return %z : i32
+}
+</code></pre>
+<p>주목할 점:</p>
+<ul>
+<li>각 <code>let</code> 바인딩은 새로운 SSA 값(<code>%x</code>, <code>%y</code>, <code>%z</code>)이 됩니다.</li>
+<li>상수는 값을 생성하는 operation(<code>arith.constant</code>)입니다.</li>
+<li>어떤 값도 재할당되지 않습니다.</li>
+</ul>
+<h3 id="ssa와-가변성mutability"><a class="header" href="#ssa와-가변성mutability">SSA와 가변성(Mutability)</a></h3>
+<p>FunLang은 불변(immutable)이므로 SSA와 자연스럽게 매핑됩니다. 하지만 변이(mutation)가 있는 명령형 코드는 어떨까요? 다음을 살펴보겠습니다:</p>
+<pre><code class="language-c">int x = 1;
+x = x + 1;
+return x;
+</code></pre>
+<p>SSA에서는 <code>x</code>를 변경할 수 없습니다. 대신, 새로운 버전을 생성합니다:</p>
+<pre><code class="language-mlir">%x0 = arith.constant 1 : i32
+%one = arith.constant 1 : i32
+%x1 = arith.addi %x0, %one : i32
+return %x1 : i32
+</code></pre>
+<p>각 “변이“는 새로운 SSA 값(<code>%x0</code>, <code>%x1</code> 등)을 생성합니다. 이 변환을 <strong>SSA conversion</strong>이라고 하며, 명령형 언어의 컴파일러에서 자동으로 처리됩니다.</p>
+<p>FunLang은 함수형이므로 이 작업은 필요하지 않습니다 — 모든 <code>let</code> 바인딩이 이미 새로운 이름을 도입하기 때문입니다.</p>
+<h3 id="핵심-통찰-ssa는-최적화를-가능하게-한다"><a class="header" href="#핵심-통찰-ssa는-최적화를-가능하게-한다">핵심 통찰: SSA는 최적화를 가능하게 한다</a></h3>
+<p>SSA form은 많은 컴파일러 최적화를 간단하게 만들어 줍니다. 예를 들어:</p>
+<ul>
+<li><strong>Dead code elimination(죽은 코드 제거):</strong> SSA 값이 정의되었지만 사용되지 않으면, 해당 값을 정의하는 operation을 삭제합니다.</li>
+<li><strong>Constant propagation(상수 전파):</strong> <code>%x</code>가 <code>arith.constant 5</code>로 정의되었다면, <code>%x</code>의 모든 사용을 <code>5</code>로 대체합니다.</li>
+<li><strong>Common subexpression elimination(공통 하위 표현식 제거):</strong> 두 operation이 같은 값을 계산하면, 하나를 재사용하고 다른 하나를 삭제합니다.</li>
+</ul>
+<p>이 모든 최적화는 값이 정의 후 절대 변경되지 않는다는 보장에 의존합니다.</p>
+<h2 id="mlir의-타입"><a class="header" href="#mlir의-타입">MLIR의 타입</a></h2>
+<p>MLIR은 강타입(strongly typed)입니다. 모든 SSA 값, operation, 함수에는 타입이 있습니다. 타입 시스템은 확장 가능하며(dialect이 커스텀 타입을 정의할 수 있음), 다음은 사용하게 될 내장 타입입니다:</p>
+<h3 id="정수-타입"><a class="header" href="#정수-타입">정수 타입</a></h3>
+<ul>
+<li><code>i1</code> — 1비트 정수 (boolean)</li>
+<li><code>i32</code> — 32비트 부호 있는 정수</li>
+<li><code>i64</code> — 64비트 부호 있는 정수</li>
+<li><code>i8</code>, <code>i16</code>, <code>i128</code> 등 — 임의 비트 너비 정수</li>
+</ul>
+<h3 id="부동소수점-타입"><a class="header" href="#부동소수점-타입">부동소수점 타입</a></h3>
+<ul>
+<li><code>f32</code> — 32비트 IEEE 754 float</li>
+<li><code>f64</code> — 64비트 IEEE 754 double</li>
+</ul>
+<h3 id="index-타입"><a class="header" href="#index-타입">Index 타입</a></h3>
+<ul>
+<li><code>index</code> — 배열 인덱싱을 위한 플랫폼 의존 정수 (대상 아키텍처에 따라 일반적으로 32비트 또는 64비트)</li>
+</ul>
+<h3 id="메모리-타입"><a class="header" href="#메모리-타입">메모리 타입</a></h3>
+<ul>
+<li><code>memref&lt;4xi32&gt;</code> — 메모리상의 4개 <code>i32</code> 값 배열에 대한 참조</li>
+<li><code>memref&lt;*xf64&gt;</code> — <code>f64</code> 값에 대한 unranked(동적) 메모리 참조</li>
+</ul>
+<h3 id="함수-타입"><a class="header" href="#함수-타입">함수 타입</a></h3>
+<ul>
+<li><code>(i32, i32) -&gt; i32</code> — 두 개의 <code>i32</code> 인자를 받아 <code>i32</code>를 반환하는 함수</li>
+</ul>
+<h3 id="funlang-타입-매핑"><a class="header" href="#funlang-타입-매핑">FunLang 타입 매핑</a></h3>
+<p>FunLang 타입이 MLIR 타입에 어떻게 매핑되는지 정리하면 다음과 같습니다:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>FunLang 타입</th><th>MLIR 타입</th><th>비고</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Int</code></td><td><code>i64</code></td><td>FunLang 정수는 인터프리터에서 임의 정밀도이지만, 64비트로 컴파일합니다</td></tr>
+<tr><td><code>Bool</code></td><td><code>i1</code></td><td>True = 1, False = 0</td></tr>
+<tr><td><code>String</code></td><td><code>!llvm.ptr</code> (LLVM dialect 포인터)</td><td>문자열은 힙에 할당된 null 종료 C 문자열입니다</td></tr>
+<tr><td><code>Float</code></td><td><code>f64</code></td><td>배정밀도 부동소수점</td></tr>
+<tr><td><code>List&lt;'a&gt;</code></td><td><code>!llvm.ptr</code></td><td>리스트는 힙에 할당된 연결 구조입니다</td></tr>
+<tr><td><code>Tuple&lt;'a, 'b, ...&gt;</code></td><td><code>!llvm.struct&lt;...&gt;</code></td><td>튜플은 LLVM struct로 컴파일됩니다</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>!</code> 접두사는 dialect에서 정의된 타입을 나타냅니다 (예: <code>!llvm.ptr</code>는 LLVM dialect의 포인터 타입).</p>
+<h2 id="progressive-lowering"><a class="header" href="#progressive-lowering">Progressive Lowering</a></h2>
+<p>MLIR의 강력함은 <strong>progressive lowering</strong>에 있습니다: 한 번에 크게 변환하는 대신, 고수준 operation을 여러 단계에 걸쳐 저수준 operation으로 변환하는 방식입니다.</p>
+<h3 id="funlang-컴파일-파이프라인"><a class="header" href="#funlang-컴파일-파이프라인">FunLang 컴파일 파이프라인</a></h3>
+<p>이 튜토리얼에서 구축할 파이프라인은 다음과 같습니다:</p>
+<pre><code>Stage 1: AST → High-Level MLIR
+    FunLang AST (타입 검사기에서 전달)
+    ↓
+    arith, func, scf dialect을 사용하여 MLIR로 변환
+    예: `let x = 1 + 2`는 `%x = arith.addi ...`가 됩니다
+
+Stage 2: High-Level MLIR → LLVM Dialect
+    `arith.addi` 같은 operation이 `llvm.add`로 lowering됩니다
+    구조적 제어 흐름(`scf.if`)은 basic block과 branch로 lowering됩니다
+
+Stage 3: LLVM Dialect → LLVM IR
+    MLIR의 LLVM dialect이 텍스트 LLVM IR로 변환됩니다
+
+Stage 4: LLVM IR → Native Code
+    LLVM 백엔드(llc)가 대상 플랫폼의 머신 코드로 컴파일합니다
+</code></pre>
+<p>각 lowering 단계는 <strong>pass</strong> — IR을 재작성하는 변환 — 입니다. MLIR은 pass 정의, 패턴 기반 재작성, 각 단계 후 검증을 위한 인프라를 제공합니다.</p>
+<h3 id="progressive-lowering이-중요한-이유"><a class="header" href="#progressive-lowering이-중요한-이유">Progressive Lowering이 중요한 이유</a></h3>
+<p>FunLang의 패턴 매칭을 컴파일하는 경우를 생각해 보겠습니다. LLVM IR로 직접 lowering해야 한다면, 즉시 basic block, phi node, 메모리 로드로 이루어진 복잡한 결정 트리로 확장해야 합니다. 하지만 progressive lowering을 사용하면:</p>
+<ol>
+<li><strong>고수준:</strong> 패턴 매칭을 구조를 보존하는 <code>funlang.match</code> operation으로 표현합니다.</li>
+<li><strong>중간 수준:</strong> <code>funlang.match</code>를 <code>scf.if</code>와 <code>scf.while</code>(구조적 제어 흐름)로 lowering합니다.</li>
+<li><strong>저수준:</strong> <code>scf.if</code>를 LLVM basic block과 branch로 lowering합니다.</li>
+</ol>
+<p>각 단계에서 해당 추상화 수준에 맞는 최적화를 수행할 수 있습니다. 패턴 매칭 최적화(중복 검사 제거)는 고수준에서 이루어지고, LLVM 수준 최적화(레지스터 할당, 명령어 스케줄링)는 저수준에서 이루어집니다.</p>
+<h2 id="종합-예제"><a class="header" href="#종합-예제">종합 예제</a></h2>
+<p>여러 개념을 함께 사용하는 좀 더 현실적인 MLIR 예제를 살펴보겠습니다:</p>
+<pre><code class="language-mlir">module {
+  func.func @factorial(%n: i64) -&gt; i64 {
+    %c0 = arith.constant 0 : i64
+    %c1 = arith.constant 1 : i64
+    %is_zero = arith.cmpi eq, %n, %c0 : i64
+    cf.cond_br %is_zero, ^base_case, ^recursive_case
+
+  ^base_case:
+    return %c1 : i64
+
+  ^recursive_case:
+    %n_minus_1 = arith.subi %n, %c1 : i64
+    %rec_result = func.call @factorial(%n_minus_1) : (i64) -&gt; i64
+    %result = arith.muli %n, %rec_result : i64
+    return %result : i64
+  }
+}
+</code></pre>
+<p>이 코드를 추적해 보겠습니다:</p>
+<ol>
+<li>
+<p><strong><code>func.func @factorial(%n: i64) -&gt; i64</code></strong>: 하나의 64비트 정수를 받아 64비트 정수를 반환하는 <code>@factorial</code> 함수를 정의합니다.</p>
+</li>
+<li>
+<p><strong><code>%c0 = arith.constant 0 : i64</code></strong>: 상수 <code>0</code>을 생성합니다.</p>
+</li>
+<li>
+<p><strong><code>%c1 = arith.constant 1 : i64</code></strong>: 상수 <code>1</code>을 생성합니다.</p>
+</li>
+<li>
+<p><strong><code>%is_zero = arith.cmpi eq, %n, %c0 : i64</code></strong>: <code>%n</code>과 <code>0</code>을 동등성 비교합니다. 결과는 <code>i1</code>(boolean)입니다.</p>
+</li>
+<li>
+<p><strong><code>cf.cond_br %is_zero, ^base_case, ^recursive_case</code></strong>: 참이면 <code>^base_case</code>로, 아니면 <code>^recursive_case</code>로 분기합니다.</p>
+</li>
+<li>
+<p><strong><code>^base_case:</code></strong>: n == 0이면 1을 반환합니다.</p>
+</li>
+<li>
+<p><strong><code>^recursive_case:</code></strong>: n &gt; 0이면 <code>n * factorial(n - 1)</code>을 계산합니다:</p>
+<ul>
+<li><code>%n_minus_1 = arith.subi %n, %c1</code>: <code>n - 1</code>을 계산합니다.</li>
+<li><code>%rec_result = func.call @factorial(%n_minus_1)</code>: 재귀 호출입니다.</li>
+<li><code>%result = arith.muli %n, %rec_result</code>: <code>n</code>과 재귀 결과를 곱합니다.</li>
+<li><code>return %result</code>: 결과를 반환합니다.</li>
+</ul>
+</li>
+</ol>
+<p>이 예제는 다음을 보여줍니다:</p>
+<ul>
+<li><strong>SSA form:</strong> 모든 값(<code>%c0</code>, <code>%n_minus_1</code> 등)이 한 번만 정의됩니다.</li>
+<li><strong>Operation:</strong> 상수, 비교, 산술, 함수 호출.</li>
+<li><strong>Region과 block:</strong> 함수 본문은 세 개의 block(entry, <code>^base_case</code>, <code>^recursive_case</code>)을 가진 region입니다.</li>
+<li><strong>Terminator:</strong> 모든 block이 terminator(<code>cf.cond_br</code> 또는 <code>return</code>)로 끝납니다.</li>
+<li><strong>Dialect:</strong> <code>arith</code>, <code>func</code>, <code>cf</code> dialect을 사용합니다.</li>
+</ul>
+<h2 id="학습-내용-정리"><a class="header" href="#학습-내용-정리">학습 내용 정리</a></h2>
+<p>이제 MLIR의 다섯 가지 핵심 개념을 이해하게 되었습니다:</p>
+<ol>
+<li><strong>Dialect:</strong> operation, 타입, attribute의 네임스페이스 (예: <code>arith</code>, <code>func</code>, <code>llvm</code>).</li>
+<li><strong>Operation:</strong> MLIR IR의 기본 단위 (예: <code>arith.addi</code>, <code>func.call</code>).</li>
+<li><strong>Region:</strong> block의 목록 (예: 함수 본문).</li>
+<li><strong>Block:</strong> terminator로 끝나는 operation 시퀀스 (예: 제어 흐름의 basic block).</li>
+<li><strong>SSA form:</strong> 모든 값이 정확히 한 번만 정의되며 불변.</li>
+</ol>
+<p>구체적인 예제(산술, 제어 흐름, 재귀)를 통해 이 개념들이 어떻게 함께 작동하는지 살펴보았습니다. 또한 progressive lowering — IR을 한 번에 큰 점프가 아닌 단계적으로 변환하는 철학 — 을 이해하게 되었습니다.</p>
+<h2 id="다음-단계"><a class="header" href="#다음-단계">다음 단계</a></h2>
+<p>다음 챕터에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성합니다. P/Invoke를 사용하여 MLIR의 C API를 호출하고, 컴파일러의 “Hello, World“인 상수 정수를 반환하는 프로그램을 생성할 것입니다.</p>
+<p>**Chapter 02: Hello MLIR from F#**로 계속됩니다 (작성 예정).</p>
+<h2 id="참고-자료"><a class="header" href="#참고-자료">참고 자료</a></h2>
+<ul>
+<li><a href="https://mlir.llvm.org/docs/LangRef/">MLIR Language Reference</a> — MLIR의 텍스트 형식, dialect, 의미론에 대한 공식 사양.</li>
+<li><a href="https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/">Understanding MLIR IR Structure</a> — operation, region, block에 대한 심층 분석.</li>
+<li><a href="https://mlir.llvm.org/docs/Tutorials/Toy/">MLIR Toy Tutorial</a> — MLIR을 사용하여 “Toy” 언어의 컴파일러를 구축하는 완전한 튜토리얼.</li>
+<li><a href="https://mlir.llvm.org/docs/Dialects/">Dialects Documentation</a> — 내장 dialect(arith, func, scf, llvm 등)에 대한 참조 문서.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="00-prerequisites.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="02-hello-mlir.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="00-prerequisites.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="02-hello-mlir.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

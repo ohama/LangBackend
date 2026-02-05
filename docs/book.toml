@@ -1,0 +1,22 @@
+[book]
+title = "LangBackend Tutorial"
+authors = ["ohama"]
+language = "ko"
+description = "MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼"
+src = "."
+
+[build]
+build-dir = "../docs"
+create-missing = false
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/ohama/LangBackend"
+edit-url-template = "https://github.com/ohama/LangBackend/edit/master/tutorial/{path}"
+
+[output.html.search]
+enable = true
+limit-results = 30
+boost-title = 2
+boost-hierarchy = 1

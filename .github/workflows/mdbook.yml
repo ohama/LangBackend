@@ -1,0 +1,50 @@
+name: Build mdBook
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - 'tutorial/**'
+  workflow_dispatch:
+
+concurrency:
+  group: mdbook-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: 'latest'
+
+      - name: Build mdBook
+        run: |
+          mdbook clean tutorial
+          mdbook build tutorial
+
+      - name: Check for changes
+        id: check
+        run: |
+          git add docs/
+          git diff --cached --quiet || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push
+        if: steps.check.outputs.changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: rebuild mdBook site"
+          git push
