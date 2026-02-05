@@ -1,16 +1,16 @@
-# Chapter 02: Hello MLIR from F#
+# 챕터 02: F#에서 Hello MLIR
 
-## Introduction
+## 소개
 
-In Chapter 00, you built MLIR from source and installed the .NET SDK. In Chapter 01, you learned the fundamental concepts of MLIR: dialects, operations, regions, blocks, and SSA form. Now it's time to write code.
+챕터 00에서는 MLIR을 소스에서 빌드하고 .NET SDK를 설치했습니다. 챕터 01에서는 MLIR의 핵심 개념인 dialect, operation, region, block, SSA 형태에 대해 배웠습니다. 이제 코드를 작성할 차례입니다.
 
-This chapter is your first "it works!" moment. You'll write an F# script that calls the MLIR C API using P/Invoke, creates an MLIR context and module, builds a simple function with arithmetic operations, and prints the resulting IR to the console. By the end, you'll have a working proof of concept that F# can interoperate with MLIR.
+이 챕터는 처음으로 "동작한다!"를 경험하는 순간입니다. F# 스크립트를 작성하여 P/Invoke를 통해 MLIR C API를 호출하고, MLIR context와 module을 생성하며, 산술 연산이 포함된 간단한 함수를 구성한 뒤, 결과 IR을 콘솔에 출력할 것입니다. 이 챕터를 마치면 F#이 MLIR과 상호운용될 수 있다는 것을 증명하는 동작하는 프로토타입을 갖게 됩니다.
 
-The code in this chapter is intentionally ad-hoc and exploratory. We'll define the P/Invoke bindings inline and focus on getting something running. In Chapter 03, we'll organize these bindings into a proper reusable module.
+이 챕터의 코드는 의도적으로 즉흥적이고 탐색적입니다. P/Invoke 바인딩을 인라인으로 정의하고 우선 동작하는 것에 집중합니다. 챕터 03에서 이 바인딩들을 적절한 재사용 가능한 모듈로 구성할 것입니다.
 
-## What We're Building
+## 만들어 볼 것
 
-Our first MLIR program will be a function that returns a constant integer. In MLIR textual form, it looks like this:
+첫 번째 MLIR 프로그램은 상수 정수를 반환하는 함수입니다. MLIR 텍스트 형식으로는 다음과 같습니다:
 
 ```mlir
 module {
@@ -21,40 +21,40 @@ module {
 }
 ```
 
-This is the simplest possible MLIR program:
-- One function named `@return_forty_two`
-- Zero parameters
-- Returns an `i32` (32-bit integer)
-- Body creates a constant `42` and returns it
+이것은 가장 간단한 MLIR 프로그램입니다:
+- `@return_forty_two`라는 이름의 함수 하나
+- 매개변수 없음
+- `i32` (32비트 정수) 반환
+- 본문에서 상수 `42`를 생성하고 반환
 
-We'll build this programmatically from F# using MLIR's C API.
+이것을 MLIR의 C API를 사용하여 F#에서 프로그래밍 방식으로 구성할 것입니다.
 
-## Understanding P/Invoke
+## P/Invoke 이해하기
 
-P/Invoke (Platform Invoke) is .NET's Foreign Function Interface (FFI) mechanism. It allows managed code (F#, C#, etc.) to call unmanaged native functions from shared libraries (`.so` on Linux, `.dylib` on macOS, `.dll` on Windows).
+P/Invoke (Platform Invoke)는 .NET의 외부 함수 인터페이스(FFI) 메커니즘입니다. 관리 코드(F#, C# 등)에서 공유 라이브러리(Linux의 `.so`, macOS의 `.dylib`, Windows의 `.dll`)에 있는 비관리 네이티브 함수를 호출할 수 있게 해줍니다.
 
-### The DllImport Attribute
+### DllImport 속성
 
-To call a native function, you use the `[<DllImport>]` attribute to declare the function signature. Here's the pattern:
+네이티브 함수를 호출하려면 `[<DllImport>]` 속성을 사용하여 함수 시그니처를 선언합니다. 패턴은 다음과 같습니다:
 
 ```fsharp
 [<DllImport("library-name", CallingConvention = CallingConvention.Cdecl)>]
 extern ReturnType functionName(ParamType1 param1, ParamType2 param2)
 ```
 
-Let's break this down:
+하나씩 살펴보겠습니다:
 
-- **`[<DllImport("library-name")>]`**: Specifies which shared library contains the function. For MLIR, this is `"MLIR-C"` (without file extension — .NET adds `.so`, `.dylib`, or `.dll` automatically based on the platform).
+- **`[<DllImport("library-name")>]`**: 함수가 포함된 공유 라이브러리를 지정합니다. MLIR의 경우 `"MLIR-C"`입니다(파일 확장자 없이 — .NET이 플랫폼에 따라 자동으로 `.so`, `.dylib`, `.dll`을 추가합니다).
 
-- **`CallingConvention = CallingConvention.Cdecl`**: Specifies how arguments are passed and the stack is managed. The MLIR C API uses the C calling convention (`Cdecl`), which is standard for C libraries.
+- **`CallingConvention = CallingConvention.Cdecl`**: 인수 전달 및 스택 관리 방식을 지정합니다. MLIR C API는 C 라이브러리의 표준인 C 호출 규약(`Cdecl`)을 사용합니다.
 
-- **`extern`**: Marks this as an external function defined in native code.
+- **`extern`**: 네이티브 코드에 정의된 외부 함수임을 표시합니다.
 
-- **Return type and parameters**: Must match the C function signature exactly. MLIR uses opaque struct handles (pointers to internal data structures), which we represent in F# as `nativeint`.
+- **반환 타입과 매개변수**: C 함수 시그니처와 정확히 일치해야 합니다. MLIR은 불투명 구조체 핸들(내부 데이터 구조에 대한 포인터)을 사용하며, F#에서는 이를 `nativeint`로 표현합니다.
 
-### MLIR Handle Types
+### MLIR 핸들 타입
 
-The MLIR C API uses opaque struct types for all IR entities:
+MLIR C API는 모든 IR 엔티티에 불투명 구조체 타입을 사용합니다:
 
 ```c
 // MLIR-C API (C header)
@@ -64,7 +64,7 @@ typedef struct MlirOperation { void *ptr; } MlirOperation;
 // ... and many more
 ```
 
-Each struct is a wrapper around a pointer. From F#'s perspective, we don't care about the internal structure — we just need to pass these handles between MLIR functions. We'll represent them as F# structs with a single `nativeint` field:
+각 구조체는 포인터를 감싸는 래퍼입니다. F#의 관점에서는 내부 구조에 관심이 없고, MLIR 함수 간에 이 핸들들을 전달하기만 하면 됩니다. 단일 `nativeint` 필드를 가진 F# 구조체로 표현합니다:
 
 ```fsharp
 [<Struct>]
@@ -73,11 +73,11 @@ type MlirContext =
     new(handle) = { Handle = handle }
 ```
 
-This matches the C memory layout (a single pointer) and is safe to pass across the P/Invoke boundary.
+이는 C 메모리 레이아웃(단일 포인터)과 일치하며, P/Invoke 경계를 넘어 안전하게 전달할 수 있습니다.
 
-## Creating an F# Script
+## F# 스크립트 생성
 
-Let's start writing code. Create a new file called `HelloMlir.fsx` in your working directory:
+코드를 작성해 보겠습니다. 작업 디렉터리에 `HelloMlir.fsx`라는 새 파일을 생성합니다:
 
 ```bash
 cd $HOME
@@ -86,30 +86,30 @@ cd mlir-fsharp-tutorial
 touch HelloMlir.fsx
 ```
 
-Open `HelloMlir.fsx` in your text editor and start with the necessary imports:
+텍스트 편집기에서 `HelloMlir.fsx`를 열고 필요한 import부터 시작합니다:
 
 ```fsharp
 open System
 open System.Runtime.InteropServices
 ```
 
-- `System`: Core .NET types
-- `System.Runtime.InteropServices`: Contains `DllImport`, `CallingConvention`, and marshalling attributes
+- `System`: .NET 핵심 타입
+- `System.Runtime.InteropServices`: `DllImport`, `CallingConvention`, 마샬링 속성 포함
 
-## Defining Handle Types
+## 핸들 타입 정의
 
-First, define the MLIR handle types we'll need. For this simple example, we need:
+먼저 필요한 MLIR 핸들 타입을 정의합니다. 이 간단한 예제에서는 다음이 필요합니다:
 
-- `MlirContext`: The root MLIR context (manages memory, dialects, etc.)
-- `MlirModule`: A module (top-level container for functions)
-- `MlirLocation`: Source location information (required for creating operations)
-- `MlirType`: Type system (we'll use `i32`)
-- `MlirBlock`: A basic block
-- `MlirRegion`: A region containing blocks
-- `MlirOperation`: An operation (the result of creating a function or arithmetic op)
-- `MlirValue`: An SSA value (the result of an operation)
+- `MlirContext`: MLIR 루트 context (메모리, dialect 등을 관리)
+- `MlirModule`: module (함수의 최상위 컨테이너)
+- `MlirLocation`: 소스 위치 정보 (operation 생성에 필요)
+- `MlirType`: 타입 시스템 (`i32` 사용 예정)
+- `MlirBlock`: 기본 블록
+- `MlirRegion`: 블록을 포함하는 region
+- `MlirOperation`: operation (함수나 산술 연산 생성 결과)
+- `MlirValue`: SSA 값 (operation의 결과)
 
-Add these type definitions to your script:
+스크립트에 다음 타입 정의를 추가합니다:
 
 ```fsharp
 [<Struct>]
@@ -153,11 +153,11 @@ type MlirValue =
     new(handle) = { Handle = handle }
 ```
 
-Each handle is a thin wrapper around a native pointer. The `[<Struct>]` attribute ensures these are stack-allocated value types (not heap-allocated classes), which is more efficient for small wrappers.
+각 핸들은 네이티브 포인터를 감싸는 얇은 래퍼입니다. `[<Struct>]` 속성은 이들이 힙에 할당되는 클래스가 아닌 스택에 할당되는 값 타입임을 보장하며, 작은 래퍼에 대해 더 효율적입니다.
 
-## String Marshalling: MlirStringRef
+## 문자열 마샬링: MlirStringRef
 
-MLIR's C API uses a custom string structure called `MlirStringRef` for passing strings without ownership concerns. It's defined in C as:
+MLIR의 C API는 소유권 문제 없이 문자열을 전달하기 위해 `MlirStringRef`라는 사용자 정의 문자열 구조체를 사용합니다. C에서는 다음과 같이 정의되어 있습니다:
 
 ```c
 typedef struct MlirStringRef {
@@ -166,7 +166,7 @@ typedef struct MlirStringRef {
 } MlirStringRef;
 ```
 
-We need to match this layout in F#:
+이 레이아웃을 F#에서 맞춰야 합니다:
 
 ```fsharp
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -187,17 +187,17 @@ type MlirStringRef =
             Marshal.FreeHGlobal(this.Data)
 ```
 
-Breaking this down:
+세부 사항을 살펴보겠습니다:
 
-- **`[<StructLayout(LayoutKind.Sequential)>]`**: Ensures fields are laid out in memory in the order declared (matching the C struct).
+- **`[<StructLayout(LayoutKind.Sequential)>]`**: 필드가 선언된 순서대로 메모리에 배치되도록 보장합니다 (C 구조체와 일치).
 
-- **`FromString(s: string)`**: Helper to convert an F# string to `MlirStringRef`. It allocates unmanaged memory, copies the UTF-8 bytes, and returns a `MlirStringRef` pointing to that memory.
+- **`FromString(s: string)`**: F# 문자열을 `MlirStringRef`로 변환하는 헬퍼입니다. 비관리 메모리를 할당하고, UTF-8 바이트를 복사한 후, 해당 메모리를 가리키는 `MlirStringRef`를 반환합니다.
 
-- **`Free()`**: Releases the unmanaged memory. You must call this after passing the string to MLIR, or you'll leak memory.
+- **`Free()`**: 비관리 메모리를 해제합니다. 문자열을 MLIR에 전달한 후 반드시 호출해야 하며, 그렇지 않으면 메모리 누수가 발생합니다.
 
-## Declaring P/Invoke Functions
+## P/Invoke 함수 선언
 
-Now for the P/Invoke declarations. We'll declare only the functions needed for this example. Add this to your script:
+이제 P/Invoke 선언을 작성합니다. 이 예제에 필요한 함수만 선언합니다. 스크립트에 다음을 추가합니다:
 
 ```fsharp
 module MlirNative =
@@ -259,7 +259,7 @@ module MlirNative =
     extern void mlirOperationPrint(MlirOperation op, MlirStringCallback callback, nativeint userData)
 ```
 
-We also need a few more handle types that appeared in the function signatures:
+함수 시그니처에 등장한 추가 핸들 타입도 필요합니다:
 
 ```fsharp
 [<Struct>]
@@ -284,18 +284,18 @@ type MlirOperationState =
     val EnableResultTypeInference: bool
 ```
 
-And the callback delegate for printing:
+그리고 출력을 위한 콜백 delegate도 필요합니다:
 
 ```fsharp
 [<UnmanagedFunctionPointer(CallingConvention.Cdecl)>]
 type MlirStringCallback = delegate of MlirStringRef * nativeint -> unit
 ```
 
-This delegate allows MLIR to call back into F# code when printing IR. MLIR will invoke the callback with each chunk of the printed output.
+이 delegate는 IR 출력 시 MLIR이 F# 코드를 콜백할 수 있게 해줍니다. MLIR은 출력의 각 청크마다 콜백을 호출합니다.
 
-## Building the MLIR Module
+## MLIR Module 구성하기
 
-Now let's write the logic to create our MLIR module. Add this function to your script:
+이제 MLIR module을 생성하는 로직을 작성합니다. 스크립트에 다음 함수를 추가합니다:
 
 ```fsharp
 let buildHelloMlir() =
@@ -420,19 +420,19 @@ let buildHelloMlir() =
     printfn "Cleaned up MLIR context and module"
 ```
 
-This function does a lot, so let's walk through it step by step.
+이 함수에는 많은 내용이 있으므로 단계별로 살펴보겠습니다.
 
-## Step-by-Step Breakdown
+## 단계별 분석
 
-### Step 1: Create MLIR Context
+### 1단계: MLIR Context 생성
 
 ```fsharp
 let ctx = MlirNative.mlirContextCreate()
 ```
 
-The MLIR context is the root object that manages all MLIR state: registered dialects, type uniquing, memory management, etc. You must create a context before doing anything else.
+MLIR context는 등록된 dialect, 타입 고유화, 메모리 관리 등 모든 MLIR 상태를 관리하는 루트 객체입니다. 다른 작업을 하기 전에 반드시 context를 생성해야 합니다.
 
-### Step 2: Load Dialects
+### 2단계: Dialect 로드
 
 ```fsharp
 let funcDialect = MlirNative.mlirGetDialectHandle__func__()
@@ -441,18 +441,18 @@ let arithDialect = MlirNative.mlirGetDialectHandle__arith__()
 MlirNative.mlirDialectHandleRegisterDialect(arithDialect, ctx)
 ```
 
-MLIR dialects are loaded on-demand. We need the `func` dialect (for function definitions) and the `arith` dialect (for constants and arithmetic operations). Each dialect has a getter function (`mlirGetDialectHandle__<dialect>__`), and we register it with the context.
+MLIR dialect은 요청 시 로드됩니다. 함수 정의를 위한 `func` dialect과 상수 및 산술 연산을 위한 `arith` dialect이 필요합니다. 각 dialect에는 getter 함수(`mlirGetDialectHandle__<dialect>__`)가 있으며, 이를 context에 등록합니다.
 
-### Step 3: Create an Empty Module
+### 3단계: 빈 Module 생성
 
 ```fsharp
 let loc = MlirNative.mlirLocationUnknownGet(ctx)
 let mlirModule = MlirNative.mlirModuleCreateEmpty(loc)
 ```
 
-Every MLIR operation requires a source location. For generated code, we use an "unknown" location. Then we create an empty module.
+모든 MLIR operation에는 소스 위치가 필요합니다. 생성된 코드의 경우 "unknown" 위치를 사용합니다. 그런 다음 빈 module을 생성합니다.
 
-### Step 4: Create Function Type
+### 4단계: 함수 타입 생성
 
 ```fsharp
 let i32Type = MlirNative.mlirIntegerTypeGet(ctx, 32u)
@@ -460,60 +460,60 @@ let mutable resultType = i32Type
 let funcType = MlirNative.mlirFunctionTypeGet(ctx, nativeint 0, &i32Type, nativeint 1, &resultType)
 ```
 
-We define the function signature: no inputs (`nativeint 0`), one output (`i32`). The `mlirFunctionTypeGet` function takes pointers to type arrays, so we use `&` to pass by reference.
+함수 시그니처를 정의합니다: 입력 없음(`nativeint 0`), 출력 하나(`i32`). `mlirFunctionTypeGet` 함수는 타입 배열에 대한 포인터를 받으므로 `&`를 사용하여 참조로 전달합니다.
 
-### Step 5-6: Create Function Operation and Body Block
+### 5-6단계: 함수 Operation 및 본문 Block 생성
 
-Creating operations in MLIR requires building an `MlirOperationState` and calling `mlirOperationCreate`. This is the general pattern for all operation creation:
+MLIR에서 operation을 생성하려면 `MlirOperationState`를 구성하고 `mlirOperationCreate`를 호출해야 합니다. 이것이 모든 operation 생성의 일반적인 패턴입니다:
 
-1. Create `MlirOperationState` with operation name, location, operands, results, regions, etc.
-2. Call `mlirOperationCreate(&state)`
-3. Free any allocated memory (like the operation name string)
+1. operation 이름, 위치, 피연산자, 결과, region 등을 포함하는 `MlirOperationState` 생성
+2. `mlirOperationCreate(&state)` 호출
+3. 할당된 메모리(operation 이름 문자열 등) 해제
 
-For the function, we also create a region (function body) and a block inside it.
+함수의 경우 region(함수 본문)과 그 안의 block도 생성합니다.
 
-### Step 7-8: Create Operations Inside the Function
+### 7-8단계: 함수 내부 Operation 생성
 
-We create two operations:
+두 개의 operation을 생성합니다:
 
-1. **`arith.constant 42 : i32`**: The constant operation. It has one result (the value 42).
-2. **`func.return %result`**: The return operation. It has one operand (the constant's result).
+1. **`arith.constant 42 : i32`**: 상수 operation입니다. 하나의 결과(값 42)를 가집니다.
+2. **`func.return %result`**: 반환 operation입니다. 하나의 피연산자(상수의 결과)를 가집니다.
 
-Each operation follows the same pattern: create `MlirOperationState`, call `mlirOperationCreate`, clean up.
+각 operation은 동일한 패턴을 따릅니다: `MlirOperationState` 생성, `mlirOperationCreate` 호출, 정리.
 
-### Step 9: Insert Operations into Block
+### 9단계: Operation을 Block에 삽입
 
 ```fsharp
 MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 0, constantOp)
 MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 1, returnOp)
 ```
 
-Operations must be inserted into a block in execution order. The constant comes first (position 0), then the return (position 1).
+Operation은 실행 순서대로 block에 삽입해야 합니다. 상수가 먼저(위치 0), 그다음 반환(위치 1)입니다.
 
-### Step 10: Print the IR
+### 10단계: IR 출력
 
 ```fsharp
 let callback = MlirStringCallback(fun strRef _ ->
-    // Convert MlirStringRef to F# string
-    // Accumulate in output variable
+    // MlirStringRef를 F# 문자열로 변환
+    // output 변수에 누적
 )
 MlirNative.mlirOperationPrint(moduleOp, callback, nativeint 0)
 ```
 
-MLIR's print functions use callbacks. The callback is invoked multiple times with chunks of the output. We accumulate these chunks into a single string and print it.
+MLIR의 출력 함수는 콜백을 사용합니다. 콜백은 출력의 청크마다 여러 번 호출됩니다. 이 청크들을 하나의 문자열로 누적하여 출력합니다.
 
-### Cleanup
+### 정리
 
 ```fsharp
 MlirNative.mlirModuleDestroy(mlirModule)
 MlirNative.mlirContextDestroy(ctx)
 ```
 
-Always destroy the module and context to avoid memory leaks.
+메모리 누수를 방지하기 위해 항상 module과 context를 파괴해야 합니다.
 
-## Running the Script
+## 스크립트 실행
 
-Add this at the end of your `HelloMlir.fsx` file:
+`HelloMlir.fsx` 파일 끝에 다음을 추가합니다:
 
 ```fsharp
 [<EntryPoint>]
@@ -522,13 +522,13 @@ let main argv =
     0
 ```
 
-Now run the script with F# Interactive:
+이제 F# Interactive로 스크립트를 실행합니다:
 
 ```bash
 LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet fsi HelloMlir.fsx
 ```
 
-**Expected output:**
+**예상 출력:**
 
 ```
 Created MLIR context
@@ -553,59 +553,59 @@ module {
 Cleaned up MLIR context and module
 ```
 
-If you see this output, congratulations! You've successfully called MLIR from F# and generated IR programmatically.
+이 출력이 보인다면 성공입니다! F#에서 MLIR을 호출하고 프로그래밍 방식으로 IR을 생성하는 데 성공했습니다.
 
-## Troubleshooting
+## 문제 해결
 
 ### DllNotFoundException: Unable to load shared library 'MLIR-C'
 
-**Cause:** .NET runtime cannot find the MLIR-C shared library.
+**원인:** .NET 런타임이 MLIR-C 공유 라이브러리를 찾을 수 없습니다.
 
-**Solution:** Ensure `LD_LIBRARY_PATH` (Linux) or `DYLD_LIBRARY_PATH` (macOS) includes `$HOME/mlir-install/lib`:
+**해결 방법:** `LD_LIBRARY_PATH` (Linux) 또는 `DYLD_LIBRARY_PATH` (macOS)에 `$HOME/mlir-install/lib`이 포함되어 있는지 확인합니다:
 
 ```bash
 export LD_LIBRARY_PATH=$HOME/mlir-install/lib:$LD_LIBRARY_PATH
 dotnet fsi HelloMlir.fsx
 ```
 
-Or run with the environment variable inline:
+또는 환경 변수를 인라인으로 지정하여 실행합니다:
 
 ```bash
 LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet fsi HelloMlir.fsx
 ```
 
-### AccessViolationException or Segmentation Fault
+### AccessViolationException 또는 Segmentation Fault
 
-**Cause:** Incorrect P/Invoke signature (wrong parameter types, missing `&` for byref parameters, etc.).
+**원인:** 잘못된 P/Invoke 시그니처 (잘못된 매개변수 타입, byref 매개변수에 `&` 누락 등).
 
-**Solution:** Verify your `DllImport` declarations match the MLIR-C API header files exactly. Check the [MLIR-C API documentation](https://mlir.llvm.org/docs/CAPI/) and the header files in `$HOME/mlir-install/include/mlir-c/`.
+**해결 방법:** `DllImport` 선언이 MLIR-C API 헤더 파일과 정확히 일치하는지 확인합니다. [MLIR-C API 문서](https://mlir.llvm.org/docs/CAPI/)와 `$HOME/mlir-install/include/mlir-c/`의 헤더 파일을 확인하세요.
 
-### Empty or Malformed IR Output
+### 비어있거나 잘못된 형식의 IR 출력
 
-**Cause:** Operations not properly inserted into blocks, or regions not properly attached to operations.
+**원인:** Operation이 block에 제대로 삽입되지 않았거나, region이 operation에 제대로 연결되지 않았습니다.
 
-**Solution:** Verify the order of operations: create operation → get region → create block → insert operations into block.
+**해결 방법:** 연산 순서를 확인합니다: operation 생성 -> region 가져오기 -> block 생성 -> block에 operation 삽입.
 
-## What We've Learned
+## 배운 내용
 
-In this chapter, you:
+이 챕터에서 다음을 배웠습니다:
 
-1. **Defined MLIR handle types** as F# structs wrapping native pointers.
-2. **Used `[<DllImport>]`** to declare external MLIR-C API functions.
-3. **Marshalled strings** using `MlirStringRef` and manual memory management.
-4. **Created an MLIR context and module** from scratch.
-5. **Built operations programmatically** using `MlirOperationState`.
-6. **Printed MLIR IR** using callbacks.
-7. **Managed memory** by destroying contexts and modules when done.
+1. **MLIR 핸들 타입 정의** - 네이티브 포인터를 감싸는 F# 구조체로 정의했습니다.
+2. **`[<DllImport>]` 사용** - 외부 MLIR-C API 함수를 선언했습니다.
+3. **문자열 마샬링** - `MlirStringRef`와 수동 메모리 관리를 사용했습니다.
+4. **MLIR context와 module 생성** - 처음부터 생성했습니다.
+5. **프로그래밍 방식으로 operation 구성** - `MlirOperationState`를 사용했습니다.
+6. **MLIR IR 출력** - 콜백을 사용했습니다.
+7. **메모리 관리** - 완료 후 context와 module을 파괴했습니다.
 
-You now have proof that F# can interoperate with MLIR. But this code is messy — we're defining types and P/Invoke functions inline in a script. In a real compiler, we need these bindings organized into a reusable module.
+이제 F#이 MLIR과 상호운용될 수 있다는 것이 증명되었습니다. 하지만 이 코드는 정돈되지 않았습니다 -- 타입과 P/Invoke 함수를 스크립트에 인라인으로 정의하고 있습니다. 실제 컴파일러에서는 이 바인딩들이 재사용 가능한 모듈로 구성되어야 합니다.
 
-## Next Chapter
+## 다음 챕터
 
-Continue to [Chapter 03: P/Invoke Bindings](03-pinvoke-bindings.md) to learn how to organize these bindings into a proper F# module with clean APIs and comprehensive coverage of the MLIR-C API.
+[챕터 03: P/Invoke 바인딩](03-pinvoke-bindings.md)으로 이어서 이 바인딩들을 깔끔한 API와 MLIR-C API의 포괄적인 커버리지를 갖춘 적절한 F# 모듈로 구성하는 방법을 배웁니다.
 
-## Further Reading
+## 추가 참고 자료
 
-- [MLIR C API Documentation](https://mlir.llvm.org/docs/CAPI/) — Official guide to the MLIR C API design and usage patterns.
-- [.NET P/Invoke Documentation](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke) — Comprehensive guide to Platform Invoke in .NET.
-- [Marshalling in .NET](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/type-marshalling) — How .NET converts between managed and unmanaged types.
+- [MLIR C API Documentation](https://mlir.llvm.org/docs/CAPI/) -- MLIR C API 설계 및 사용 패턴에 대한 공식 가이드.
+- [.NET P/Invoke Documentation](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke) -- .NET에서의 Platform Invoke 종합 가이드.
+- [Marshalling in .NET](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/type-marshalling) -- .NET이 관리 타입과 비관리 타입 간에 변환하는 방법.

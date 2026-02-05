@@ -58,6 +58,7 @@ Recent decisions affecting current work:
 - [01-02]: Organized bindings by functional area (context, module, type, operation, region, block)
 - [01-02]: MlirHelpers module for common patterns (operationToString, createContextWithDialects)
 - [01-02]: Cross-platform library loading via "MLIR-C" name without extension
+- [Project]: Tutorial 본문은 한글로 작성 (코드, API명, 기술 용어는 원문 유지)
 
 ### Pending Todos
 

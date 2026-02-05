@@ -1,31 +1,31 @@
-# Chapter 03: P/Invoke Bindings
+# Chapter 03: P/Invoke 바인딩
 
-## Introduction
+## 소개
 
-In Chapter 02, you wrote your first F# program that generates MLIR IR. You defined handle types, wrote `DllImport` declarations, and successfully called the MLIR C API to create a simple function. But that code was exploratory and ad-hoc — all the bindings were defined inline in a script.
+Chapter 02에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성했습니다. 핸들 타입을 정의하고, `DllImport` 선언을 작성하며, MLIR C API를 성공적으로 호출하여 간단한 함수를 만들었습니다. 하지만 그 코드는 탐색적이고 임시방편적이었습니다 -- 모든 바인딩이 스크립트 내에 인라인으로 정의되어 있었습니다.
 
-A real compiler needs organized, reusable bindings. In this chapter, we'll take everything we learned in Chapter 02 and systematize it into a proper F# module: `MlirBindings.fs`. This module will serve as the foundation for all future chapters. You'll learn:
+실제 컴파일러에는 체계적이고 재사용 가능한 바인딩이 필요합니다. 이 장에서는 Chapter 02에서 배운 모든 것을 가져와 적절한 F# 모듈인 `MlirBindings.fs`로 체계화합니다. 이 모듈은 이후 모든 장의 기반이 됩니다. 이 장에서 배울 내용은 다음과 같습니다:
 
-- How to organize MLIR C API bindings by functional area (context, module, type, operation, etc.)
-- How to handle string marshalling correctly and safely
-- How to work with callbacks for IR printing
-- Cross-platform considerations (Linux, macOS, Windows)
+- 기능 영역별(context, module, type, operation 등)로 MLIR C API 바인딩을 구성하는 방법
+- 문자열 마샬링을 올바르고 안전하게 처리하는 방법
+- IR 출력을 위한 콜백 처리 방법
+- 크로스 플랫폼 고려 사항 (Linux, macOS, Windows)
 
-By the end of this chapter, you'll have a complete, production-ready binding layer for the MLIR C API.
+이 장을 마치면 MLIR C API에 대한 완전하고 프로덕션에 사용할 수 있는 바인딩 레이어를 갖추게 됩니다.
 
-## Design Philosophy
+## 설계 철학
 
-Our binding layer follows these principles:
+바인딩 레이어는 다음 원칙을 따릅니다:
 
-1. **Thin wrapper:** Minimal abstraction over the C API. Each F# function maps directly to a C function.
-2. **Type safety:** Use F# struct types for MLIR handles to catch type errors at compile time.
-3. **Memory safety:** Provide utilities for safe string marshalling and cleanup, but don't hide the need to call destroy functions.
-4. **Completeness:** Cover all MLIR C API functions needed for the compiler (context, module, type, operation, region, block, location, attribute, value).
-5. **Documentation:** Every function has a comment explaining its purpose and MLIR C API correspondence.
+1. **얇은 래퍼:** C API 위에 최소한의 추상화만 적용합니다. 각 F# 함수는 C 함수에 직접 대응됩니다.
+2. **타입 안전성:** MLIR 핸들에 F# struct 타입을 사용하여 컴파일 시점에 타입 오류를 잡습니다.
+3. **메모리 안전성:** 안전한 문자열 마샬링과 정리를 위한 유틸리티를 제공하되, destroy 함수를 호출해야 하는 필요성을 숨기지 않습니다.
+4. **완전성:** 컴파일러에 필요한 모든 MLIR C API 함수를 다룹니다 (context, module, type, operation, region, block, location, attribute, value).
+5. **문서화:** 모든 함수에 목적과 MLIR C API 대응 관계를 설명하는 주석이 있습니다.
 
-## Project Structure
+## 프로젝트 구조
 
-Before we write code, let's set up a proper F# project. In Chapter 02, we used a script (`.fsx`). Now we'll create a library project:
+코드를 작성하기 전에 적절한 F# 프로젝트를 설정하겠습니다. Chapter 02에서는 스크립트(`.fsx`)를 사용했지만, 이제 라이브러리 프로젝트를 만들겠습니다:
 
 ```bash
 cd $HOME/mlir-fsharp-tutorial
@@ -33,7 +33,7 @@ dotnet new classlib -lang F# -o MlirBindings
 cd MlirBindings
 ```
 
-This creates a new F# library project with this structure:
+이렇게 하면 다음과 같은 구조의 새 F# 라이브러리 프로젝트가 생성됩니다:
 
 ```
 MlirBindings/
@@ -41,40 +41,40 @@ MlirBindings/
 └── Library.fs
 ```
 
-Delete the default `Library.fs`:
+기본 `Library.fs`를 삭제합니다:
 
 ```bash
 rm Library.fs
 ```
 
-We'll create `MlirBindings.fs` from scratch.
+`MlirBindings.fs`를 처음부터 새로 만들겠습니다.
 
-## Module Organization
+## 모듈 구성
 
-Our bindings module will be organized into logical sections:
+바인딩 모듈은 다음과 같은 논리적 섹션으로 구성됩니다:
 
-1. **Handle Types:** F# structs representing MLIR opaque types
-2. **String Marshalling:** `MlirStringRef` and helper functions
-3. **Callback Delegates:** Function pointer types for MLIR callbacks
-4. **Context Management:** Context creation, destruction, dialect loading
-5. **Module Management:** Module creation, operations, printing
-6. **Location:** Source location utilities
-7. **Type System:** Integer types, function types, LLVM types
-8. **Operation Building:** Operation state, creation, insertion
-9. **Region and Block:** Region and block creation and management
-10. **Value and Attribute:** SSA value and attribute handling
+1. **핸들 타입:** MLIR 불투명 타입을 나타내는 F# struct
+2. **문자열 마샬링:** `MlirStringRef`와 헬퍼 함수
+3. **콜백 델리게이트:** MLIR 콜백을 위한 함수 포인터 타입
+4. **Context 관리:** Context 생성, 소멸, dialect 로딩
+5. **Module 관리:** Module 생성, 연산, 출력
+6. **Location:** 소스 위치 유틸리티
+7. **타입 시스템:** 정수 타입, 함수 타입, LLVM 타입
+8. **Operation 빌딩:** Operation state 생성 및 조립
+9. **Region과 Block:** Region 및 Block 생성과 관리
+10. **Value와 Attribute:** SSA value 및 attribute 처리
 
-Let's build this step by step.
+단계별로 구축해 보겠습니다.
 
-## Handle Types
+## 핸들 타입
 
-Create a new file `MlirBindings.fs` in the `MlirBindings` directory:
+`MlirBindings` 디렉토리에 새 파일 `MlirBindings.fs`를 생성합니다:
 
 ```bash
 touch MlirBindings.fs
 ```
 
-Add the file to the project by editing `MlirBindings.fsproj`. Replace the contents with:
+프로젝트 파일 `MlirBindings.fsproj`를 편집하여 파일을 추가합니다. 내용을 다음으로 교체합니다:
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
@@ -91,7 +91,7 @@ Add the file to the project by editing `MlirBindings.fsproj`. Replace the conten
 </Project>
 ```
 
-Now open `MlirBindings.fs` and start with the namespace and imports:
+이제 `MlirBindings.fs`를 열고 namespace와 import부터 시작합니다:
 
 ```fsharp
 namespace MlirBindings
@@ -100,7 +100,7 @@ open System
 open System.Runtime.InteropServices
 ```
 
-Define all the handle types we'll need. These are opaque pointers to MLIR internal structures:
+필요한 모든 핸들 타입을 정의합니다. 이것들은 MLIR 내부 구조체에 대한 불투명 포인터입니다:
 
 ```fsharp
 /// MLIR context - manages dialects, types, and global state
@@ -176,11 +176,11 @@ type MlirIdentifier =
     new(handle) = { Handle = handle }
 ```
 
-Each handle type includes a doc comment explaining its purpose. The `[<Struct>]` attribute ensures these are stack-allocated value types.
+각 핸들 타입에는 목적을 설명하는 문서 주석이 포함되어 있습니다. `[<Struct>]` 어트리뷰트는 이들이 스택에 할당되는 값 타입임을 보장합니다.
 
-## String Marshalling
+## 문자열 마샬링
 
-MLIR uses `MlirStringRef` for passing strings without ownership semantics. Define it with helper utilities:
+MLIR은 소유권 의미 없이 문자열을 전달하기 위해 `MlirStringRef`를 사용합니다. 헬퍼 유틸리티와 함께 정의합니다:
 
 ```fsharp
 /// MLIR string reference - non-owning pointer to string data
@@ -225,23 +225,23 @@ type MlirStringRef =
             strRef.Free()
 ```
 
-The `WithString` helper is particularly useful — it handles allocation and cleanup automatically:
+`WithString` 헬퍼는 특히 유용합니다 -- 할당과 정리를 자동으로 처리합니다:
 
 ```fsharp
-// Instead of:
+// 이렇게 하는 대신:
 let strRef = MlirStringRef.FromString("func.func")
 let op = createOp strRef
 strRef.Free()
 
-// You can write:
+// 다음과 같이 작성할 수 있습니다:
 MlirStringRef.WithString "func.func" (fun strRef ->
     createOp strRef
 )
 ```
 
-## Callback Delegates
+## 콜백 델리게이트
 
-MLIR uses callbacks for printing and string handling. Define the delegate types:
+MLIR은 출력과 문자열 처리를 위해 콜백을 사용합니다. 델리게이트 타입을 정의합니다:
 
 ```fsharp
 /// Callback for MLIR IR printing (invoked with chunks of output)
@@ -269,7 +269,7 @@ type MlirLogicalResult =
 
 ## Operation State
 
-The `MlirOperationState` struct is used to build operations. It's complex because it contains pointers to arrays:
+`MlirOperationState` struct는 operation을 빌드하는 데 사용됩니다. 배열에 대한 포인터를 포함하기 때문에 복잡합니다:
 
 ```fsharp
 /// MLIR operation state - used to construct operations
@@ -290,17 +290,17 @@ type MlirOperationState =
     val mutable EnableResultTypeInference: bool
 ```
 
-Note: All fields are mutable because we need to modify them before passing to `mlirOperationCreate`.
+참고: `mlirOperationCreate`에 전달하기 전에 수정해야 하므로 모든 필드가 mutable입니다.
 
-## P/Invoke Declarations
+## P/Invoke 선언
 
-Now for the main event: the P/Invoke declarations for the MLIR C API. Organize them into a module:
+이제 핵심 부분입니다: MLIR C API에 대한 P/Invoke 선언입니다. 모듈로 구성합니다:
 
 ```fsharp
 module MlirNative =
 
     //==========================================================================
-    // Context Management
+    // Context 관리
     //==========================================================================
 
     /// Create an MLIR context
@@ -340,7 +340,7 @@ module MlirNative =
     extern void mlirDialectHandleRegisterDialect(MlirDialectHandle handle, MlirContext ctx)
 
     //==========================================================================
-    // Module Management
+    // Module 관리
     //==========================================================================
 
     /// Create an empty MLIR module
@@ -380,7 +380,7 @@ module MlirNative =
     extern MlirLocation mlirLocationFusedGet(MlirContext ctx, nativeint numLocs, MlirLocation& locs, MlirAttribute metadata)
 
     //==========================================================================
-    // Type System
+    // 타입 시스템
     //==========================================================================
 
     /// Create an integer type with specified bit width
@@ -431,7 +431,7 @@ module MlirNative =
     extern MlirType mlirLLVMStructTypeLiteralGet(MlirContext ctx, nativeint numFieldTypes, MlirType& fieldTypes, bool isPacked)
 
     //==========================================================================
-    // Attribute System
+    // Attribute 시스템
     //==========================================================================
 
     /// Create an integer attribute
@@ -467,7 +467,7 @@ module MlirNative =
     extern MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name, MlirAttribute attr)
 
     //==========================================================================
-    // Operation Building
+    // Operation 빌딩
     //==========================================================================
 
     /// Create an operation state
@@ -523,7 +523,7 @@ module MlirNative =
     extern bool mlirOperationVerify(MlirOperation op)
 
     //==========================================================================
-    // Region Management
+    // Region 관리
     //==========================================================================
 
     /// Create a new region
@@ -547,7 +547,7 @@ module MlirNative =
     extern MlirBlock mlirRegionGetFirstBlock(MlirRegion region)
 
     //==========================================================================
-    // Block Management
+    // Block 관리
     //==========================================================================
 
     /// Create a new block with arguments
@@ -591,29 +591,29 @@ module MlirNative =
     extern void mlirValuePrint(MlirValue value, MlirStringCallback callback, nativeint userData)
 ```
 
-This is a comprehensive binding layer covering all the MLIR C API functions you'll need for building a compiler. Each function is documented with its purpose.
+이것은 컴파일러 구축에 필요한 모든 MLIR C API 함수를 다루는 포괄적인 바인딩 레이어입니다. 각 함수에는 목적을 설명하는 문서가 포함되어 있습니다.
 
-## Cross-Platform Library Loading
+## 크로스 플랫폼 라이브러리 로딩
 
-One important detail: the library name `"MLIR-C"` works across platforms because .NET automatically appends the correct extension:
+중요한 세부 사항이 하나 있습니다: 라이브러리 이름 `"MLIR-C"`는 .NET이 자동으로 올바른 확장자를 추가하기 때문에 플랫폼 간에 동작합니다:
 
 - **Linux:** `libMLIR-C.so`
 - **macOS:** `libMLIR-C.dylib`
 - **Windows:** `MLIR-C.dll`
 
-However, .NET still needs to know where to find the library at runtime. We covered this in Chapter 00 (setting `LD_LIBRARY_PATH` or `DYLD_LIBRARY_PATH`). For a production application, you have several options:
+그러나 .NET은 런타임에 라이브러리를 어디서 찾을 수 있는지 알아야 합니다. 이 내용은 Chapter 00에서 다루었습니다 (`LD_LIBRARY_PATH` 또는 `DYLD_LIBRARY_PATH` 설정). 프로덕션 애플리케이션의 경우 여러 가지 옵션이 있습니다:
 
-### Option 1: Environment Variable (Development)
+### 옵션 1: 환경 변수 (개발 시)
 
-Set the library path before running:
+실행 전에 라이브러리 경로를 설정합니다:
 
 ```bash
 LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
 ```
 
-### Option 2: NativeLibrary.SetDllImportResolver (Runtime)
+### 옵션 2: NativeLibrary.SetDllImportResolver (런타임)
 
-Use .NET's `NativeLibrary` API to specify custom search paths:
+.NET의 `NativeLibrary` API를 사용하여 커스텀 검색 경로를 지정합니다:
 
 ```fsharp
 open System.Runtime.InteropServices
@@ -641,15 +641,15 @@ module LibraryLoader =
         )
 ```
 
-Call `LibraryLoader.initialize()` before any MLIR functions are invoked.
+MLIR 함수를 호출하기 전에 `LibraryLoader.initialize()`를 호출합니다.
 
-### Option 3: rpath (Linux/macOS Binaries)
+### 옵션 3: rpath (Linux/macOS 바이너리)
 
-For compiled binaries, embed the library search path in the executable using rpath. This is outside the scope of this tutorial but is the standard solution for distributed applications.
+컴파일된 바이너리의 경우, rpath를 사용하여 실행 파일에 라이브러리 검색 경로를 내장합니다. 이 방법은 이 튜토리얼의 범위를 벗어나지만, 배포 애플리케이션의 표준 솔루션입니다.
 
-## Helper Utilities
+## 헬퍼 유틸리티
 
-Add some high-level helper functions for common patterns:
+자주 사용되는 패턴을 위한 고수준 헬퍼 함수를 추가합니다:
 
 ```fsharp
 module MlirHelpers =
@@ -694,11 +694,11 @@ module MlirHelpers =
         MlirNative.mlirBlockCreate(nativeint 0, &dummyType, &dummyLoc)
 ```
 
-These utilities wrap common operations and reduce boilerplate in user code.
+이 유틸리티들은 일반적인 작업을 래핑하여 사용자 코드에서 보일러플레이트를 줄여 줍니다.
 
-## Complete MlirBindings.fs Listing
+## 전체 MlirBindings.fs 목록
 
-Here's the complete `MlirBindings.fs` file with all sections integrated:
+다음은 모든 섹션이 통합된 완전한 `MlirBindings.fs` 파일입니다:
 
 ```fsharp
 namespace MlirBindings
@@ -1058,18 +1058,18 @@ module MlirHelpers =
         ctx
 ```
 
-This is your complete, production-ready MLIR binding layer.
+이것이 완전하고 프로덕션에 사용할 수 있는 MLIR 바인딩 레이어입니다.
 
-## Building the Library
+## 라이브러리 빌드
 
-Build the library project:
+라이브러리 프로젝트를 빌드합니다:
 
 ```bash
 cd $HOME/mlir-fsharp-tutorial/MlirBindings
 dotnet build
 ```
 
-Expected output:
+예상 출력:
 
 ```
 Build succeeded.
@@ -1077,11 +1077,11 @@ Build succeeded.
     0 Error(s)
 ```
 
-The compiled library is in `bin/Debug/net8.0/MlirBindings.dll`.
+컴파일된 라이브러리는 `bin/Debug/net8.0/MlirBindings.dll`에 위치합니다.
 
-## Using the Bindings
+## 바인딩 사용하기
 
-Let's rewrite the Chapter 02 hello-world example using the new bindings. Create a new console project:
+새 바인딩을 사용하여 Chapter 02의 hello-world 예제를 다시 작성해 보겠습니다. 새 콘솔 프로젝트를 생성합니다:
 
 ```bash
 cd $HOME/mlir-fsharp-tutorial
@@ -1090,7 +1090,7 @@ cd HelloMlirWithBindings
 dotnet add reference ../MlirBindings/MlirBindings.fsproj
 ```
 
-Replace the contents of `Program.fs`:
+`Program.fs`의 내용을 다음으로 교체합니다:
 
 ```fsharp
 open System
@@ -1119,13 +1119,13 @@ let main argv =
     0
 ```
 
-Run it:
+실행합니다:
 
 ```bash
 LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
 ```
 
-Expected output:
+예상 출력:
 
 ```
 Created MLIR context with dialects loaded
@@ -1138,30 +1138,30 @@ module {
 Cleaned up
 ```
 
-Much cleaner than Chapter 02! The bindings module handles all the marshalling and boilerplate.
+Chapter 02보다 훨씬 깔끔합니다! 바인딩 모듈이 모든 마샬링과 보일러플레이트를 처리합니다.
 
-## What We've Learned
+## 이 장에서 배운 내용
 
-In this chapter, you:
+이 장에서는 다음을 수행했습니다:
 
-1. **Organized MLIR bindings** into a reusable F# library module with logical sections.
-2. **Defined comprehensive handle types** for all MLIR entities (context, module, operation, type, region, block, value, attribute).
-3. **Implemented safe string marshalling** with `MlirStringRef` and helper utilities.
-4. **Declared P/Invoke bindings** for the complete MLIR C API surface area needed for compilation.
-5. **Created helper utilities** to reduce boilerplate (printing, context creation).
-6. **Understood cross-platform considerations** for library loading.
-7. **Built and used the bindings library** in a separate project.
+1. **MLIR 바인딩을 구성하여** 논리적 섹션으로 나뉜 재사용 가능한 F# 라이브러리 모듈을 만들었습니다.
+2. **포괄적인 핸들 타입을 정의하여** 모든 MLIR 엔티티(context, module, operation, type, region, block, value, attribute)를 다루었습니다.
+3. **안전한 문자열 마샬링을 구현하여** `MlirStringRef`와 헬퍼 유틸리티를 만들었습니다.
+4. **P/Invoke 바인딩을 선언하여** 컴파일에 필요한 MLIR C API의 전체 표면적을 다루었습니다.
+5. **헬퍼 유틸리티를 생성하여** 보일러플레이트를 줄였습니다 (출력, context 생성).
+6. **크로스 플랫폼 고려 사항을** 이해하여 라이브러리 로딩을 다루었습니다.
+7. **바인딩 라이브러리를 빌드하고 사용하여** 별도의 프로젝트에서 활용했습니다.
 
-You now have a complete, production-ready binding layer for MLIR. This `MlirBindings` module will serve as the foundation for all future chapters as we build the FunLang compiler.
+이제 MLIR에 대한 완전하고 프로덕션에 사용할 수 있는 바인딩 레이어를 갖추었습니다. 이 `MlirBindings` 모듈은 FunLang 컴파일러를 구축하는 이후 모든 장의 기반이 됩니다.
 
-## Next Chapter
+## 다음 장
 
-In the next chapter, we'll start building the FunLang compiler backend. We'll define the data structures for representing the typed FunLang AST in F#, and begin writing the code generation logic that translates FunLang expressions into MLIR operations using the bindings we've built.
+다음 장에서는 FunLang 컴파일러 백엔드 구축을 시작합니다. 타입이 지정된 FunLang AST를 F#에서 표현하기 위한 데이터 구조를 정의하고, 여기서 만든 바인딩을 사용하여 FunLang 표현식을 MLIR operation으로 변환하는 코드 생성 로직을 작성하기 시작합니다.
 
-Continue to **Chapter 04: FunLang AST to MLIR** (to be written).
+**Chapter 04: FunLang AST에서 MLIR로** (작성 예정)로 이어집니다.
 
-## Further Reading
+## 참고 자료
 
-- [MLIR C API Documentation](https://mlir.llvm.org/docs/CAPI/) — Official C API guide
-- [P/Invoke Best Practices](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/best-practices) — Microsoft's guidelines for safe and performant interop
-- [Memory Management in P/Invoke](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/tutorial-custom-marshaller) — Understanding managed/unmanaged memory boundaries
+- [MLIR C API Documentation](https://mlir.llvm.org/docs/CAPI/) -- 공식 C API 가이드
+- [P/Invoke Best Practices](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/best-practices) -- 안전하고 고성능의 interop을 위한 Microsoft의 가이드라인
+- [Memory Management in P/Invoke](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/tutorial-custom-marshaller) -- 관리/비관리 메모리 경계 이해

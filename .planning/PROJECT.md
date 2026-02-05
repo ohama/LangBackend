@@ -49,6 +49,7 @@ Each chapter produces a working compiler for all features covered so far — the
 - **MLIR**: Must use structured builder APIs, not string-based MLIR generation
 - **Format**: Documentation-only markdown files in `tutorial/`, no separate buildable project in this repo
 - **Dependency**: Assumes reader has FunLang source from LangTutorial as the starting point
+- **Language (Writing)**: Tutorial 본문은 한글로 작성 (코드, API명, 기술 용어는 원문 유지)
 
 ## Key Decisions
 
@@ -58,6 +59,7 @@ Each chapter produces a working compiler for all features covered so far — the
 | Custom MLIR Dialect first | Standard MLIR practice: model domain semantics before lowering | — Pending |
 | Incremental chapters | Each step compilable — better learning experience than big-bang | — Pending |
 | MLIR binding approach | TBD — needs research into F#/MLIR interop options | — Pending |
+| Tutorial 한글 작성 | 독자 대상이 한국어 사용자, 접근성 향상 | Accepted |
 
 ---
 *Last updated: 2026-02-05 after initialization*
