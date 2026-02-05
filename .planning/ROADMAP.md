@@ -12,7 +12,7 @@ LangBackend is a 10-15 chapter tutorial series teaching MLIR-based compiler back
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Interop** - MLIR build setup, F# bindings, and architecture validation
+- [x] **Phase 1: Foundation & Interop** - MLIR build setup, F# bindings, and architecture validation
 - [ ] **Phase 2: Core Language Basics** - Arithmetic, let bindings, control flow, and memory strategy
 - [ ] **Phase 3: Functions & Recursion** - Function definitions, calls, and recursive patterns
 - [ ] **Phase 4: Closures & Higher-Order Functions** - Environment capture and closure compilation
@@ -140,7 +140,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Interop | 0/3 | Planning complete | - |
+| 1. Foundation & Interop | 3/3 | Complete ✓ | 2026-02-06 |
 | 2. Core Language Basics | 0/TBD | Not started | - |
 | 3. Functions & Recursion | 0/TBD | Not started | - |
 | 4. Closures & Higher-Order Functions | 0/TBD | Not started | - |
