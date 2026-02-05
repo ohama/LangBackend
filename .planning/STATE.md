@@ -10,28 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 1 of 7 (Foundation & Interop)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-05 — Completed 01-01-PLAN.md (Prerequisites and MLIR Primer)
+Last activity: 2026-02-05 — Completed 01-02-PLAN.md (Hello MLIR and P/Invoke Bindings)
 
-Progress: [█░░░░░░░░░] 10% (1/10 estimated total plans)
+Progress: [██░░░░░░░░] 20% (2/10 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 4 min
-- Total execution time: 0.07 hours
+- Total plans completed: 2
+- Average duration: 5 min
+- Total execution time: 0.17 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 - Foundation & Interop | 1/3 | 4 min | 4 min |
+| 1 - Foundation & Interop | 2/3 | 10 min | 5 min |
 
 **Recent Trend:**
-- Last plan: 01-01 (4 min)
-- Trend: First plan completed
+- Last plan: 01-02 (6 min)
+- Previous: 01-01 (4 min)
+- Trend: Consistent execution pace
 
 *Updated after each plan completion*
 
@@ -51,6 +52,12 @@ Recent decisions affecting current work:
 - [01-01]: WSL2 recommended for Windows users instead of native MSVC build
 - [01-01]: Progressive lowering philosophy: FunLang AST → High-Level MLIR → LLVM Dialect → LLVM IR → Native
 - [01-01]: Tutorial chapters use copy-pasteable commands and annotated examples
+- [01-02]: CallingConvention.Cdecl for all MLIR-C API P/Invoke declarations
+- [01-02]: Opaque handle types as F# structs with single nativeint field
+- [01-02]: MlirStringRef for string marshalling with FromString/ToString/Free methods
+- [01-02]: Organized bindings by functional area (context, module, type, operation, region, block)
+- [01-02]: MlirHelpers module for common patterns (operationToString, createContextWithDialects)
+- [01-02]: Cross-platform library loading via "MLIR-C" name without extension
 
 ### Pending Todos
 
@@ -63,7 +70,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T07:00:33Z
-Stopped at: Completed 01-01-PLAN.md - Prerequisites and MLIR Primer chapters written
+Last session: 2026-02-05T07:09:04Z
+Stopped at: Completed 01-02-PLAN.md - Hello MLIR and P/Invoke Bindings chapters written
 Resume file: None
-Next: Execute 01-02-PLAN.md - Hello MLIR from F# and P/Invoke bindings
+Next: Execute 01-03-PLAN.md - AST Representation and First Code Generator
