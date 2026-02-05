@@ -127,58 +127,67 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | TBD | Pending |
-| FOUND-02 | TBD | Pending |
-| FOUND-03 | TBD | Pending |
-| FOUND-04 | TBD | Pending |
-| FOUND-05 | TBD | Pending |
-| EXPR-01 | TBD | Pending |
-| EXPR-02 | TBD | Pending |
-| EXPR-03 | TBD | Pending |
-| EXPR-04 | TBD | Pending |
-| LET-01 | TBD | Pending |
-| LET-02 | TBD | Pending |
-| LET-03 | TBD | Pending |
-| CTRL-01 | TBD | Pending |
-| CTRL-02 | TBD | Pending |
-| CTRL-03 | TBD | Pending |
-| FUNC-01 | TBD | Pending |
-| FUNC-02 | TBD | Pending |
-| FUNC-03 | TBD | Pending |
-| FUNC-04 | TBD | Pending |
-| FUNC-05 | TBD | Pending |
-| CLOS-01 | TBD | Pending |
-| CLOS-02 | TBD | Pending |
-| CLOS-03 | TBD | Pending |
-| CLOS-04 | TBD | Pending |
-| CLOS-05 | TBD | Pending |
-| PMTC-01 | TBD | Pending |
-| PMTC-02 | TBD | Pending |
-| PMTC-03 | TBD | Pending |
-| PMTC-04 | TBD | Pending |
-| PMTC-05 | TBD | Pending |
-| DIAL-01 | TBD | Pending |
-| DIAL-02 | TBD | Pending |
-| DIAL-03 | TBD | Pending |
-| DIAL-04 | TBD | Pending |
-| DIAL-05 | TBD | Pending |
-| OPT-01 | TBD | Pending |
-| OPT-02 | TBD | Pending |
-| OPT-03 | TBD | Pending |
-| OPT-04 | TBD | Pending |
-| MEM-01 | TBD | Pending |
-| MEM-02 | TBD | Pending |
-| MEM-03 | TBD | Pending |
-| QUAL-01 | TBD | Pending |
-| QUAL-02 | TBD | Pending |
-| QUAL-03 | TBD | Pending |
-| QUAL-04 | TBD | Pending |
+| FOUND-01 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Pending |
+| FOUND-04 | Phase 1 | Pending |
+| FOUND-05 | Phase 1 | Pending |
+| EXPR-01 | Phase 2 | Pending |
+| EXPR-02 | Phase 2 | Pending |
+| EXPR-03 | Phase 2 | Pending |
+| EXPR-04 | Phase 2 | Pending |
+| LET-01 | Phase 2 | Pending |
+| LET-02 | Phase 2 | Pending |
+| LET-03 | Phase 2 | Pending |
+| CTRL-01 | Phase 2 | Pending |
+| CTRL-02 | Phase 2 | Pending |
+| CTRL-03 | Phase 2 | Pending |
+| FUNC-01 | Phase 3 | Pending |
+| FUNC-02 | Phase 3 | Pending |
+| FUNC-03 | Phase 3 | Pending |
+| FUNC-04 | Phase 3 | Pending |
+| FUNC-05 | Phase 3 | Pending |
+| CLOS-01 | Phase 4 | Pending |
+| CLOS-02 | Phase 4 | Pending |
+| CLOS-03 | Phase 4 | Pending |
+| CLOS-04 | Phase 4 | Pending |
+| CLOS-05 | Phase 4 | Pending |
+| PMTC-01 | Phase 6 | Pending |
+| PMTC-02 | Phase 6 | Pending |
+| PMTC-03 | Phase 6 | Pending |
+| PMTC-04 | Phase 6 | Pending |
+| PMTC-05 | Phase 6 | Pending |
+| DIAL-01 | Phase 5 | Pending |
+| DIAL-02 | Phase 5 | Pending |
+| DIAL-03 | Phase 5 | Pending |
+| DIAL-04 | Phase 5 | Pending |
+| DIAL-05 | Phase 5 | Pending |
+| OPT-01 | Phase 7 | Pending |
+| OPT-02 | Phase 7 | Pending |
+| OPT-03 | Phase 7 | Pending |
+| OPT-04 | Phase 7 | Pending |
+| MEM-01 | Phase 2 | Pending |
+| MEM-02 | Phase 2 | Pending |
+| MEM-03 | Phase 4 | Pending |
+| QUAL-01 | Phase 2 | Pending |
+| QUAL-02 | Phase 2 | Pending |
+| QUAL-03 | Phase 1 | Pending |
+| QUAL-04 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 44 total
-- Mapped to phases: 0
-- Unmapped: 44 (pending roadmap creation)
+- Mapped to phases: 44
+- Unmapped: 0
+
+**Phase Distribution:**
+- Phase 1 (Foundation & Interop): 6 requirements
+- Phase 2 (Core Language Basics): 14 requirements
+- Phase 3 (Functions & Recursion): 5 requirements
+- Phase 4 (Closures & Higher-Order Functions): 6 requirements
+- Phase 5 (Custom MLIR Dialect): 5 requirements
+- Phase 6 (Pattern Matching & Data Structures): 5 requirements
+- Phase 7 (Optimization & Polish): 4 requirements
 
 ---
 *Requirements defined: 2026-02-05*
-*Last updated: 2026-02-05 after initial definition*
+*Last updated: 2026-02-05 after roadmap creation*
