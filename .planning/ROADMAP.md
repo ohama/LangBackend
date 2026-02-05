@@ -33,10 +33,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Reader understands MLIR primer concepts (dialect, operation, region, block, SSA form)
   5. Reader can register a custom MLIR dialect from F# via C API
   6. Reader can compile a trivial FunLang program (integer literal) to native binary and execute it
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD during planning
+- [ ] 01-01-PLAN.md — Prerequisites (LLVM/MLIR build) and MLIR Primer (concepts)
+- [ ] 01-02-PLAN.md — Hello MLIR from F# and complete P/Invoke bindings module
+- [ ] 01-03-PLAN.md — F# wrapper layer, arithmetic compiler, and custom dialect appendix
 
 ### Phase 2: Core Language Basics
 **Goal**: Reader can compile arithmetic expressions, let bindings, and if/else control flow with working memory management
@@ -91,7 +93,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Reader understands custom dialect design principles (operations, types, attributes)
   2. Reader can define custom operations (e.g., funlang.closure, funlang.apply, funlang.match)
-  3. Reader understands progressive lowering philosophy (FunLang dialect → SCF/MemRef → LLVM)
+  3. Reader understands progressive lowering philosophy (FunLang dialect -> SCF/MemRef -> LLVM)
   4. Reader can implement lowering passes from FunLang dialect to standard dialects
   5. Reader can implement pattern-based rewrites using MLIR's rewrite infrastructure
   6. Reader can refactor earlier chapters to use custom dialect operations
@@ -134,11 +136,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Interop | 0/TBD | Not started | - |
+| 1. Foundation & Interop | 0/3 | Planning complete | - |
 | 2. Core Language Basics | 0/TBD | Not started | - |
 | 3. Functions & Recursion | 0/TBD | Not started | - |
 | 4. Closures & Higher-Order Functions | 0/TBD | Not started | - |
