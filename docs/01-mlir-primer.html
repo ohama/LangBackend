@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7d9443ad.js";
+            window.path_to_searchindex_js = "searchindex-7ea10746.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0fc86e66.js"></script>
@@ -182,9 +182,9 @@
                     <main>
                         <h1 id="chapter-01-mlir-입문"><a class="header" href="#chapter-01-mlir-입문">Chapter 01: MLIR 입문</a></h1>
 <h2 id="소개"><a class="header" href="#소개">소개</a></h2>
-<p>이전 챕터에서 LLVM/MLIR을 소스에서 빌드하고 .NET SDK를 설정했습니다. 필요한 도구는 모두 설치되었습니다. 하지만 MLIR을 생성하는 F# 코드를 작성하기 전에, MLIR이 무엇이고 프로그램을 어떻게 표현하는지 이해해야 합니다.</p>
-<p>MLIR은 전통적인 중간 표현(intermediate representation)과 다릅니다. 단순히 “하나의 IR“이 아니라, 서로 상호 운용할 수 있는 여러 IR(dialect이라고 부릅니다)을 구축하기 위한 프레임워크입니다. 이 다단계(multi-level) 철학이 MLIR을 컴파일러 개발에 강력하게 만드는 핵심입니다. 고수준 함수형 언어를 매우 저수준인 LLVM IR로 직접 변환하도록 강제하는 대신, MLIR은 언어의 의미론(semantics)을 필요한 만큼 보존하는 중간 표현을 정의한 다음, 단계적으로 점진적 하강(progressive lowering)할 수 있게 해줍니다.</p>
-<p>FunLang의 컴파일 파이프라인은 다음과 같습니다:</p>
+<p>이전 챕터에서 LLVM/MLIR을 소스에서 빌드하고 .NET SDK를 설정했다. 필요한 도구는 모두 설치되었다. 하지만 MLIR을 생성하는 F# 코드를 작성하기 전에, MLIR이 무엇이고 프로그램을 어떻게 표현하는지 이해해야 한다.</p>
+<p>MLIR은 전통적인 중간 표현(intermediate representation)과 다르다. 단순히 “하나의 IR“이 아니라, 서로 상호 운용할 수 있는 여러 IR(dialect이라고 부른다)을 구축하기 위한 프레임워크이다. 이 다단계(multi-level) 철학이 MLIR을 컴파일러 개발에 강력하게 만드는 핵심이다. 고수준 함수형 언어를 매우 저수준인 LLVM IR로 직접 변환하도록 강제하는 대신, MLIR은 언어의 의미론(semantics)을 필요한 만큼 보존하는 중간 표현을 정의한 다음, 단계적으로 점진적 하강(progressive lowering)할 수 있게 해준다.</p>
+<p>FunLang의 컴파일 파이프라인은 다음과 같다:</p>
 <pre><code>FunLang Typed AST
     ↓
 High-Level MLIR (arith, func, scf dialects)
@@ -195,9 +195,9 @@ LLVM IR
     ↓
 Native Machine Code
 </code></pre>
-<p>이 챕터에서는 MLIR IR을 이해하기 위한 멘탈 모델을 제공합니다. 다섯 가지 핵심 개념 — <strong>dialect</strong>, <strong>operation</strong>, <strong>region</strong>, <strong>block</strong>, 그리고 <strong>SSA form</strong> — 을 구체적인 예제를 통해 배우게 됩니다. 챕터를 마치면 MLIR 텍스트 IR을 읽고, FunLang 프로그램이 MLIR 구조에 어떻게 매핑되는지 이해할 수 있을 것입니다.</p>
+<p>이 챕터에서는 MLIR IR을 이해하기 위한 멘탈 모델을 제공한다. 다섯 가지 핵심 개념 — <strong>dialect</strong>, <strong>operation</strong>, <strong>region</strong>, <strong>block</strong>, 그리고 <strong>SSA form</strong> — 을 구체적인 예제를 통해 배운다. 챕터를 마치면 MLIR 텍스트 IR을 읽고, FunLang 프로그램이 MLIR 구조에 어떻게 매핑되는지 이해할 수 있을 것이다.</p>
 <h2 id="mlir-ir-구조"><a class="header" href="#mlir-ir-구조">MLIR IR 구조</a></h2>
-<p>완전한 MLIR 프로그램을 보면서 각 부분을 분석해 보겠습니다. 다음은 두 개의 32비트 정수를 더하는 간단한 함수입니다:</p>
+<p>완전한 MLIR 프로그램을 보면서 각 부분을 분석해 본다. 다음은 두 개의 32비트 정수를 더하는 간단한 함수이다:</p>
 <pre><code class="language-mlir">module {
   func.func @add(%arg0: i32, %arg1: i32) -&gt; i32 {
     %result = arith.addi %arg0, %arg1 : i32
@@ -205,29 +205,29 @@ Native Machine Code
   }
 }
 </code></pre>
-<p>한 줄씩 분석해 보겠습니다:</p>
+<p>한 줄씩 분석해 본다:</p>
 <ul>
 <li>
-<p><strong><code>module { ... }</code></strong>: 모든 MLIR 프로그램은 module에 포함됩니다. module은 모든 코드를 담는 최상위 컨테이너로, C의 컴파일 단위(compilation unit)나 .NET의 어셈블리와 유사합니다.</p>
+<p><strong><code>module { ... }</code></strong>: 모든 MLIR 프로그램은 module에 포함된다. module은 모든 코드를 담는 최상위 컨테이너로, C의 컴파일 단위(compilation unit)나 .NET의 어셈블리와 유사하다.</p>
 </li>
 <li>
-<p><strong><code>func.func @add(...) -&gt; i32 { ... }</code></strong>: <code>func</code> dialect의 operation으로, <code>@add</code>라는 이름의 함수를 정의합니다. <code>@</code> 접두사는 심볼(함수 이름)을 나타냅니다. 이 함수는 두 개의 인자를 받아 <code>i32</code>(32비트 정수)를 반환합니다.</p>
+<p><strong><code>func.func @add(...) -&gt; i32 { ... }</code></strong>: <code>func</code> dialect의 operation으로, <code>@add</code>라는 이름의 함수를 정의한다. <code>@</code> 접두사는 심볼(함수 이름)을 나타낸다. 이 함수는 두 개의 인자를 받아 <code>i32</code>(32비트 정수)를 반환한다.</p>
 </li>
 <li>
-<p><strong><code>%arg0: i32, %arg1: i32</code></strong>: 함수 매개변수입니다. 각 매개변수는 타입 어노테이션(<code>: i32</code>)을 가진 SSA 값(<code>%</code>로 시작)입니다. 이것이 함수의 입력입니다.</p>
+<p><strong><code>%arg0: i32, %arg1: i32</code></strong>: 함수 매개변수이다. 각 매개변수는 타입 어노테이션(<code>: i32</code>)을 가진 SSA 값(<code>%</code>로 시작)이다. 이것이 함수의 입력이다.</p>
 </li>
 <li>
-<p><strong><code>%result = arith.addi %arg0, %arg1 : i32</code></strong>: <code>arith</code> dialect의 산술 덧셈 operation입니다. 두 피연산자(<code>%arg0</code>과 <code>%arg1</code>)를 받아 더한 후, 새로운 SSA 값 <code>%result</code>를 생성합니다. <code>: i32</code> 접미사는 결과 타입을 지정합니다.</p>
+<p><strong><code>%result = arith.addi %arg0, %arg1 : i32</code></strong>: <code>arith</code> dialect의 산술 덧셈 operation이다. 두 피연산자(<code>%arg0</code>과 <code>%arg1</code>)를 받아 더한 후, 새로운 SSA 값 <code>%result</code>를 생성한다. <code>: i32</code> 접미사는 결과 타입을 지정한다.</p>
 </li>
 <li>
-<p><strong><code>return %result : i32</code></strong>: 함수의 return operation입니다. <code>%result</code> 값을 호출자에게 반환합니다. <code>: i32</code> 타입 어노테이션은 타입 안전성을 보장합니다.</p>
+<p><strong><code>return %result : i32</code></strong>: 함수의 return operation이다. <code>%result</code> 값을 호출자에게 반환한다. <code>: i32</code> 타입 어노테이션은 타입 안전성을 보장한다.</p>
 </li>
 </ul>
-<p>MLIR의 모든 요소에는 목적과 타입이 있습니다. 암시적 변환이나 정의되지 않은 동작(undefined behavior)은 없습니다. 이러한 엄격함이 MLIR이 공격적인 최적화와 검증을 수행할 수 있게 해주는 것입니다.</p>
+<p>MLIR의 모든 요소에는 목적과 타입이 있다. 암시적 변환이나 정의되지 않은 동작(undefined behavior)은 없다. 이러한 엄격함이 MLIR이 공격적인 최적화와 검증을 수행할 수 있게 해주는 것이다.</p>
 <h2 id="dialect"><a class="header" href="#dialect">Dialect</a></h2>
-<p><strong>Dialect</strong>은 관련된 operation, 타입, attribute를 그룹화하는 네임스페이스입니다. Dialect은 MLIR의 확장성 메커니즘입니다 — 모든 가능한 operation을 하나의 거대한 IR에 넣는 대신, MLIR은 도메인에 맞는 커스텀 dialect을 정의할 수 있게 해줍니다.</p>
+<p><strong>Dialect</strong>은 관련된 operation, 타입, attribute를 그룹화하는 네임스페이스이다. Dialect은 MLIR의 확장성 메커니즘이다 — 모든 가능한 operation을 하나의 거대한 IR에 넣는 대신, MLIR은 도메인에 맞는 커스텀 dialect을 정의할 수 있게 해준다.</p>
 <h3 id="사용할-내장-dialect"><a class="header" href="#사용할-내장-dialect">사용할 내장 Dialect</a></h3>
-<p>FunLang 컴파일러에서는 주로 다음 표준 dialect들을 사용합니다:</p>
+<p>FunLang 컴파일러에서는 주로 다음 표준 dialect들을 사용한다:</p>
 <ol>
 <li>
 <p><strong><code>arith</code></strong> — 산술 연산</p>
@@ -257,75 +257,75 @@ Native Machine Code
 <p><strong><code>llvm</code></strong> — LLVM dialect (lowering 대상)</p>
 <ul>
 <li><code>llvm.func</code>, <code>llvm.call</code>, <code>llvm.add</code> 등</li>
-<li>이 dialect은 LLVM IR 구성 요소와 1:1로 매핑됩니다</li>
+<li>이 dialect은 LLVM IR 구성 요소와 1:1로 매핑된다</li>
 </ul>
 </li>
 </ol>
 <h3 id="커스텀-dialect"><a class="header" href="#커스텀-dialect">커스텀 Dialect</a></h3>
-<p>이 튜토리얼 시리즈의 후반부(Chapter 10-11)에서는 다음과 같은 operation을 가진 <strong>FunLang dialect</strong>을 정의하게 됩니다:</p>
+<p>이 튜토리얼 시리즈의 후반부(Chapter 10-11)에서는 다음과 같은 operation을 가진 <strong>FunLang dialect</strong>을 정의하게 된다:</p>
 <ul>
 <li><code>funlang.closure</code> (클로저 생성)</li>
 <li><code>funlang.apply</code> (클로저에 인자를 적용)</li>
 <li><code>funlang.match</code> (패턴 매칭)</li>
 </ul>
-<p>커스텀 dialect을 사용하면 컴파일 과정에서 고수준 의미론을 보존할 수 있습니다. FunLang 클로저를 즉시 저수준 구조체 할당과 함수 포인터로 변환하는 대신, 고수준 <code>funlang.closure</code> operation으로 표현합니다. 이렇게 하면 최적화를 작성하고 이해하기가 더 쉬워집니다.</p>
+<p>커스텀 dialect을 사용하면 컴파일 과정에서 고수준 의미론을 보존할 수 있다. FunLang 클로저를 즉시 저수준 구조체 할당과 함수 포인터로 변환하는 대신, 고수준 <code>funlang.closure</code> operation으로 표현한다. 이렇게 하면 최적화를 작성하고 이해하기가 더 쉬워진다.</p>
 <h3 id="dialect-명명-규칙"><a class="header" href="#dialect-명명-규칙">Dialect 명명 규칙</a></h3>
-<p>Operation은 항상 자신이 속한 dialect 이름을 접두사로 가지며, 점(.)으로 구분됩니다:</p>
+<p>Operation은 항상 자신이 속한 dialect 이름을 접두사로 가지며, 점(.)으로 구분된다:</p>
 <pre><code class="language-mlir">arith.addi   // "arith" dialect의 "addi" operation
 func.call    // "func" dialect의 "call" operation
 llvm.load    // "llvm" dialect의 "load" operation
 </code></pre>
-<p>이를 통해 이름 충돌을 방지합니다. <code>arith</code> dialect의 <code>addi</code>는 가상의 <code>mydialect.addi</code>와 구별됩니다.</p>
+<p>이를 통해 이름 충돌을 방지한다. <code>arith</code> dialect의 <code>addi</code>는 가상의 <code>mydialect.addi</code>와 구별된다.</p>
 <h2 id="operation"><a class="header" href="#operation">Operation</a></h2>
-<p><strong>Operation</strong>은 MLIR IR의 기본 단위입니다. MLIR에서는 함수 정의, 산술 명령어, 제어 흐름 등 모든 것이 operation으로 표현됩니다. 심지어 타입과 attribute도 operation에 첨부됩니다.</p>
+<p><strong>Operation</strong>은 MLIR IR의 기본 단위이다. MLIR에서는 함수 정의, 산술 명령어, 제어 흐름 등 모든 것이 operation으로 표현된다. 심지어 타입과 attribute도 operation에 첨부된다.</p>
 <h3 id="operation의-구조"><a class="header" href="#operation의-구조">Operation의 구조</a></h3>
-<p>텍스트 형식에서 operation은 다음과 같은 구조를 가집니다:</p>
+<p>텍스트 형식에서 operation은 다음과 같은 구조를 가진다:</p>
 <pre><code class="language-mlir">%results = dialect.opname(%operands) {attributes} : (types) -&gt; result_type
 </code></pre>
-<p>덧셈 예제에서 각 구성 요소를 살펴보겠습니다:</p>
+<p>덧셈 예제에서 각 구성 요소를 살펴본다:</p>
 <pre><code class="language-mlir">%result = arith.addi %arg0, %arg1 : i32
 </code></pre>
 <ul>
 <li>
-<p><strong><code>%result</code></strong>: 이 operation이 생성하는 SSA 값입니다. 이 값은 이후 operation에서 사용할 수 있습니다. <code>%</code> 접두사는 SSA 값을 심볼(<code>@function_name</code>)과 구별합니다.</p>
+<p><strong><code>%result</code></strong>: 이 operation이 생성하는 SSA 값이다. 이 값은 이후 operation에서 사용할 수 있다. <code>%</code> 접두사는 SSA 값을 심볼(<code>@function_name</code>)과 구별한다.</p>
 </li>
 <li>
-<p><strong><code>arith.addi</code></strong>: operation 이름(dialect + opname)입니다.</p>
+<p><strong><code>arith.addi</code></strong>: operation 이름(dialect + opname)이다.</p>
 </li>
 <li>
-<p><strong><code>%arg0, %arg1</code></strong>: 피연산자(operation의 입력)입니다. 이전에 정의된 SSA 값(이 경우 함수 인자)입니다.</p>
+<p><strong><code>%arg0, %arg1</code></strong>: 피연산자(operation의 입력)이다. 이전에 정의된 SSA 값(이 경우 함수 인자)이다.</p>
 </li>
 <li>
-<p><strong><code>: i32</code></strong>: 타입 제약 조건입니다. 이 operation은 32비트 정수에 대해 동작합니다.</p>
+<p><strong><code>: i32</code></strong>: 타입 제약 조건이다. 이 operation은 32비트 정수에 대해 동작한다.</p>
 </li>
 </ul>
-<p>모든 operation이 결과를 생성하는 것은 아닙니다. 예를 들어, <code>return</code>은 함수를 종료하는 operation이지만 이후에 사용할 값을 생성하지는 않습니다:</p>
+<p>모든 operation이 결과를 생성하는 것은 아니다. 예를 들어, <code>return</code>은 함수를 종료하는 operation이지만 이후에 사용할 값을 생성하지는 않는다:</p>
 <pre><code class="language-mlir">return %result : i32
 </code></pre>
 <h3 id="복수-결과를-가진-operation"><a class="header" href="#복수-결과를-가진-operation">복수 결과를 가진 Operation</a></h3>
-<p>일부 operation은 여러 값을 생성합니다. 예를 들어, 몫과 나머지를 모두 반환하는 나눗셈 operation이 있습니다:</p>
+<p>일부 operation은 여러 값을 생성한다. 예를 들어, 몫과 나머지를 모두 반환하는 나눗셈 operation이 있다:</p>
 <pre><code class="language-mlir">%quot, %rem = arith.divrem %dividend, %divisor : i32
 </code></pre>
-<p>이제 <code>%quot</code>과 <code>%rem</code> 모두 사용 가능한 SSA 값입니다.</p>
+<p>이제 <code>%quot</code>과 <code>%rem</code> 모두 사용 가능한 SSA 값이다.</p>
 <h3 id="attribute를-가진-operation"><a class="header" href="#attribute를-가진-operation">Attribute를 가진 Operation</a></h3>
-<p>Attribute는 컴파일 타임 상수 메타데이터를 제공합니다. 예를 들어, 정수 상수는 다음과 같습니다:</p>
+<p>Attribute는 컴파일 타임 상수 메타데이터를 제공한다. 예를 들어, 정수 상수는 다음과 같다:</p>
 <pre><code class="language-mlir">%zero = arith.constant 0 : i32
 </code></pre>
-<p><code>0</code>은 attribute(상수 값)이고, <code>i32</code>는 타입입니다. Attribute는 런타임 값이 아니라 컴파일 타임에 IR에 내장되는 것입니다.</p>
+<p><code>0</code>은 attribute(상수 값)이고, <code>i32</code>는 타입이다. Attribute는 런타임 값이 아니라 컴파일 타임에 IR에 내장되는 것이다.</p>
 <h2 id="region과-block"><a class="header" href="#region과-block">Region과 Block</a></h2>
-<p>MLIR operation은 <strong>region</strong>을 포함할 수 있고, region은 <strong>block</strong>을 포함합니다. 이것이 MLIR이 중첩된 스코프와 제어 흐름을 표현하는 방식입니다.</p>
+<p>MLIR operation은 <strong>region</strong>을 포함할 수 있고, region은 <strong>block</strong>을 포함한다. 이것이 MLIR이 중첩된 스코프와 제어 흐름을 표현하는 방식이다.</p>
 <h3 id="region"><a class="header" href="#region">Region</a></h3>
-<p><strong>Region</strong>은 block의 목록입니다. 함수 본문은 region입니다. <code>scf.if</code>와 같은 제어 흐름 operation에는 “then“과 “else” 분기를 위한 region이 있습니다.</p>
-<p>다음은 하나의 region에 하나의 block을 포함하는 함수입니다:</p>
+<p><strong>Region</strong>은 block의 목록이다. 함수 본문은 region이다. <code>scf.if</code>와 같은 제어 흐름 operation에는 “then“과 “else” 분기를 위한 region이 있다.</p>
+<p>다음은 하나의 region에 하나의 block을 포함하는 함수이다:</p>
 <pre><code class="language-mlir">func.func @example() -&gt; i32 {
   %one = arith.constant 1 : i32
   return %one : i32
 }
 </code></pre>
-<p>중괄호 <code>{ ... }</code>가 함수의 region을 구분합니다. region 내부에는 두 개의 operation(상수와 return)을 가진 하나의 block이 있습니다.</p>
+<p>중괄호 <code>{ ... }</code>가 함수의 region을 구분한다. region 내부에는 두 개의 operation(상수와 return)을 가진 하나의 block이 있다.</p>
 <h3 id="block"><a class="header" href="#block">Block</a></h3>
-<p><strong>Block</strong>은 선형적으로 실행되는 operation의 시퀀스입니다. 모든 block은 <strong>terminator</strong> operation — 제어를 다른 곳으로 이전하는 operation(return, branch 등) — 으로 끝나야 합니다. Block을 “통과(fall through)“할 수 없습니다.</p>
-<p>제어 흐름이 있을 때 block이 필수적이 됩니다. 다음은 두 개의 block을 가진 함수입니다:</p>
+<p><strong>Block</strong>은 선형적으로 실행되는 operation의 시퀀스이다. 모든 block은 <strong>terminator</strong> operation — 제어를 다른 곳으로 이전하는 operation(return, branch 등) — 으로 끝나야 한다. Block을 “통과(fall through)“할 수 없다.</p>
+<p>제어 흐름이 있을 때 block이 필수적이 된다. 다음은 두 개의 block을 가진 함수이다:</p>
 <pre><code class="language-mlir">func.func @conditional(%cond: i1, %a: i32, %b: i32) -&gt; i32 {
   cf.cond_br %cond, ^then_block, ^else_block
 
@@ -336,27 +336,27 @@ llvm.load    // "llvm" dialect의 "load" operation
   return %b : i32
 }
 </code></pre>
-<p>분석해 보겠습니다:</p>
+<p>분석해 본다:</p>
 <ul>
 <li>
-<p><strong><code>cf.cond_br %cond, ^then_block, ^else_block</code></strong>: 조건 분기 operation(<code>cf</code> control-flow dialect)입니다. <code>%cond</code>가 참이면 <code>^then_block</code>으로, 그렇지 않으면 <code>^else_block</code>으로 점프합니다. 이것이 entry block의 terminator입니다.</p>
+<p><strong><code>cf.cond_br %cond, ^then_block, ^else_block</code></strong>: 조건 분기 operation(<code>cf</code> control-flow dialect)이다. <code>%cond</code>가 참이면 <code>^then_block</code>으로, 그렇지 않으면 <code>^else_block</code>으로 점프한다. 이것이 entry block의 terminator이다.</p>
 </li>
 <li>
-<p><strong><code>^then_block:</code></strong>: block 레이블입니다. <code>^</code> 접두사는 block을 나타냅니다. block 이름은 함수 내에서 로컬입니다.</p>
+<p><strong><code>^then_block:</code></strong>: block 레이블이다. <code>^</code> 접두사는 block을 나타낸다. block 이름은 함수 내에서 로컬이다.</p>
 </li>
 <li>
-<p><strong><code>return %a : i32</code></strong>: <code>^then_block</code>의 terminator입니다. <code>%a</code>를 호출자에게 반환합니다.</p>
+<p><strong><code>return %a : i32</code></strong>: <code>^then_block</code>의 terminator이다. <code>%a</code>를 호출자에게 반환한다.</p>
 </li>
 <li>
-<p><strong><code>^else_block:</code></strong>: 또 다른 block 레이블입니다.</p>
+<p><strong><code>^else_block:</code></strong>: 또 다른 block 레이블이다.</p>
 </li>
 <li>
-<p><strong><code>return %b : i32</code></strong>: <code>^else_block</code>의 terminator입니다. <code>%b</code>를 반환합니다.</p>
+<p><strong><code>return %b : i32</code></strong>: <code>^else_block</code>의 terminator이다. <code>%b</code>를 반환한다.</p>
 </li>
 </ul>
 <h3 id="block-인자-mlir의-phi-node-처리-방식"><a class="header" href="#block-인자-mlir의-phi-node-처리-방식">Block 인자 (MLIR의 Phi Node 처리 방식)</a></h3>
-<p>MLIR은 LLVM의 phi node 대신 <strong>block 인자</strong>를 사용합니다. LLVM IR에서는 여러 선행 block의 값을 병합하기 위해 phi node를 사용합니다. MLIR에서는 block으로 분기할 때 값을 인자로 전달합니다.</p>
-<p>다음은 두 값을 병합하는 예제입니다:</p>
+<p>MLIR은 LLVM의 phi node 대신 <strong>block 인자</strong>를 사용한다. LLVM IR에서는 여러 선행 block의 값을 병합하기 위해 phi node를 사용한다. MLIR에서는 block으로 분기할 때 값을 인자로 전달한다.</p>
+<p>다음은 두 값을 병합하는 예제이다:</p>
 <pre><code class="language-mlir">func.func @merge_example(%cond: i1, %a: i32, %b: i32) -&gt; i32 {
   cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)
 
@@ -364,26 +364,26 @@ llvm.load    // "llvm" dialect의 "load" operation
   return %result : i32
 }
 </code></pre>
-<p>무슨 일이 일어나는지 살펴보겠습니다:</p>
+<p>무슨 일이 일어나는지 살펴본다:</p>
 <ul>
 <li>
-<p><strong><code>cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)</code></strong>: <code>^merge</code> block으로 분기하되, 조건이 참이면 <code>%a</code>를, 거짓이면 <code>%b</code>를 전달합니다.</p>
+<p><strong><code>cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)</code></strong>: <code>^merge</code> block으로 분기하되, 조건이 참이면 <code>%a</code>를, 거짓이면 <code>%b</code>를 전달한다.</p>
 </li>
 <li>
-<p><strong><code>^merge(%result: i32):</code></strong>: <code>^merge</code> block은 <code>i32</code> 타입의 인자 하나를 기대한다고 선언합니다. 어느 분기가 선택되든, 전달된 값이 이 block 내에서 <code>%result</code>가 됩니다.</p>
+<p><strong><code>^merge(%result: i32):</code></strong>: <code>^merge</code> block은 <code>i32</code> 타입의 인자 하나를 기대한다고 선언한다. 어느 분기가 선택되든, 전달된 값이 이 block 내에서 <code>%result</code>가 된다.</p>
 </li>
 </ul>
-<p>이 방식은 LLVM의 phi node보다 깔끔합니다. 데이터 흐름이 분기 지점에서 명시적으로 표현되며, 사후에 재구성할 필요가 없기 때문입니다.</p>
+<p>이 방식은 LLVM의 phi node보다 깔끔하다. 데이터 흐름이 분기 지점에서 명시적으로 표현되며, 사후에 재구성할 필요가 없기 때문이다.</p>
 <h2 id="ssa-form-static-single-assignment"><a class="header" href="#ssa-form-static-single-assignment">SSA Form (Static Single Assignment)</a></h2>
-<p>MLIR은 <strong>SSA form</strong>을 사용합니다. 즉, 모든 값은 정확히 한 번만 정의되고 절대 변경되지 않습니다. <code>%x</code>를 정의하면 다시 할당할 수 없습니다. 이 속성 덕분에 “지금 어떤 버전의 변수를 보고 있는 것인가?“를 추적할 필요가 없어 최적화가 단순해집니다.</p>
+<p>MLIR은 <strong>SSA form</strong>을 사용한다. 즉, 모든 값은 정확히 한 번만 정의되고 절대 변경되지 않는다. <code>%x</code>를 정의하면 다시 할당할 수 없다. 이 속성 덕분에 “지금 어떤 버전의 변수를 보고 있는 것인가?“를 추적할 필요가 없어 최적화가 단순해진다.</p>
 <h3 id="ssa-동작-예시"><a class="header" href="#ssa-동작-예시">SSA 동작 예시</a></h3>
-<p>다음 FunLang 코드를 살펴보겠습니다:</p>
+<p>다음 FunLang 코드를 살펴본다:</p>
 <pre><code class="language-fsharp">let x = 5
 let y = x + 3
 let z = y * 2
 z
 </code></pre>
-<p>MLIR SSA form에서 각 let 바인딩은 새로운 SSA 값이 됩니다:</p>
+<p>MLIR SSA form에서 각 let 바인딩은 새로운 SSA 값이 된다:</p>
 <pre><code class="language-mlir">func.func @example() -&gt; i32 {
   %x = arith.constant 5 : i32
   %three = arith.constant 3 : i32
@@ -395,34 +395,34 @@ z
 </code></pre>
 <p>주목할 점:</p>
 <ul>
-<li>각 <code>let</code> 바인딩은 새로운 SSA 값(<code>%x</code>, <code>%y</code>, <code>%z</code>)이 됩니다.</li>
-<li>상수는 값을 생성하는 operation(<code>arith.constant</code>)입니다.</li>
-<li>어떤 값도 재할당되지 않습니다.</li>
+<li>각 <code>let</code> 바인딩은 새로운 SSA 값(<code>%x</code>, <code>%y</code>, <code>%z</code>)이 된다.</li>
+<li>상수는 값을 생성하는 operation(<code>arith.constant</code>)이다.</li>
+<li>어떤 값도 재할당되지 않는다.</li>
 </ul>
 <h3 id="ssa와-가변성mutability"><a class="header" href="#ssa와-가변성mutability">SSA와 가변성(Mutability)</a></h3>
-<p>FunLang은 불변(immutable)이므로 SSA와 자연스럽게 매핑됩니다. 하지만 변이(mutation)가 있는 명령형 코드는 어떨까요? 다음을 살펴보겠습니다:</p>
+<p>FunLang은 불변(immutable)이므로 SSA와 자연스럽게 매핑된다. 하지만 변이(mutation)가 있는 명령형 코드는 어떨까? 다음을 살펴본다:</p>
 <pre><code class="language-c">int x = 1;
 x = x + 1;
 return x;
 </code></pre>
-<p>SSA에서는 <code>x</code>를 변경할 수 없습니다. 대신, 새로운 버전을 생성합니다:</p>
+<p>SSA에서는 <code>x</code>를 변경할 수 없다. 대신, 새로운 버전을 생성한다:</p>
 <pre><code class="language-mlir">%x0 = arith.constant 1 : i32
 %one = arith.constant 1 : i32
 %x1 = arith.addi %x0, %one : i32
 return %x1 : i32
 </code></pre>
-<p>각 “변이“는 새로운 SSA 값(<code>%x0</code>, <code>%x1</code> 등)을 생성합니다. 이 변환을 <strong>SSA conversion</strong>이라고 하며, 명령형 언어의 컴파일러에서 자동으로 처리됩니다.</p>
-<p>FunLang은 함수형이므로 이 작업은 필요하지 않습니다 — 모든 <code>let</code> 바인딩이 이미 새로운 이름을 도입하기 때문입니다.</p>
+<p>각 “변이“는 새로운 SSA 값(<code>%x0</code>, <code>%x1</code> 등)을 생성한다. 이 변환을 <strong>SSA conversion</strong>이라고 하며, 명령형 언어의 컴파일러에서 자동으로 처리된다.</p>
+<p>FunLang은 함수형이므로 이 작업은 필요하지 않다 — 모든 <code>let</code> 바인딩이 이미 새로운 이름을 도입하기 때문이다.</p>
 <h3 id="핵심-통찰-ssa는-최적화를-가능하게-한다"><a class="header" href="#핵심-통찰-ssa는-최적화를-가능하게-한다">핵심 통찰: SSA는 최적화를 가능하게 한다</a></h3>
-<p>SSA form은 많은 컴파일러 최적화를 간단하게 만들어 줍니다. 예를 들어:</p>
+<p>SSA form은 많은 컴파일러 최적화를 간단하게 만들어 준다. 예를 들어:</p>
 <ul>
-<li><strong>Dead code elimination(죽은 코드 제거):</strong> SSA 값이 정의되었지만 사용되지 않으면, 해당 값을 정의하는 operation을 삭제합니다.</li>
-<li><strong>Constant propagation(상수 전파):</strong> <code>%x</code>가 <code>arith.constant 5</code>로 정의되었다면, <code>%x</code>의 모든 사용을 <code>5</code>로 대체합니다.</li>
-<li><strong>Common subexpression elimination(공통 하위 표현식 제거):</strong> 두 operation이 같은 값을 계산하면, 하나를 재사용하고 다른 하나를 삭제합니다.</li>
+<li><strong>Dead code elimination(죽은 코드 제거):</strong> SSA 값이 정의되었지만 사용되지 않으면, 해당 값을 정의하는 operation을 삭제한다.</li>
+<li><strong>Constant propagation(상수 전파):</strong> <code>%x</code>가 <code>arith.constant 5</code>로 정의되었다면, <code>%x</code>의 모든 사용을 <code>5</code>로 대체한다.</li>
+<li><strong>Common subexpression elimination(공통 하위 표현식 제거):</strong> 두 operation이 같은 값을 계산하면, 하나를 재사용하고 다른 하나를 삭제한다.</li>
 </ul>
-<p>이 모든 최적화는 값이 정의 후 절대 변경되지 않는다는 보장에 의존합니다.</p>
+<p>이 모든 최적화는 값이 정의 후 절대 변경되지 않는다는 보장에 의존한다.</p>
 <h2 id="mlir의-타입"><a class="header" href="#mlir의-타입">MLIR의 타입</a></h2>
-<p>MLIR은 강타입(strongly typed)입니다. 모든 SSA 값, operation, 함수에는 타입이 있습니다. 타입 시스템은 확장 가능하며(dialect이 커스텀 타입을 정의할 수 있음), 다음은 사용하게 될 내장 타입입니다:</p>
+<p>MLIR은 강타입(strongly typed)이다. 모든 SSA 값, operation, 함수에는 타입이 있다. 타입 시스템은 확장 가능하며(dialect이 커스텀 타입을 정의할 수 있음), 다음은 사용하게 될 내장 타입이다:</p>
 <h3 id="정수-타입"><a class="header" href="#정수-타입">정수 타입</a></h3>
 <ul>
 <li><code>i1</code> — 1비트 정수 (boolean)</li>
@@ -449,27 +449,27 @@ return %x1 : i32
 <li><code>(i32, i32) -&gt; i32</code> — 두 개의 <code>i32</code> 인자를 받아 <code>i32</code>를 반환하는 함수</li>
 </ul>
 <h3 id="funlang-타입-매핑"><a class="header" href="#funlang-타입-매핑">FunLang 타입 매핑</a></h3>
-<p>FunLang 타입이 MLIR 타입에 어떻게 매핑되는지 정리하면 다음과 같습니다:</p>
+<p>FunLang 타입이 MLIR 타입에 어떻게 매핑되는지 정리하면 다음과 같다:</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>FunLang 타입</th><th>MLIR 타입</th><th>비고</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Int</code></td><td><code>i64</code></td><td>FunLang 정수는 인터프리터에서 임의 정밀도이지만, 64비트로 컴파일합니다</td></tr>
+<tr><td><code>Int</code></td><td><code>i64</code></td><td>FunLang 정수는 인터프리터에서 임의 정밀도이지만, 64비트로 컴파일한다</td></tr>
 <tr><td><code>Bool</code></td><td><code>i1</code></td><td>True = 1, False = 0</td></tr>
-<tr><td><code>String</code></td><td><code>!llvm.ptr</code> (LLVM dialect 포인터)</td><td>문자열은 힙에 할당된 null 종료 C 문자열입니다</td></tr>
+<tr><td><code>String</code></td><td><code>!llvm.ptr</code> (LLVM dialect 포인터)</td><td>문자열은 힙에 할당된 null 종료 C 문자열이다</td></tr>
 <tr><td><code>Float</code></td><td><code>f64</code></td><td>배정밀도 부동소수점</td></tr>
-<tr><td><code>List&lt;'a&gt;</code></td><td><code>!llvm.ptr</code></td><td>리스트는 힙에 할당된 연결 구조입니다</td></tr>
-<tr><td><code>Tuple&lt;'a, 'b, ...&gt;</code></td><td><code>!llvm.struct&lt;...&gt;</code></td><td>튜플은 LLVM struct로 컴파일됩니다</td></tr>
+<tr><td><code>List&lt;'a&gt;</code></td><td><code>!llvm.ptr</code></td><td>리스트는 힙에 할당된 연결 구조이다</td></tr>
+<tr><td><code>Tuple&lt;'a, 'b, ...&gt;</code></td><td><code>!llvm.struct&lt;...&gt;</code></td><td>튜플은 LLVM struct로 컴파일된다</td></tr>
 </tbody>
 </table>
 </div>
-<p><code>!</code> 접두사는 dialect에서 정의된 타입을 나타냅니다 (예: <code>!llvm.ptr</code>는 LLVM dialect의 포인터 타입).</p>
+<p><code>!</code> 접두사는 dialect에서 정의된 타입을 나타낸다 (예: <code>!llvm.ptr</code>는 LLVM dialect의 포인터 타입).</p>
 <h2 id="progressive-lowering"><a class="header" href="#progressive-lowering">Progressive Lowering</a></h2>
-<p>MLIR의 강력함은 <strong>progressive lowering</strong>에 있습니다: 한 번에 크게 변환하는 대신, 고수준 operation을 여러 단계에 걸쳐 저수준 operation으로 변환하는 방식입니다.</p>
+<p>MLIR의 강력함은 <strong>progressive lowering</strong>에 있다: 한 번에 크게 변환하는 대신, 고수준 operation을 여러 단계에 걸쳐 저수준 operation으로 변환하는 방식이다.</p>
 <h3 id="funlang-컴파일-파이프라인"><a class="header" href="#funlang-컴파일-파이프라인">FunLang 컴파일 파이프라인</a></h3>
-<p>이 튜토리얼에서 구축할 파이프라인은 다음과 같습니다:</p>
+<p>이 튜토리얼에서 구축할 파이프라인은 다음과 같다:</p>
 <pre><code>Stage 1: AST → High-Level MLIR
     FunLang AST (타입 검사기에서 전달)
     ↓
@@ -486,17 +486,17 @@ Stage 3: LLVM Dialect → LLVM IR
 Stage 4: LLVM IR → Native Code
     LLVM 백엔드(llc)가 대상 플랫폼의 머신 코드로 컴파일합니다
 </code></pre>
-<p>각 lowering 단계는 <strong>pass</strong> — IR을 재작성하는 변환 — 입니다. MLIR은 pass 정의, 패턴 기반 재작성, 각 단계 후 검증을 위한 인프라를 제공합니다.</p>
+<p>각 lowering 단계는 <strong>pass</strong> — IR을 재작성하는 변환 — 이다. MLIR은 pass 정의, 패턴 기반 재작성, 각 단계 후 검증을 위한 인프라를 제공한다.</p>
 <h3 id="progressive-lowering이-중요한-이유"><a class="header" href="#progressive-lowering이-중요한-이유">Progressive Lowering이 중요한 이유</a></h3>
-<p>FunLang의 패턴 매칭을 컴파일하는 경우를 생각해 보겠습니다. LLVM IR로 직접 lowering해야 한다면, 즉시 basic block, phi node, 메모리 로드로 이루어진 복잡한 결정 트리로 확장해야 합니다. 하지만 progressive lowering을 사용하면:</p>
+<p>FunLang의 패턴 매칭을 컴파일하는 경우를 생각해 보자. LLVM IR로 직접 lowering해야 한다면, 즉시 basic block, phi node, 메모리 로드로 이루어진 복잡한 결정 트리로 확장해야 한다. 하지만 progressive lowering을 사용하면:</p>
 <ol>
-<li><strong>고수준:</strong> 패턴 매칭을 구조를 보존하는 <code>funlang.match</code> operation으로 표현합니다.</li>
-<li><strong>중간 수준:</strong> <code>funlang.match</code>를 <code>scf.if</code>와 <code>scf.while</code>(구조적 제어 흐름)로 lowering합니다.</li>
-<li><strong>저수준:</strong> <code>scf.if</code>를 LLVM basic block과 branch로 lowering합니다.</li>
+<li><strong>고수준:</strong> 패턴 매칭을 구조를 보존하는 <code>funlang.match</code> operation으로 표현한다.</li>
+<li><strong>중간 수준:</strong> <code>funlang.match</code>를 <code>scf.if</code>와 <code>scf.while</code>(구조적 제어 흐름)로 lowering한다.</li>
+<li><strong>저수준:</strong> <code>scf.if</code>를 LLVM basic block과 branch로 lowering한다.</li>
 </ol>
-<p>각 단계에서 해당 추상화 수준에 맞는 최적화를 수행할 수 있습니다. 패턴 매칭 최적화(중복 검사 제거)는 고수준에서 이루어지고, LLVM 수준 최적화(레지스터 할당, 명령어 스케줄링)는 저수준에서 이루어집니다.</p>
+<p>각 단계에서 해당 추상화 수준에 맞는 최적화를 수행할 수 있다. 패턴 매칭 최적화(중복 검사 제거)는 고수준에서 이루어지고, LLVM 수준 최적화(레지스터 할당, 명령어 스케줄링)는 저수준에서 이루어진다.</p>
 <h2 id="종합-예제"><a class="header" href="#종합-예제">종합 예제</a></h2>
-<p>여러 개념을 함께 사용하는 좀 더 현실적인 MLIR 예제를 살펴보겠습니다:</p>
+<p>여러 개념을 함께 사용하는 좀 더 현실적인 MLIR 예제를 살펴본다:</p>
 <pre><code class="language-mlir">module {
   func.func @factorial(%n: i64) -&gt; i64 {
     %c0 = arith.constant 0 : i64
@@ -515,46 +515,46 @@ Stage 4: LLVM IR → Native Code
   }
 }
 </code></pre>
-<p>이 코드를 추적해 보겠습니다:</p>
+<p>이 코드를 추적해 본다:</p>
 <ol>
 <li>
-<p><strong><code>func.func @factorial(%n: i64) -&gt; i64</code></strong>: 하나의 64비트 정수를 받아 64비트 정수를 반환하는 <code>@factorial</code> 함수를 정의합니다.</p>
+<p><strong><code>func.func @factorial(%n: i64) -&gt; i64</code></strong>: 하나의 64비트 정수를 받아 64비트 정수를 반환하는 <code>@factorial</code> 함수를 정의한다.</p>
 </li>
 <li>
-<p><strong><code>%c0 = arith.constant 0 : i64</code></strong>: 상수 <code>0</code>을 생성합니다.</p>
+<p><strong><code>%c0 = arith.constant 0 : i64</code></strong>: 상수 <code>0</code>을 생성한다.</p>
 </li>
 <li>
-<p><strong><code>%c1 = arith.constant 1 : i64</code></strong>: 상수 <code>1</code>을 생성합니다.</p>
+<p><strong><code>%c1 = arith.constant 1 : i64</code></strong>: 상수 <code>1</code>을 생성한다.</p>
 </li>
 <li>
-<p><strong><code>%is_zero = arith.cmpi eq, %n, %c0 : i64</code></strong>: <code>%n</code>과 <code>0</code>을 동등성 비교합니다. 결과는 <code>i1</code>(boolean)입니다.</p>
+<p><strong><code>%is_zero = arith.cmpi eq, %n, %c0 : i64</code></strong>: <code>%n</code>과 <code>0</code>을 동등성 비교한다. 결과는 <code>i1</code>(boolean)이다.</p>
 </li>
 <li>
-<p><strong><code>cf.cond_br %is_zero, ^base_case, ^recursive_case</code></strong>: 참이면 <code>^base_case</code>로, 아니면 <code>^recursive_case</code>로 분기합니다.</p>
+<p><strong><code>cf.cond_br %is_zero, ^base_case, ^recursive_case</code></strong>: 참이면 <code>^base_case</code>로, 아니면 <code>^recursive_case</code>로 분기한다.</p>
 </li>
 <li>
-<p><strong><code>^base_case:</code></strong>: n == 0이면 1을 반환합니다.</p>
+<p><strong><code>^base_case:</code></strong>: n == 0이면 1을 반환한다.</p>
 </li>
 <li>
-<p><strong><code>^recursive_case:</code></strong>: n &gt; 0이면 <code>n * factorial(n - 1)</code>을 계산합니다:</p>
+<p><strong><code>^recursive_case:</code></strong>: n &gt; 0이면 <code>n * factorial(n - 1)</code>을 계산한다:</p>
 <ul>
-<li><code>%n_minus_1 = arith.subi %n, %c1</code>: <code>n - 1</code>을 계산합니다.</li>
-<li><code>%rec_result = func.call @factorial(%n_minus_1)</code>: 재귀 호출입니다.</li>
-<li><code>%result = arith.muli %n, %rec_result</code>: <code>n</code>과 재귀 결과를 곱합니다.</li>
-<li><code>return %result</code>: 결과를 반환합니다.</li>
+<li><code>%n_minus_1 = arith.subi %n, %c1</code>: <code>n - 1</code>을 계산한다.</li>
+<li><code>%rec_result = func.call @factorial(%n_minus_1)</code>: 재귀 호출이다.</li>
+<li><code>%result = arith.muli %n, %rec_result</code>: <code>n</code>과 재귀 결과를 곱한다.</li>
+<li><code>return %result</code>: 결과를 반환한다.</li>
 </ul>
 </li>
 </ol>
-<p>이 예제는 다음을 보여줍니다:</p>
+<p>이 예제는 다음을 보여준다:</p>
 <ul>
-<li><strong>SSA form:</strong> 모든 값(<code>%c0</code>, <code>%n_minus_1</code> 등)이 한 번만 정의됩니다.</li>
+<li><strong>SSA form:</strong> 모든 값(<code>%c0</code>, <code>%n_minus_1</code> 등)이 한 번만 정의된다.</li>
 <li><strong>Operation:</strong> 상수, 비교, 산술, 함수 호출.</li>
-<li><strong>Region과 block:</strong> 함수 본문은 세 개의 block(entry, <code>^base_case</code>, <code>^recursive_case</code>)을 가진 region입니다.</li>
-<li><strong>Terminator:</strong> 모든 block이 terminator(<code>cf.cond_br</code> 또는 <code>return</code>)로 끝납니다.</li>
-<li><strong>Dialect:</strong> <code>arith</code>, <code>func</code>, <code>cf</code> dialect을 사용합니다.</li>
+<li><strong>Region과 block:</strong> 함수 본문은 세 개의 block(entry, <code>^base_case</code>, <code>^recursive_case</code>)을 가진 region이다.</li>
+<li><strong>Terminator:</strong> 모든 block이 terminator(<code>cf.cond_br</code> 또는 <code>return</code>)로 끝난다.</li>
+<li><strong>Dialect:</strong> <code>arith</code>, <code>func</code>, <code>cf</code> dialect을 사용한다.</li>
 </ul>
 <h2 id="학습-내용-정리"><a class="header" href="#학습-내용-정리">학습 내용 정리</a></h2>
-<p>이제 MLIR의 다섯 가지 핵심 개념을 이해하게 되었습니다:</p>
+<p>이제 MLIR의 다섯 가지 핵심 개념을 이해하게 되었다:</p>
 <ol>
 <li><strong>Dialect:</strong> operation, 타입, attribute의 네임스페이스 (예: <code>arith</code>, <code>func</code>, <code>llvm</code>).</li>
 <li><strong>Operation:</strong> MLIR IR의 기본 단위 (예: <code>arith.addi</code>, <code>func.call</code>).</li>
@@ -562,10 +562,10 @@ Stage 4: LLVM IR → Native Code
 <li><strong>Block:</strong> terminator로 끝나는 operation 시퀀스 (예: 제어 흐름의 basic block).</li>
 <li><strong>SSA form:</strong> 모든 값이 정확히 한 번만 정의되며 불변.</li>
 </ol>
-<p>구체적인 예제(산술, 제어 흐름, 재귀)를 통해 이 개념들이 어떻게 함께 작동하는지 살펴보았습니다. 또한 progressive lowering — IR을 한 번에 큰 점프가 아닌 단계적으로 변환하는 철학 — 을 이해하게 되었습니다.</p>
+<p>구체적인 예제(산술, 제어 흐름, 재귀)를 통해 이 개념들이 어떻게 함께 작동하는지 살펴보았다. 또한 progressive lowering — IR을 한 번에 큰 점프가 아닌 단계적으로 변환하는 철학 — 을 이해하게 되었다.</p>
 <h2 id="다음-단계"><a class="header" href="#다음-단계">다음 단계</a></h2>
-<p>다음 챕터에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성합니다. P/Invoke를 사용하여 MLIR의 C API를 호출하고, 컴파일러의 “Hello, World“인 상수 정수를 반환하는 프로그램을 생성할 것입니다.</p>
-<p>**Chapter 02: Hello MLIR from F#**로 계속됩니다 (작성 예정).</p>
+<p>다음 챕터에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성한다. P/Invoke를 사용하여 MLIR의 C API를 호출하고, 컴파일러의 “Hello, World“인 상수 정수를 반환하는 프로그램을 생성할 것이다.</p>
+<p>**Chapter 02: Hello MLIR from F#**로 계속된다 (작성 예정).</p>
 <h2 id="참고-자료"><a class="header" href="#참고-자료">참고 자료</a></h2>
 <ul>
 <li><a href="https://mlir.llvm.org/docs/LangRef/">MLIR Language Reference</a> — MLIR의 텍스트 형식, dialect, 의미론에 대한 공식 사양.</li>

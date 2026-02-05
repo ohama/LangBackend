@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7d9443ad.js";
+            window.path_to_searchindex_js = "searchindex-7ea10746.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0fc86e66.js"></script>
@@ -182,11 +182,11 @@
                     <main>
                         <h1 id="chapter-00-사전-준비"><a class="header" href="#chapter-00-사전-준비">Chapter 00: 사전 준비</a></h1>
 <h2 id="소개"><a class="header" href="#소개">소개</a></h2>
-<p>LangBackend 튜토리얼 시리즈에 오신 것을 환영합니다. 여러분은 LangTutorial을 완료하고 완전히 동작하는 FunLang 인터프리터를 구축했기 때문에 이 튜토리얼을 시작하게 되었을 것입니다. 이미 파서, Hindley-Milner 타입 추론을 갖춘 타입 체커, 그리고 트리 워킹 평가기를 갖추고 있습니다. 이제 FunLang을 다음 단계로 끌어올릴 차례입니다: 네이티브 머신 코드로 컴파일하는 것입니다.</p>
-<p>이 튜토리얼 시리즈에서는 타입이 지정된 FunLang AST를 실행 가능한 바이너리로 변환하는 MLIR 기반 컴파일러 백엔드를 구축하는 방법을 배웁니다. MLIR(Multi-Level Intermediate Representation)은 LLVM 프로젝트에서 제공하는 현대적인 컴파일러 프레임워크로, 구조화된 IR 연산, 타입 안전성, 플러그인 가능한 dialect, 그리고 고수준 의미론에서 머신 코드까지의 점진적 lowering 등 필요한 인프라를 제공합니다.</p>
-<p>이 장에서는 필수 사전 준비 설정을 다룹니다: C API를 활성화하여 LLVM/MLIR을 소스에서 빌드하고, F# 개발을 위한 .NET SDK를 설치하며, 두 시스템이 통신할 수 있도록 환경을 구성하는 것입니다. 이러한 기초가 없으면 나머지 튜토리얼을 진행할 수 없습니다.</p>
+<p>LangBackend 튜토리얼 시리즈에 오신 것을 환영한다. 여러분은 LangTutorial을 완료하고 완전히 동작하는 FunLang 인터프리터를 구축했기 때문에 이 튜토리얼을 시작하게 되었을 것이다. 이미 파서, Hindley-Milner 타입 추론을 갖춘 타입 체커, 그리고 트리 워킹 평가기를 갖추고 있다. 이제 FunLang을 다음 단계로 끌어올릴 차례다: 네이티브 머신 코드로 컴파일하는 것이다.</p>
+<p>이 튜토리얼 시리즈에서는 타입이 지정된 FunLang AST를 실행 가능한 바이너리로 변환하는 MLIR 기반 컴파일러 백엔드를 구축하는 방법을 배운다. MLIR(Multi-Level Intermediate Representation)은 LLVM 프로젝트에서 제공하는 현대적인 컴파일러 프레임워크로, 구조화된 IR 연산, 타입 안전성, 플러그인 가능한 dialect, 그리고 고수준 의미론에서 머신 코드까지의 점진적 lowering 등 필요한 인프라를 제공한다.</p>
+<p>이 장에서는 필수 사전 준비 설정을 다룬다: C API를 활성화하여 LLVM/MLIR을 소스에서 빌드하고, F# 개발을 위한 .NET SDK를 설치하며, 두 시스템이 통신할 수 있도록 환경을 구성하는 것이다. 이러한 기초가 없으면 나머지 튜토리얼을 진행할 수 없다.</p>
 <h2 id="시스템-요구-사항"><a class="header" href="#시스템-요구-사항">시스템 요구 사항</a></h2>
-<p>시작하기 전에 시스템이 다음 요구 사항을 충족하는지 확인하십시오:</p>
+<p>시작하기 전에 시스템이 다음 요구 사항을 충족하는지 확인한다:</p>
 <ul>
 <li><strong>디스크 공간:</strong> ~30 GB (LLVM 소스 + 빌드 산출물 + 설치)</li>
 <li><strong>RAM:</strong> 16 GB 권장 (빌드 병렬 처리를 줄이면 최소 8 GB)</li>
@@ -195,12 +195,12 @@
 <ul>
 <li>Linux (Ubuntu 22.04+, Fedora 38+ 또는 이에 상응하는 배포판)</li>
 <li>macOS (13 Ventura 이상, Intel 및 Apple Silicon 모두 지원)</li>
-<li>Windows (Ubuntu 22.04+가 설치된 WSL2 권장; 네이티브 MSVC 빌드도 가능하지만 이 튜토리얼에서는 다루지 않습니다)</li>
+<li>Windows (Ubuntu 22.04+가 설치된 WSL2 권장; 네이티브 MSVC 빌드도 가능하지만 이 튜토리얼에서는 다루지 않는다)</li>
 </ul>
 </li>
 </ul>
 <h2 id="c-api를-포함한-llvmmlir-빌드"><a class="header" href="#c-api를-포함한-llvmmlir-빌드">C API를 포함한 LLVM/MLIR 빌드</a></h2>
-<p>MLIR은 LLVM 프로젝트의 일부입니다. MLIR 팀은 F#과 같은 비-C++ 언어가 MLIR 인프라와 상호작용할 수 있도록 안정적인 C API를 제공합니다. 이 C API는 기본적으로 빌드되지 않으므로 CMake 구성 단계에서 명시적으로 활성화해야 합니다.</p>
+<p>MLIR은 LLVM 프로젝트의 일부이다. MLIR 팀은 F#과 같은 비-C++ 언어가 MLIR 인프라와 상호작용할 수 있도록 안정적인 C API를 제공한다. 이 C API는 기본적으로 빌드되지 않으므로 CMake 구성 단계에서 명시적으로 활성화해야 한다.</p>
 <h3 id="빌드-의존성-설치"><a class="header" href="#빌드-의존성-설치">빌드 의존성 설치</a></h3>
 <h4 id="linux-ubuntudebian"><a class="header" href="#linux-ubuntudebian">Linux (Ubuntu/Debian)</a></h4>
 <pre><code class="language-bash">sudo apt update
@@ -214,27 +214,27 @@ sudo apt install -y \
   git
 </code></pre>
 <h4 id="macos"><a class="header" href="#macos">macOS</a></h4>
-<p>먼저 Xcode Command Line Tools가 설치되어 있지 않다면 설치합니다:</p>
+<p>먼저 Xcode Command Line Tools가 설치되어 있지 않다면 설치한다:</p>
 <pre><code class="language-bash">xcode-select --install
 </code></pre>
-<p>그런 다음 Homebrew를 통해 CMake와 Ninja를 설치합니다:</p>
+<p>그런 다음 Homebrew를 통해 CMake와 Ninja를 설치한다:</p>
 <pre><code class="language-bash">brew install cmake ninja
 </code></pre>
-<p>macOS에는 이미 Clang이 포함되어 있으므로 빌드할 준비가 된 것입니다.</p>
+<p>macOS에는 이미 Clang이 포함되어 있으므로 빌드할 준비가 된 것이다.</p>
 <h4 id="windows-wsl2"><a class="header" href="#windows-wsl2">Windows (WSL2)</a></h4>
-<p>Ubuntu 22.04가 설치된 Windows Subsystem for Linux 2 (WSL2)를 사용하는 것을 권장합니다. <a href="https://learn.microsoft.com/en-us/windows/wsl/install">WSL2 설치 가이드</a>를 따른 후, 위의 Linux (Ubuntu) 의존성 설치 단계를 사용하십시오.</p>
+<p>Ubuntu 22.04가 설치된 Windows Subsystem for Linux 2 (WSL2)를 사용하는 것을 권장한다. <a href="https://learn.microsoft.com/en-us/windows/wsl/install">WSL2 설치 가이드</a>를 따른 후, 위의 Linux (Ubuntu) 의존성 설치 단계를 사용한다.</p>
 <blockquote>
-<p><strong>참고:</strong> MSVC를 사용한 네이티브 Windows 빌드도 가능하지만 다른 CMake 구성이 필요하며 이 튜토리얼의 범위를 벗어납니다. WSL2는 Windows에서 일관된 Linux 환경을 제공합니다.</p>
+<p><strong>참고:</strong> MSVC를 사용한 네이티브 Windows 빌드도 가능하지만 다른 CMake 구성이 필요하며 이 튜토리얼의 범위를 벗어난다. WSL2는 Windows에서 일관된 Linux 환경을 제공한다.</p>
 </blockquote>
 <h3 id="llvm-클론"><a class="header" href="#llvm-클론">LLVM 클론</a></h3>
-<p>LLVM monorepo를 LLVM 19.x 안정 릴리스 브랜치에서 클론합니다. <code>--depth 1</code>을 사용하면 최신 커밋만 가져와 디스크 공간과 다운로드 시간을 절약할 수 있습니다:</p>
+<p>LLVM monorepo를 LLVM 19.x 안정 릴리스 브랜치에서 클론한다. <code>--depth 1</code>을 사용하면 최신 커밋만 가져와 디스크 공간과 다운로드 시간을 절약할 수 있다:</p>
 <pre><code class="language-bash">cd $HOME
 git clone --depth 1 --branch release/19.x https://github.com/llvm/llvm-project.git
 cd llvm-project
 </code></pre>
-<p>shallow clone 후 저장소 크기는 약 2 GB입니다.</p>
+<p>shallow clone 후 저장소 크기는 약 2 GB이다.</p>
 <h3 id="빌드-구성"><a class="header" href="#빌드-구성">빌드 구성</a></h3>
-<p>CMake 구성 단계는 매우 중요합니다. 각 플래그는 특정 목적을 가지고 있습니다:</p>
+<p>CMake 구성 단계는 매우 중요하다. 각 플래그는 특정 목적을 가지고 있다:</p>
 <pre><code class="language-bash">cmake -S llvm -B build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_PROJECTS=mlir \
@@ -249,29 +249,29 @@ cd llvm-project
 <li><code>-G Ninja</code>: Ninja 빌드 시스템 사용 (Make보다 빠름)</li>
 <li><code>-DCMAKE_BUILD_TYPE=Release</code>: 디버그 심볼 없이 최적화된 빌드 (크기가 훨씬 작고 빠름)</li>
 <li><code>-DLLVM_ENABLE_PROJECTS=mlir</code>: LLVM과 함께 MLIR 빌드 (MLIR은 LLVM에 의존)</li>
-<li><strong><code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code></strong>: <strong>핵심 플래그</strong> — MLIR C API를 노출하는 <code>libMLIR-C</code> 공유 라이브러리를 빌드합니다</li>
+<li><strong><code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code></strong>: <strong>핵심 플래그</strong> — MLIR C API를 노출하는 <code>libMLIR-C</code> 공유 라이브러리를 빌드한다</li>
 <li><code>-DLLVM_TARGETS_TO_BUILD="X86;AArch64"</code>: x86-64 및 ARM64 백엔드만 빌드 (빌드 시간 단축; 필요시 다른 타겟 추가)</li>
 <li><code>-DCMAKE_INSTALL_PREFIX=$HOME/mlir-install</code>: 설치 위치 (쓰기 가능한 디렉터리 사용)</li>
 </ul>
-<p>CMake 구성은 1-2분 내에 완료됩니다. 다음과 같은 출력이 표시됩니다:</p>
+<p>CMake 구성은 1-2분 내에 완료된다. 다음과 같은 출력이 표시된다:</p>
 <pre><code>-- The C compiler identification is GNU 11.4.0
 -- The CXX compiler identification is GNU 11.4.0
 ...
 -- Build files have been written to: /home/user/llvm-project/build
 </code></pre>
 <h3 id="빌드-및-설치"><a class="header" href="#빌드-및-설치">빌드 및 설치</a></h3>
-<p>사용 가능한 모든 CPU 코어를 활용하여 MLIR을 빌드합니다 (Ninja는 자동으로 병렬 처리를 사용합니다):</p>
+<p>사용 가능한 모든 CPU 코어를 활용하여 MLIR을 빌드한다 (Ninja는 자동으로 병렬 처리를 사용한다):</p>
 <pre><code class="language-bash">cmake --build build --target install
 </code></pre>
-<p>이 단계는 하드웨어에 따라 30-60분이 소요됩니다. 수천 줄의 컴파일 로그가 스크롤됩니다. 빌드 중 메모리가 부족해지면 (시스템이 응답하지 않는 경우), 빌드를 중지하고 (Ctrl+C) 병렬 처리를 줄여 다시 시작합니다:</p>
+<p>이 단계는 하드웨어에 따라 30-60분이 소요된다. 수천 줄의 컴파일 로그가 스크롤된다. 빌드 중 메모리가 부족해지면 (시스템이 응답하지 않는 경우), 빌드를 중지하고 (Ctrl+C) 병렬 처리를 줄여 다시 시작한다:</p>
 <pre><code class="language-bash">cmake --build build --target install -- -j2
 </code></pre>
-<p><code>-j2</code> 플래그는 Ninja의 병렬 컴파일 작업을 2개로 제한하여, 빌드 시간이 느려지는 대신 최대 메모리 사용량을 줄입니다.</p>
-<p>빌드가 완료되면 다음과 같이 표시됩니다:</p>
+<p><code>-j2</code> 플래그는 Ninja의 병렬 컴파일 작업을 2개로 제한하여, 빌드 시간이 느려지는 대신 최대 메모리 사용량을 줄인다.</p>
+<p>빌드가 완료되면 다음과 같이 표시된다:</p>
 <pre><code>[100%] Built target install
 </code></pre>
 <h3 id="설치-확인"><a class="header" href="#설치-확인">설치 확인</a></h3>
-<p>MLIR C API 공유 라이브러리가 설치되었는지 확인합니다:</p>
+<p>MLIR C API 공유 라이브러리가 설치되었는지 확인한다:</p>
 <pre><code class="language-bash">ls -lh $HOME/mlir-install/lib/libMLIR-C*
 </code></pre>
 <p><strong>예상 출력:</strong></p>
@@ -280,85 +280,85 @@ cd llvm-project
 <li><strong>macOS:</strong> <code>libMLIR-C.19.dylib</code> 및 <code>libMLIR-C.dylib</code> (심볼릭 링크)</li>
 <li><strong>Windows (WSL):</strong> Linux와 동일</li>
 </ul>
-<p><code>No such file or directory</code>가 표시되면 CMake 구성에 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>이 포함되어 있는지 확인하고 빌드 단계를 다시 실행하십시오.</p>
-<p><code>mlir-opt</code> 도구도 설치되어 있어야 합니다:</p>
+<p><code>No such file or directory</code>가 표시되면 CMake 구성에 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>이 포함되어 있는지 확인하고 빌드 단계를 다시 실행한다.</p>
+<p><code>mlir-opt</code> 도구도 설치되어 있어야 한다:</p>
 <pre><code class="language-bash">$HOME/mlir-install/bin/mlir-opt --version
 </code></pre>
 <p>예상 출력: <code>MLIR (http://mlir.llvm.org) version 19.1.x</code></p>
 <h2 id="net-sdk-설치"><a class="header" href="#net-sdk-설치">.NET SDK 설치</a></h2>
-<p>FunLang의 컴파일러 백엔드는 F#으로 구현됩니다. F# 프로그램을 컴파일하고 실행하려면 .NET SDK가 필요합니다.</p>
+<p>FunLang의 컴파일러 백엔드는 F#으로 구현된다. F# 프로그램을 컴파일하고 실행하려면 .NET SDK가 필요하다.</p>
 <h3 id="linux-ubuntudebian-1"><a class="header" href="#linux-ubuntudebian-1">Linux (Ubuntu/Debian)</a></h3>
-<p>.NET 8.0 SDK (2026년 11월까지 지원되는 LTS 릴리스)를 설치합니다:</p>
+<p>.NET 8.0 SDK (2026년 11월까지 지원되는 LTS 릴리스)를 설치한다:</p>
 <pre><code class="language-bash">wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
 chmod +x dotnet-install.sh
 ./dotnet-install.sh --channel 8.0
 </code></pre>
-<p>스크립트는 .NET을 <code>$HOME/.dotnet</code>에 설치합니다. PATH에 추가합니다:</p>
+<p>스크립트는 .NET을 <code>$HOME/.dotnet</code>에 설치한다. PATH에 추가한다:</p>
 <pre><code class="language-bash">echo 'export PATH="$HOME/.dotnet:$PATH"' &gt;&gt; ~/.bashrc
 source ~/.bashrc
 </code></pre>
 <h3 id="macos-1"><a class="header" href="#macos-1">macOS</a></h3>
-<p><a href="https://dotnet.microsoft.com/download/dotnet/8.0">https://dotnet.microsoft.com/download/dotnet/8.0</a>에서 .NET 8.0 SDK 설치 프로그램을 다운로드하여 설치하거나, Homebrew를 사용합니다:</p>
+<p><a href="https://dotnet.microsoft.com/download/dotnet/8.0">https://dotnet.microsoft.com/download/dotnet/8.0</a>에서 .NET 8.0 SDK 설치 프로그램을 다운로드하여 설치하거나, Homebrew를 사용한다:</p>
 <pre><code class="language-bash">brew install --cask dotnet-sdk
 </code></pre>
 <h3 id="windows-wsl2-1"><a class="header" href="#windows-wsl2-1">Windows (WSL2)</a></h3>
-<p>WSL2 Ubuntu 환경에서 위의 Linux 설치 단계를 따르십시오.</p>
+<p>WSL2 Ubuntu 환경에서 위의 Linux 설치 단계를 따른다.</p>
 <h3 id="net-설치-확인"><a class="header" href="#net-설치-확인">.NET 설치 확인</a></h3>
-<p>.NET 버전을 확인합니다:</p>
+<p>.NET 버전을 확인한다:</p>
 <pre><code class="language-bash">dotnet --version
 </code></pre>
 <p>예상 출력: <code>8.0.x</code></p>
-<p>F# 컴파일러가 사용 가능한지 확인합니다:</p>
+<p>F# 컴파일러가 사용 가능한지 확인한다:</p>
 <pre><code class="language-bash">dotnet fsi --version
 </code></pre>
 <p>예상 출력: <code>Microsoft (R) F# Interactive version 12.8.x.0</code></p>
-<p>모든 것이 정상적으로 작동하는지 확인하기 위해 테스트 F# 프로젝트를 생성합니다:</p>
+<p>모든 것이 정상적으로 작동하는지 확인하기 위해 테스트 F# 프로젝트를 생성한다:</p>
 <pre><code class="language-bash">dotnet new console -lang F# -o test-fsharp
 cd test-fsharp
 dotnet run
 </code></pre>
-<p>다음과 같이 출력되어야 합니다:</p>
+<p>다음과 같이 출력되어야 한다:</p>
 <pre><code>Hello from F#
 </code></pre>
 <h2 id="라이브러리-검색-경로-설정"><a class="header" href="#라이브러리-검색-경로-설정">라이브러리 검색 경로 설정</a></h2>
-<p>F# 프로그램이 P/Invoke를 통해 MLIR C API 함수를 호출할 때, .NET 런타임은 런타임에 <code>libMLIR-C</code> 공유 라이브러리를 찾을 수 있어야 합니다. 표준적인 방법은 MLIR 설치 라이브러리 디렉터리를 시스템의 라이브러리 검색 경로에 추가하는 것입니다.</p>
+<p>F# 프로그램이 P/Invoke를 통해 MLIR C API 함수를 호출할 때, .NET 런타임은 런타임에 <code>libMLIR-C</code> 공유 라이브러리를 찾을 수 있어야 한다. 표준적인 방법은 MLIR 설치 라이브러리 디렉터리를 시스템의 라이브러리 검색 경로에 추가하는 것이다.</p>
 <h3 id="linux"><a class="header" href="#linux">Linux</a></h3>
-<p>MLIR 라이브러리 디렉터리를 <code>LD_LIBRARY_PATH</code>에 추가합니다:</p>
+<p>MLIR 라이브러리 디렉터리를 <code>LD_LIBRARY_PATH</code>에 추가한다:</p>
 <pre><code class="language-bash">echo 'export LD_LIBRARY_PATH="$HOME/mlir-install/lib:$LD_LIBRARY_PATH"' &gt;&gt; ~/.bashrc
 source ~/.bashrc
 </code></pre>
-<p>라이브러리가 검색 가능한지 확인합니다:</p>
+<p>라이브러리가 검색 가능한지 확인한다:</p>
 <pre><code class="language-bash">ldconfig -p | grep MLIR
 </code></pre>
-<p><code>libMLIR-C.so</code>에 대한 항목이 표시되어야 합니다.</p>
+<p><code>libMLIR-C.so</code>에 대한 항목이 표시되어야 한다.</p>
 <h3 id="macos-2"><a class="header" href="#macos-2">macOS</a></h3>
-<p>MLIR 라이브러리 디렉터리를 <code>DYLD_LIBRARY_PATH</code>에 추가합니다:</p>
+<p>MLIR 라이브러리 디렉터리를 <code>DYLD_LIBRARY_PATH</code>에 추가한다:</p>
 <pre><code class="language-bash">echo 'export DYLD_LIBRARY_PATH="$HOME/mlir-install/lib:$DYLD_LIBRARY_PATH"' &gt;&gt; ~/.zshrc
 source ~/.zshrc
 </code></pre>
 <blockquote>
-<p><strong>참고:</strong> macOS Catalina 이후 macOS는 기본적으로 zsh를 사용합니다. bash를 사용하고 있다면 <code>~/.bashrc</code>를 수정하십시오.</p>
+<p><strong>참고:</strong> macOS Catalina 이후 macOS는 기본적으로 zsh를 사용한다. bash를 사용하고 있다면 <code>~/.bashrc</code>를 수정한다.</p>
 </blockquote>
-<p>라이브러리가 존재하는지 확인합니다:</p>
+<p>라이브러리가 존재하는지 확인한다:</p>
 <pre><code class="language-bash">ls -l $HOME/mlir-install/lib/libMLIR-C.dylib
 </code></pre>
 <h3 id="windows-wsl2-2"><a class="header" href="#windows-wsl2-2">Windows (WSL2)</a></h3>
-<p>WSL2에서 위의 Linux 지침을 따르십시오.</p>
+<p>WSL2에서 위의 Linux 지침을 따른다.</p>
 <h3 id="대안-프로젝트별-구성"><a class="header" href="#대안-프로젝트별-구성">대안: 프로젝트별 구성</a></h3>
-<p>전역 환경 변수를 설정하는 대신, F# 애플리케이션을 실행할 때 라이브러리 경로를 지정할 수 있습니다:</p>
+<p>전역 환경 변수를 설정하는 대신, F# 애플리케이션을 실행할 때 라이브러리 경로를 지정할 수 있다:</p>
 <pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
 </code></pre>
-<p>이 방법은 셸 프로파일을 수정하지 않고 테스트할 때 유용합니다.</p>
+<p>이 방법은 셸 프로파일을 수정하지 않고 테스트할 때 유용하다.</p>
 <h2 id="자주-발생하는-문제-해결"><a class="header" href="#자주-발생하는-문제-해결">자주 발생하는 문제 해결</a></h2>
 <h3 id="빌드-중-메모리-부족"><a class="header" href="#빌드-중-메모리-부족">빌드 중 메모리 부족</a></h3>
 <p><strong>증상:</strong> MLIR 빌드 중 시스템이 응답하지 않음; 스왑 사용량이 100%.</p>
-<p><strong>해결 방법:</strong> 빌드 병렬 처리를 줄입니다:</p>
+<p><strong>해결 방법:</strong> 빌드 병렬 처리를 줄인다:</p>
 <pre><code class="language-bash">cmake --build build --target install -- -j2
 </code></pre>
-<p>RAM이 8 GB인 시스템에서는 <code>-j1</code>이 필요할 수 있습니다.</p>
+<p>RAM이 8 GB인 시스템에서는 <code>-j1</code>이 필요할 수 있다.</p>
 <h3 id="mlir-c-library-not-found-런타임-오류"><a class="header" href="#mlir-c-library-not-found-런타임-오류">“MLIR-C library not found” 런타임 오류</a></h3>
-<p><strong>증상:</strong> F# 프로그램이 <code>DllNotFoundException: Unable to load shared library 'MLIR-C'</code>로 실패합니다.</p>
-<p><strong>해결 방법:</strong> 라이브러리 검색 경로가 구성되어 있는지 확인합니다:</p>
+<p><strong>증상:</strong> F# 프로그램이 <code>DllNotFoundException: Unable to load shared library 'MLIR-C'</code>로 실패한다.</p>
+<p><strong>해결 방법:</strong> 라이브러리 검색 경로가 구성되어 있는지 확인한다:</p>
 <pre><code class="language-bash"># Linux
 echo $LD_LIBRARY_PATH
 # $HOME/mlir-install/lib이 포함되어 있어야 합니다
@@ -366,13 +366,13 @@ echo $LD_LIBRARY_PATH
 # macOS
 echo $DYLD_LIBRARY_PATH
 </code></pre>
-<p>라이브러리 파일이 존재하는지 확인합니다:</p>
+<p>라이브러리 파일이 존재하는지 확인한다:</p>
 <pre><code class="language-bash">ls $HOME/mlir-install/lib/libMLIR-C*
 </code></pre>
-<p>파일이 없다면 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>으로 다시 빌드하십시오.</p>
+<p>파일이 없다면 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>으로 다시 빌드한다.</p>
 <h3 id="cmake-버전이-너무-오래됨"><a class="header" href="#cmake-버전이-너무-오래됨">CMake 버전이 너무 오래됨</a></h3>
-<p><strong>증상:</strong> CMake 구성이 <code>CMake 3.20 or higher is required</code>로 실패합니다.</p>
-<p><strong>해결 방법:</strong> 최신 CMake를 설치합니다:</p>
+<p><strong>증상:</strong> CMake 구성이 <code>CMake 3.20 or higher is required</code>로 실패한다.</p>
+<p><strong>해결 방법:</strong> 최신 CMake를 설치한다:</p>
 <pre><code class="language-bash"># Linux: 최신 CMake 바이너리 다운로드
 wget https://github.com/Kitware/CMake/releases/download/v3.28.0/cmake-3.28.0-linux-x86_64.sh
 sudo sh cmake-3.28.0-linux-x86_64.sh --prefix=/usr/local --skip-license
@@ -381,8 +381,8 @@ sudo sh cmake-3.28.0-linux-x86_64.sh --prefix=/usr/local --skip-license
 brew upgrade cmake
 </code></pre>
 <h3 id="ninja-빌드-시스템-누락"><a class="header" href="#ninja-빌드-시스템-누락">Ninja 빌드 시스템 누락</a></h3>
-<p><strong>증상:</strong> CMake 구성이 <code>Could not find Ninja</code>로 실패합니다.</p>
-<p><strong>해결 방법:</strong> Ninja를 설치하거나 (위의 “빌드 의존성 설치” 참조), 대신 Unix Makefiles를 사용합니다 (더 느림):</p>
+<p><strong>증상:</strong> CMake 구성이 <code>Could not find Ninja</code>로 실패한다.</p>
+<p><strong>해결 방법:</strong> Ninja를 설치하거나 (위의 “빌드 의존성 설치” 참조), 대신 Unix Makefiles를 사용한다 (더 느림):</p>
 <pre><code class="language-bash">cmake -S llvm -B build -G "Unix Makefiles" \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_PROJECTS=mlir \
@@ -393,21 +393,21 @@ brew upgrade cmake
 make -C build install -j$(nproc)
 </code></pre>
 <h3 id="디스크-공간-부족"><a class="header" href="#디스크-공간-부족">디스크 공간 부족</a></h3>
-<p><strong>증상:</strong> 빌드가 <code>No space left on device</code>로 실패합니다.</p>
-<p><strong>해결 방법:</strong> LLVM 빌드에는 ~30 GB가 필요합니다. 공간을 확보하거나 다른 파티션에서 빌드하십시오. 설치 후 <code>build</code> 디렉터리를 삭제하면 ~20 GB를 회수할 수 있습니다:</p>
+<p><strong>증상:</strong> 빌드가 <code>No space left on device</code>로 실패한다.</p>
+<p><strong>해결 방법:</strong> LLVM 빌드에는 ~30 GB가 필요하다. 공간을 확보하거나 다른 파티션에서 빌드한다. 설치 후 <code>build</code> 디렉터리를 삭제하면 ~20 GB를 회수할 수 있다:</p>
 <pre><code class="language-bash">rm -rf $HOME/llvm-project/build
 </code></pre>
 <h2 id="이-장에서-완료한-것"><a class="header" href="#이-장에서-완료한-것">이 장에서 완료한 것</a></h2>
-<p>이 시점에서 다음 항목이 준비되어 있습니다:</p>
+<p>이 시점에서 다음 항목이 준비되어 있다:</p>
 <ol>
 <li><strong>LLVM/MLIR 설치 완료</strong> — <code>$HOME/mlir-install</code>에 C API 공유 라이브러리(<code>libMLIR-C.so</code>, <code>libMLIR-C.dylib</code>, 또는 <code>MLIR-C.dll</code>) 포함</li>
 <li><strong>.NET 8.0 SDK</strong> — F# 컴파일러 및 런타임과 함께 설치 완료</li>
 <li><strong>라이브러리 검색 경로 구성 완료</strong> — .NET이 런타임에 MLIR을 찾을 수 있도록 설정</li>
 <li><strong>빌드 도구 검증 완료</strong> — 개발 준비 완료 (<code>mlir-opt</code>, <code>dotnet</code>)</li>
 </ol>
-<p>이제 MLIR과 상호작용하는 F# 코드를 작성할 준비가 되었습니다. 다음 장에서는 코드를 작성하기 전에 이해해야 할 핵심 MLIR 개념들을 살펴봅니다: dialect, operation, region, block, 그리고 SSA 형식입니다.</p>
+<p>이제 MLIR과 상호작용하는 F# 코드를 작성할 준비가 되었다. 다음 장에서는 코드를 작성하기 전에 이해해야 할 핵심 MLIR 개념들을 살펴본다: dialect, operation, region, block, 그리고 SSA 형식이다.</p>
 <h2 id="다음-장"><a class="header" href="#다음-장">다음 장</a></h2>
-<p><a href="01-mlir-primer.html">Chapter 01: MLIR 입문</a>으로 이동하여 MLIR IR의 기본 개념을 학습합니다.</p>
+<p><a href="01-mlir-primer.html">Chapter 01: MLIR 입문</a>으로 이동하여 MLIR IR의 기본 개념을 학습한다.</p>
 
                     </main>
 

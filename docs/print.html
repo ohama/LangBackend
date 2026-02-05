@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7d9443ad.js";
+            window.path_to_searchindex_js = "searchindex-7ea10746.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-0fc86e66.js"></script>
@@ -186,11 +186,11 @@
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="chapter-00-사전-준비"><a class="header" href="#chapter-00-사전-준비">Chapter 00: 사전 준비</a></h1>
 <h2 id="소개"><a class="header" href="#소개">소개</a></h2>
-<p>LangBackend 튜토리얼 시리즈에 오신 것을 환영합니다. 여러분은 LangTutorial을 완료하고 완전히 동작하는 FunLang 인터프리터를 구축했기 때문에 이 튜토리얼을 시작하게 되었을 것입니다. 이미 파서, Hindley-Milner 타입 추론을 갖춘 타입 체커, 그리고 트리 워킹 평가기를 갖추고 있습니다. 이제 FunLang을 다음 단계로 끌어올릴 차례입니다: 네이티브 머신 코드로 컴파일하는 것입니다.</p>
-<p>이 튜토리얼 시리즈에서는 타입이 지정된 FunLang AST를 실행 가능한 바이너리로 변환하는 MLIR 기반 컴파일러 백엔드를 구축하는 방법을 배웁니다. MLIR(Multi-Level Intermediate Representation)은 LLVM 프로젝트에서 제공하는 현대적인 컴파일러 프레임워크로, 구조화된 IR 연산, 타입 안전성, 플러그인 가능한 dialect, 그리고 고수준 의미론에서 머신 코드까지의 점진적 lowering 등 필요한 인프라를 제공합니다.</p>
-<p>이 장에서는 필수 사전 준비 설정을 다룹니다: C API를 활성화하여 LLVM/MLIR을 소스에서 빌드하고, F# 개발을 위한 .NET SDK를 설치하며, 두 시스템이 통신할 수 있도록 환경을 구성하는 것입니다. 이러한 기초가 없으면 나머지 튜토리얼을 진행할 수 없습니다.</p>
+<p>LangBackend 튜토리얼 시리즈에 오신 것을 환영한다. 여러분은 LangTutorial을 완료하고 완전히 동작하는 FunLang 인터프리터를 구축했기 때문에 이 튜토리얼을 시작하게 되었을 것이다. 이미 파서, Hindley-Milner 타입 추론을 갖춘 타입 체커, 그리고 트리 워킹 평가기를 갖추고 있다. 이제 FunLang을 다음 단계로 끌어올릴 차례다: 네이티브 머신 코드로 컴파일하는 것이다.</p>
+<p>이 튜토리얼 시리즈에서는 타입이 지정된 FunLang AST를 실행 가능한 바이너리로 변환하는 MLIR 기반 컴파일러 백엔드를 구축하는 방법을 배운다. MLIR(Multi-Level Intermediate Representation)은 LLVM 프로젝트에서 제공하는 현대적인 컴파일러 프레임워크로, 구조화된 IR 연산, 타입 안전성, 플러그인 가능한 dialect, 그리고 고수준 의미론에서 머신 코드까지의 점진적 lowering 등 필요한 인프라를 제공한다.</p>
+<p>이 장에서는 필수 사전 준비 설정을 다룬다: C API를 활성화하여 LLVM/MLIR을 소스에서 빌드하고, F# 개발을 위한 .NET SDK를 설치하며, 두 시스템이 통신할 수 있도록 환경을 구성하는 것이다. 이러한 기초가 없으면 나머지 튜토리얼을 진행할 수 없다.</p>
 <h2 id="시스템-요구-사항"><a class="header" href="#시스템-요구-사항">시스템 요구 사항</a></h2>
-<p>시작하기 전에 시스템이 다음 요구 사항을 충족하는지 확인하십시오:</p>
+<p>시작하기 전에 시스템이 다음 요구 사항을 충족하는지 확인한다:</p>
 <ul>
 <li><strong>디스크 공간:</strong> ~30 GB (LLVM 소스 + 빌드 산출물 + 설치)</li>
 <li><strong>RAM:</strong> 16 GB 권장 (빌드 병렬 처리를 줄이면 최소 8 GB)</li>
@@ -199,12 +199,12 @@
 <ul>
 <li>Linux (Ubuntu 22.04+, Fedora 38+ 또는 이에 상응하는 배포판)</li>
 <li>macOS (13 Ventura 이상, Intel 및 Apple Silicon 모두 지원)</li>
-<li>Windows (Ubuntu 22.04+가 설치된 WSL2 권장; 네이티브 MSVC 빌드도 가능하지만 이 튜토리얼에서는 다루지 않습니다)</li>
+<li>Windows (Ubuntu 22.04+가 설치된 WSL2 권장; 네이티브 MSVC 빌드도 가능하지만 이 튜토리얼에서는 다루지 않는다)</li>
 </ul>
 </li>
 </ul>
 <h2 id="c-api를-포함한-llvmmlir-빌드"><a class="header" href="#c-api를-포함한-llvmmlir-빌드">C API를 포함한 LLVM/MLIR 빌드</a></h2>
-<p>MLIR은 LLVM 프로젝트의 일부입니다. MLIR 팀은 F#과 같은 비-C++ 언어가 MLIR 인프라와 상호작용할 수 있도록 안정적인 C API를 제공합니다. 이 C API는 기본적으로 빌드되지 않으므로 CMake 구성 단계에서 명시적으로 활성화해야 합니다.</p>
+<p>MLIR은 LLVM 프로젝트의 일부이다. MLIR 팀은 F#과 같은 비-C++ 언어가 MLIR 인프라와 상호작용할 수 있도록 안정적인 C API를 제공한다. 이 C API는 기본적으로 빌드되지 않으므로 CMake 구성 단계에서 명시적으로 활성화해야 한다.</p>
 <h3 id="빌드-의존성-설치"><a class="header" href="#빌드-의존성-설치">빌드 의존성 설치</a></h3>
 <h4 id="linux-ubuntudebian"><a class="header" href="#linux-ubuntudebian">Linux (Ubuntu/Debian)</a></h4>
 <pre><code class="language-bash">sudo apt update
@@ -218,27 +218,27 @@ sudo apt install -y \
   git
 </code></pre>
 <h4 id="macos"><a class="header" href="#macos">macOS</a></h4>
-<p>먼저 Xcode Command Line Tools가 설치되어 있지 않다면 설치합니다:</p>
+<p>먼저 Xcode Command Line Tools가 설치되어 있지 않다면 설치한다:</p>
 <pre><code class="language-bash">xcode-select --install
 </code></pre>
-<p>그런 다음 Homebrew를 통해 CMake와 Ninja를 설치합니다:</p>
+<p>그런 다음 Homebrew를 통해 CMake와 Ninja를 설치한다:</p>
 <pre><code class="language-bash">brew install cmake ninja
 </code></pre>
-<p>macOS에는 이미 Clang이 포함되어 있으므로 빌드할 준비가 된 것입니다.</p>
+<p>macOS에는 이미 Clang이 포함되어 있으므로 빌드할 준비가 된 것이다.</p>
 <h4 id="windows-wsl2"><a class="header" href="#windows-wsl2">Windows (WSL2)</a></h4>
-<p>Ubuntu 22.04가 설치된 Windows Subsystem for Linux 2 (WSL2)를 사용하는 것을 권장합니다. <a href="https://learn.microsoft.com/en-us/windows/wsl/install">WSL2 설치 가이드</a>를 따른 후, 위의 Linux (Ubuntu) 의존성 설치 단계를 사용하십시오.</p>
+<p>Ubuntu 22.04가 설치된 Windows Subsystem for Linux 2 (WSL2)를 사용하는 것을 권장한다. <a href="https://learn.microsoft.com/en-us/windows/wsl/install">WSL2 설치 가이드</a>를 따른 후, 위의 Linux (Ubuntu) 의존성 설치 단계를 사용한다.</p>
 <blockquote>
-<p><strong>참고:</strong> MSVC를 사용한 네이티브 Windows 빌드도 가능하지만 다른 CMake 구성이 필요하며 이 튜토리얼의 범위를 벗어납니다. WSL2는 Windows에서 일관된 Linux 환경을 제공합니다.</p>
+<p><strong>참고:</strong> MSVC를 사용한 네이티브 Windows 빌드도 가능하지만 다른 CMake 구성이 필요하며 이 튜토리얼의 범위를 벗어난다. WSL2는 Windows에서 일관된 Linux 환경을 제공한다.</p>
 </blockquote>
 <h3 id="llvm-클론"><a class="header" href="#llvm-클론">LLVM 클론</a></h3>
-<p>LLVM monorepo를 LLVM 19.x 안정 릴리스 브랜치에서 클론합니다. <code>--depth 1</code>을 사용하면 최신 커밋만 가져와 디스크 공간과 다운로드 시간을 절약할 수 있습니다:</p>
+<p>LLVM monorepo를 LLVM 19.x 안정 릴리스 브랜치에서 클론한다. <code>--depth 1</code>을 사용하면 최신 커밋만 가져와 디스크 공간과 다운로드 시간을 절약할 수 있다:</p>
 <pre><code class="language-bash">cd $HOME
 git clone --depth 1 --branch release/19.x https://github.com/llvm/llvm-project.git
 cd llvm-project
 </code></pre>
-<p>shallow clone 후 저장소 크기는 약 2 GB입니다.</p>
+<p>shallow clone 후 저장소 크기는 약 2 GB이다.</p>
 <h3 id="빌드-구성"><a class="header" href="#빌드-구성">빌드 구성</a></h3>
-<p>CMake 구성 단계는 매우 중요합니다. 각 플래그는 특정 목적을 가지고 있습니다:</p>
+<p>CMake 구성 단계는 매우 중요하다. 각 플래그는 특정 목적을 가지고 있다:</p>
 <pre><code class="language-bash">cmake -S llvm -B build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_PROJECTS=mlir \
@@ -253,29 +253,29 @@ cd llvm-project
 <li><code>-G Ninja</code>: Ninja 빌드 시스템 사용 (Make보다 빠름)</li>
 <li><code>-DCMAKE_BUILD_TYPE=Release</code>: 디버그 심볼 없이 최적화된 빌드 (크기가 훨씬 작고 빠름)</li>
 <li><code>-DLLVM_ENABLE_PROJECTS=mlir</code>: LLVM과 함께 MLIR 빌드 (MLIR은 LLVM에 의존)</li>
-<li><strong><code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code></strong>: <strong>핵심 플래그</strong> — MLIR C API를 노출하는 <code>libMLIR-C</code> 공유 라이브러리를 빌드합니다</li>
+<li><strong><code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code></strong>: <strong>핵심 플래그</strong> — MLIR C API를 노출하는 <code>libMLIR-C</code> 공유 라이브러리를 빌드한다</li>
 <li><code>-DLLVM_TARGETS_TO_BUILD="X86;AArch64"</code>: x86-64 및 ARM64 백엔드만 빌드 (빌드 시간 단축; 필요시 다른 타겟 추가)</li>
 <li><code>-DCMAKE_INSTALL_PREFIX=$HOME/mlir-install</code>: 설치 위치 (쓰기 가능한 디렉터리 사용)</li>
 </ul>
-<p>CMake 구성은 1-2분 내에 완료됩니다. 다음과 같은 출력이 표시됩니다:</p>
+<p>CMake 구성은 1-2분 내에 완료된다. 다음과 같은 출력이 표시된다:</p>
 <pre><code>-- The C compiler identification is GNU 11.4.0
 -- The CXX compiler identification is GNU 11.4.0
 ...
 -- Build files have been written to: /home/user/llvm-project/build
 </code></pre>
 <h3 id="빌드-및-설치"><a class="header" href="#빌드-및-설치">빌드 및 설치</a></h3>
-<p>사용 가능한 모든 CPU 코어를 활용하여 MLIR을 빌드합니다 (Ninja는 자동으로 병렬 처리를 사용합니다):</p>
+<p>사용 가능한 모든 CPU 코어를 활용하여 MLIR을 빌드한다 (Ninja는 자동으로 병렬 처리를 사용한다):</p>
 <pre><code class="language-bash">cmake --build build --target install
 </code></pre>
-<p>이 단계는 하드웨어에 따라 30-60분이 소요됩니다. 수천 줄의 컴파일 로그가 스크롤됩니다. 빌드 중 메모리가 부족해지면 (시스템이 응답하지 않는 경우), 빌드를 중지하고 (Ctrl+C) 병렬 처리를 줄여 다시 시작합니다:</p>
+<p>이 단계는 하드웨어에 따라 30-60분이 소요된다. 수천 줄의 컴파일 로그가 스크롤된다. 빌드 중 메모리가 부족해지면 (시스템이 응답하지 않는 경우), 빌드를 중지하고 (Ctrl+C) 병렬 처리를 줄여 다시 시작한다:</p>
 <pre><code class="language-bash">cmake --build build --target install -- -j2
 </code></pre>
-<p><code>-j2</code> 플래그는 Ninja의 병렬 컴파일 작업을 2개로 제한하여, 빌드 시간이 느려지는 대신 최대 메모리 사용량을 줄입니다.</p>
-<p>빌드가 완료되면 다음과 같이 표시됩니다:</p>
+<p><code>-j2</code> 플래그는 Ninja의 병렬 컴파일 작업을 2개로 제한하여, 빌드 시간이 느려지는 대신 최대 메모리 사용량을 줄인다.</p>
+<p>빌드가 완료되면 다음과 같이 표시된다:</p>
 <pre><code>[100%] Built target install
 </code></pre>
 <h3 id="설치-확인"><a class="header" href="#설치-확인">설치 확인</a></h3>
-<p>MLIR C API 공유 라이브러리가 설치되었는지 확인합니다:</p>
+<p>MLIR C API 공유 라이브러리가 설치되었는지 확인한다:</p>
 <pre><code class="language-bash">ls -lh $HOME/mlir-install/lib/libMLIR-C*
 </code></pre>
 <p><strong>예상 출력:</strong></p>
@@ -284,85 +284,85 @@ cd llvm-project
 <li><strong>macOS:</strong> <code>libMLIR-C.19.dylib</code> 및 <code>libMLIR-C.dylib</code> (심볼릭 링크)</li>
 <li><strong>Windows (WSL):</strong> Linux와 동일</li>
 </ul>
-<p><code>No such file or directory</code>가 표시되면 CMake 구성에 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>이 포함되어 있는지 확인하고 빌드 단계를 다시 실행하십시오.</p>
-<p><code>mlir-opt</code> 도구도 설치되어 있어야 합니다:</p>
+<p><code>No such file or directory</code>가 표시되면 CMake 구성에 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>이 포함되어 있는지 확인하고 빌드 단계를 다시 실행한다.</p>
+<p><code>mlir-opt</code> 도구도 설치되어 있어야 한다:</p>
 <pre><code class="language-bash">$HOME/mlir-install/bin/mlir-opt --version
 </code></pre>
 <p>예상 출력: <code>MLIR (http://mlir.llvm.org) version 19.1.x</code></p>
 <h2 id="net-sdk-설치"><a class="header" href="#net-sdk-설치">.NET SDK 설치</a></h2>
-<p>FunLang의 컴파일러 백엔드는 F#으로 구현됩니다. F# 프로그램을 컴파일하고 실행하려면 .NET SDK가 필요합니다.</p>
+<p>FunLang의 컴파일러 백엔드는 F#으로 구현된다. F# 프로그램을 컴파일하고 실행하려면 .NET SDK가 필요하다.</p>
 <h3 id="linux-ubuntudebian-1"><a class="header" href="#linux-ubuntudebian-1">Linux (Ubuntu/Debian)</a></h3>
-<p>.NET 8.0 SDK (2026년 11월까지 지원되는 LTS 릴리스)를 설치합니다:</p>
+<p>.NET 8.0 SDK (2026년 11월까지 지원되는 LTS 릴리스)를 설치한다:</p>
 <pre><code class="language-bash">wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
 chmod +x dotnet-install.sh
 ./dotnet-install.sh --channel 8.0
 </code></pre>
-<p>스크립트는 .NET을 <code>$HOME/.dotnet</code>에 설치합니다. PATH에 추가합니다:</p>
+<p>스크립트는 .NET을 <code>$HOME/.dotnet</code>에 설치한다. PATH에 추가한다:</p>
 <pre><code class="language-bash">echo 'export PATH="$HOME/.dotnet:$PATH"' &gt;&gt; ~/.bashrc
 source ~/.bashrc
 </code></pre>
 <h3 id="macos-1"><a class="header" href="#macos-1">macOS</a></h3>
-<p><a href="https://dotnet.microsoft.com/download/dotnet/8.0">https://dotnet.microsoft.com/download/dotnet/8.0</a>에서 .NET 8.0 SDK 설치 프로그램을 다운로드하여 설치하거나, Homebrew를 사용합니다:</p>
+<p><a href="https://dotnet.microsoft.com/download/dotnet/8.0">https://dotnet.microsoft.com/download/dotnet/8.0</a>에서 .NET 8.0 SDK 설치 프로그램을 다운로드하여 설치하거나, Homebrew를 사용한다:</p>
 <pre><code class="language-bash">brew install --cask dotnet-sdk
 </code></pre>
 <h3 id="windows-wsl2-1"><a class="header" href="#windows-wsl2-1">Windows (WSL2)</a></h3>
-<p>WSL2 Ubuntu 환경에서 위의 Linux 설치 단계를 따르십시오.</p>
+<p>WSL2 Ubuntu 환경에서 위의 Linux 설치 단계를 따른다.</p>
 <h3 id="net-설치-확인"><a class="header" href="#net-설치-확인">.NET 설치 확인</a></h3>
-<p>.NET 버전을 확인합니다:</p>
+<p>.NET 버전을 확인한다:</p>
 <pre><code class="language-bash">dotnet --version
 </code></pre>
 <p>예상 출력: <code>8.0.x</code></p>
-<p>F# 컴파일러가 사용 가능한지 확인합니다:</p>
+<p>F# 컴파일러가 사용 가능한지 확인한다:</p>
 <pre><code class="language-bash">dotnet fsi --version
 </code></pre>
 <p>예상 출력: <code>Microsoft (R) F# Interactive version 12.8.x.0</code></p>
-<p>모든 것이 정상적으로 작동하는지 확인하기 위해 테스트 F# 프로젝트를 생성합니다:</p>
+<p>모든 것이 정상적으로 작동하는지 확인하기 위해 테스트 F# 프로젝트를 생성한다:</p>
 <pre><code class="language-bash">dotnet new console -lang F# -o test-fsharp
 cd test-fsharp
 dotnet run
 </code></pre>
-<p>다음과 같이 출력되어야 합니다:</p>
+<p>다음과 같이 출력되어야 한다:</p>
 <pre><code>Hello from F#
 </code></pre>
 <h2 id="라이브러리-검색-경로-설정"><a class="header" href="#라이브러리-검색-경로-설정">라이브러리 검색 경로 설정</a></h2>
-<p>F# 프로그램이 P/Invoke를 통해 MLIR C API 함수를 호출할 때, .NET 런타임은 런타임에 <code>libMLIR-C</code> 공유 라이브러리를 찾을 수 있어야 합니다. 표준적인 방법은 MLIR 설치 라이브러리 디렉터리를 시스템의 라이브러리 검색 경로에 추가하는 것입니다.</p>
+<p>F# 프로그램이 P/Invoke를 통해 MLIR C API 함수를 호출할 때, .NET 런타임은 런타임에 <code>libMLIR-C</code> 공유 라이브러리를 찾을 수 있어야 한다. 표준적인 방법은 MLIR 설치 라이브러리 디렉터리를 시스템의 라이브러리 검색 경로에 추가하는 것이다.</p>
 <h3 id="linux"><a class="header" href="#linux">Linux</a></h3>
-<p>MLIR 라이브러리 디렉터리를 <code>LD_LIBRARY_PATH</code>에 추가합니다:</p>
+<p>MLIR 라이브러리 디렉터리를 <code>LD_LIBRARY_PATH</code>에 추가한다:</p>
 <pre><code class="language-bash">echo 'export LD_LIBRARY_PATH="$HOME/mlir-install/lib:$LD_LIBRARY_PATH"' &gt;&gt; ~/.bashrc
 source ~/.bashrc
 </code></pre>
-<p>라이브러리가 검색 가능한지 확인합니다:</p>
+<p>라이브러리가 검색 가능한지 확인한다:</p>
 <pre><code class="language-bash">ldconfig -p | grep MLIR
 </code></pre>
-<p><code>libMLIR-C.so</code>에 대한 항목이 표시되어야 합니다.</p>
+<p><code>libMLIR-C.so</code>에 대한 항목이 표시되어야 한다.</p>
 <h3 id="macos-2"><a class="header" href="#macos-2">macOS</a></h3>
-<p>MLIR 라이브러리 디렉터리를 <code>DYLD_LIBRARY_PATH</code>에 추가합니다:</p>
+<p>MLIR 라이브러리 디렉터리를 <code>DYLD_LIBRARY_PATH</code>에 추가한다:</p>
 <pre><code class="language-bash">echo 'export DYLD_LIBRARY_PATH="$HOME/mlir-install/lib:$DYLD_LIBRARY_PATH"' &gt;&gt; ~/.zshrc
 source ~/.zshrc
 </code></pre>
 <blockquote>
-<p><strong>참고:</strong> macOS Catalina 이후 macOS는 기본적으로 zsh를 사용합니다. bash를 사용하고 있다면 <code>~/.bashrc</code>를 수정하십시오.</p>
+<p><strong>참고:</strong> macOS Catalina 이후 macOS는 기본적으로 zsh를 사용한다. bash를 사용하고 있다면 <code>~/.bashrc</code>를 수정한다.</p>
 </blockquote>
-<p>라이브러리가 존재하는지 확인합니다:</p>
+<p>라이브러리가 존재하는지 확인한다:</p>
 <pre><code class="language-bash">ls -l $HOME/mlir-install/lib/libMLIR-C.dylib
 </code></pre>
 <h3 id="windows-wsl2-2"><a class="header" href="#windows-wsl2-2">Windows (WSL2)</a></h3>
-<p>WSL2에서 위의 Linux 지침을 따르십시오.</p>
+<p>WSL2에서 위의 Linux 지침을 따른다.</p>
 <h3 id="대안-프로젝트별-구성"><a class="header" href="#대안-프로젝트별-구성">대안: 프로젝트별 구성</a></h3>
-<p>전역 환경 변수를 설정하는 대신, F# 애플리케이션을 실행할 때 라이브러리 경로를 지정할 수 있습니다:</p>
+<p>전역 환경 변수를 설정하는 대신, F# 애플리케이션을 실행할 때 라이브러리 경로를 지정할 수 있다:</p>
 <pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
 </code></pre>
-<p>이 방법은 셸 프로파일을 수정하지 않고 테스트할 때 유용합니다.</p>
+<p>이 방법은 셸 프로파일을 수정하지 않고 테스트할 때 유용하다.</p>
 <h2 id="자주-발생하는-문제-해결"><a class="header" href="#자주-발생하는-문제-해결">자주 발생하는 문제 해결</a></h2>
 <h3 id="빌드-중-메모리-부족"><a class="header" href="#빌드-중-메모리-부족">빌드 중 메모리 부족</a></h3>
 <p><strong>증상:</strong> MLIR 빌드 중 시스템이 응답하지 않음; 스왑 사용량이 100%.</p>
-<p><strong>해결 방법:</strong> 빌드 병렬 처리를 줄입니다:</p>
+<p><strong>해결 방법:</strong> 빌드 병렬 처리를 줄인다:</p>
 <pre><code class="language-bash">cmake --build build --target install -- -j2
 </code></pre>
-<p>RAM이 8 GB인 시스템에서는 <code>-j1</code>이 필요할 수 있습니다.</p>
+<p>RAM이 8 GB인 시스템에서는 <code>-j1</code>이 필요할 수 있다.</p>
 <h3 id="mlir-c-library-not-found-런타임-오류"><a class="header" href="#mlir-c-library-not-found-런타임-오류">“MLIR-C library not found” 런타임 오류</a></h3>
-<p><strong>증상:</strong> F# 프로그램이 <code>DllNotFoundException: Unable to load shared library 'MLIR-C'</code>로 실패합니다.</p>
-<p><strong>해결 방법:</strong> 라이브러리 검색 경로가 구성되어 있는지 확인합니다:</p>
+<p><strong>증상:</strong> F# 프로그램이 <code>DllNotFoundException: Unable to load shared library 'MLIR-C'</code>로 실패한다.</p>
+<p><strong>해결 방법:</strong> 라이브러리 검색 경로가 구성되어 있는지 확인한다:</p>
 <pre><code class="language-bash"># Linux
 echo $LD_LIBRARY_PATH
 # $HOME/mlir-install/lib이 포함되어 있어야 합니다
@@ -370,13 +370,13 @@ echo $LD_LIBRARY_PATH
 # macOS
 echo $DYLD_LIBRARY_PATH
 </code></pre>
-<p>라이브러리 파일이 존재하는지 확인합니다:</p>
+<p>라이브러리 파일이 존재하는지 확인한다:</p>
 <pre><code class="language-bash">ls $HOME/mlir-install/lib/libMLIR-C*
 </code></pre>
-<p>파일이 없다면 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>으로 다시 빌드하십시오.</p>
+<p>파일이 없다면 <code>-DMLIR_BUILD_MLIR_C_DYLIB=ON</code>으로 다시 빌드한다.</p>
 <h3 id="cmake-버전이-너무-오래됨"><a class="header" href="#cmake-버전이-너무-오래됨">CMake 버전이 너무 오래됨</a></h3>
-<p><strong>증상:</strong> CMake 구성이 <code>CMake 3.20 or higher is required</code>로 실패합니다.</p>
-<p><strong>해결 방법:</strong> 최신 CMake를 설치합니다:</p>
+<p><strong>증상:</strong> CMake 구성이 <code>CMake 3.20 or higher is required</code>로 실패한다.</p>
+<p><strong>해결 방법:</strong> 최신 CMake를 설치한다:</p>
 <pre><code class="language-bash"># Linux: 최신 CMake 바이너리 다운로드
 wget https://github.com/Kitware/CMake/releases/download/v3.28.0/cmake-3.28.0-linux-x86_64.sh
 sudo sh cmake-3.28.0-linux-x86_64.sh --prefix=/usr/local --skip-license
@@ -385,8 +385,8 @@ sudo sh cmake-3.28.0-linux-x86_64.sh --prefix=/usr/local --skip-license
 brew upgrade cmake
 </code></pre>
 <h3 id="ninja-빌드-시스템-누락"><a class="header" href="#ninja-빌드-시스템-누락">Ninja 빌드 시스템 누락</a></h3>
-<p><strong>증상:</strong> CMake 구성이 <code>Could not find Ninja</code>로 실패합니다.</p>
-<p><strong>해결 방법:</strong> Ninja를 설치하거나 (위의 “빌드 의존성 설치” 참조), 대신 Unix Makefiles를 사용합니다 (더 느림):</p>
+<p><strong>증상:</strong> CMake 구성이 <code>Could not find Ninja</code>로 실패한다.</p>
+<p><strong>해결 방법:</strong> Ninja를 설치하거나 (위의 “빌드 의존성 설치” 참조), 대신 Unix Makefiles를 사용한다 (더 느림):</p>
 <pre><code class="language-bash">cmake -S llvm -B build -G "Unix Makefiles" \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_PROJECTS=mlir \
@@ -397,27 +397,27 @@ brew upgrade cmake
 make -C build install -j$(nproc)
 </code></pre>
 <h3 id="디스크-공간-부족"><a class="header" href="#디스크-공간-부족">디스크 공간 부족</a></h3>
-<p><strong>증상:</strong> 빌드가 <code>No space left on device</code>로 실패합니다.</p>
-<p><strong>해결 방법:</strong> LLVM 빌드에는 ~30 GB가 필요합니다. 공간을 확보하거나 다른 파티션에서 빌드하십시오. 설치 후 <code>build</code> 디렉터리를 삭제하면 ~20 GB를 회수할 수 있습니다:</p>
+<p><strong>증상:</strong> 빌드가 <code>No space left on device</code>로 실패한다.</p>
+<p><strong>해결 방법:</strong> LLVM 빌드에는 ~30 GB가 필요하다. 공간을 확보하거나 다른 파티션에서 빌드한다. 설치 후 <code>build</code> 디렉터리를 삭제하면 ~20 GB를 회수할 수 있다:</p>
 <pre><code class="language-bash">rm -rf $HOME/llvm-project/build
 </code></pre>
 <h2 id="이-장에서-완료한-것"><a class="header" href="#이-장에서-완료한-것">이 장에서 완료한 것</a></h2>
-<p>이 시점에서 다음 항목이 준비되어 있습니다:</p>
+<p>이 시점에서 다음 항목이 준비되어 있다:</p>
 <ol>
 <li><strong>LLVM/MLIR 설치 완료</strong> — <code>$HOME/mlir-install</code>에 C API 공유 라이브러리(<code>libMLIR-C.so</code>, <code>libMLIR-C.dylib</code>, 또는 <code>MLIR-C.dll</code>) 포함</li>
 <li><strong>.NET 8.0 SDK</strong> — F# 컴파일러 및 런타임과 함께 설치 완료</li>
 <li><strong>라이브러리 검색 경로 구성 완료</strong> — .NET이 런타임에 MLIR을 찾을 수 있도록 설정</li>
 <li><strong>빌드 도구 검증 완료</strong> — 개발 준비 완료 (<code>mlir-opt</code>, <code>dotnet</code>)</li>
 </ol>
-<p>이제 MLIR과 상호작용하는 F# 코드를 작성할 준비가 되었습니다. 다음 장에서는 코드를 작성하기 전에 이해해야 할 핵심 MLIR 개념들을 살펴봅니다: dialect, operation, region, block, 그리고 SSA 형식입니다.</p>
+<p>이제 MLIR과 상호작용하는 F# 코드를 작성할 준비가 되었다. 다음 장에서는 코드를 작성하기 전에 이해해야 할 핵심 MLIR 개념들을 살펴본다: dialect, operation, region, block, 그리고 SSA 형식이다.</p>
 <h2 id="다음-장"><a class="header" href="#다음-장">다음 장</a></h2>
-<p><a href="#chapter-01-mlir-입문">Chapter 01: MLIR 입문</a>으로 이동하여 MLIR IR의 기본 개념을 학습합니다.</p>
+<p><a href="#chapter-01-mlir-입문">Chapter 01: MLIR 입문</a>으로 이동하여 MLIR IR의 기본 개념을 학습한다.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="chapter-01-mlir-입문"><a class="header" href="#chapter-01-mlir-입문">Chapter 01: MLIR 입문</a></h1>
 <h2 id="소개-1"><a class="header" href="#소개-1">소개</a></h2>
-<p>이전 챕터에서 LLVM/MLIR을 소스에서 빌드하고 .NET SDK를 설정했습니다. 필요한 도구는 모두 설치되었습니다. 하지만 MLIR을 생성하는 F# 코드를 작성하기 전에, MLIR이 무엇이고 프로그램을 어떻게 표현하는지 이해해야 합니다.</p>
-<p>MLIR은 전통적인 중간 표현(intermediate representation)과 다릅니다. 단순히 “하나의 IR“이 아니라, 서로 상호 운용할 수 있는 여러 IR(dialect이라고 부릅니다)을 구축하기 위한 프레임워크입니다. 이 다단계(multi-level) 철학이 MLIR을 컴파일러 개발에 강력하게 만드는 핵심입니다. 고수준 함수형 언어를 매우 저수준인 LLVM IR로 직접 변환하도록 강제하는 대신, MLIR은 언어의 의미론(semantics)을 필요한 만큼 보존하는 중간 표현을 정의한 다음, 단계적으로 점진적 하강(progressive lowering)할 수 있게 해줍니다.</p>
-<p>FunLang의 컴파일 파이프라인은 다음과 같습니다:</p>
+<p>이전 챕터에서 LLVM/MLIR을 소스에서 빌드하고 .NET SDK를 설정했다. 필요한 도구는 모두 설치되었다. 하지만 MLIR을 생성하는 F# 코드를 작성하기 전에, MLIR이 무엇이고 프로그램을 어떻게 표현하는지 이해해야 한다.</p>
+<p>MLIR은 전통적인 중간 표현(intermediate representation)과 다르다. 단순히 “하나의 IR“이 아니라, 서로 상호 운용할 수 있는 여러 IR(dialect이라고 부른다)을 구축하기 위한 프레임워크이다. 이 다단계(multi-level) 철학이 MLIR을 컴파일러 개발에 강력하게 만드는 핵심이다. 고수준 함수형 언어를 매우 저수준인 LLVM IR로 직접 변환하도록 강제하는 대신, MLIR은 언어의 의미론(semantics)을 필요한 만큼 보존하는 중간 표현을 정의한 다음, 단계적으로 점진적 하강(progressive lowering)할 수 있게 해준다.</p>
+<p>FunLang의 컴파일 파이프라인은 다음과 같다:</p>
 <pre><code>FunLang Typed AST
     ↓
 High-Level MLIR (arith, func, scf dialects)
@@ -428,9 +428,9 @@ LLVM IR
     ↓
 Native Machine Code
 </code></pre>
-<p>이 챕터에서는 MLIR IR을 이해하기 위한 멘탈 모델을 제공합니다. 다섯 가지 핵심 개념 — <strong>dialect</strong>, <strong>operation</strong>, <strong>region</strong>, <strong>block</strong>, 그리고 <strong>SSA form</strong> — 을 구체적인 예제를 통해 배우게 됩니다. 챕터를 마치면 MLIR 텍스트 IR을 읽고, FunLang 프로그램이 MLIR 구조에 어떻게 매핑되는지 이해할 수 있을 것입니다.</p>
+<p>이 챕터에서는 MLIR IR을 이해하기 위한 멘탈 모델을 제공한다. 다섯 가지 핵심 개념 — <strong>dialect</strong>, <strong>operation</strong>, <strong>region</strong>, <strong>block</strong>, 그리고 <strong>SSA form</strong> — 을 구체적인 예제를 통해 배운다. 챕터를 마치면 MLIR 텍스트 IR을 읽고, FunLang 프로그램이 MLIR 구조에 어떻게 매핑되는지 이해할 수 있을 것이다.</p>
 <h2 id="mlir-ir-구조"><a class="header" href="#mlir-ir-구조">MLIR IR 구조</a></h2>
-<p>완전한 MLIR 프로그램을 보면서 각 부분을 분석해 보겠습니다. 다음은 두 개의 32비트 정수를 더하는 간단한 함수입니다:</p>
+<p>완전한 MLIR 프로그램을 보면서 각 부분을 분석해 본다. 다음은 두 개의 32비트 정수를 더하는 간단한 함수이다:</p>
 <pre><code class="language-mlir">module {
   func.func @add(%arg0: i32, %arg1: i32) -&gt; i32 {
     %result = arith.addi %arg0, %arg1 : i32
@@ -438,29 +438,29 @@ Native Machine Code
   }
 }
 </code></pre>
-<p>한 줄씩 분석해 보겠습니다:</p>
+<p>한 줄씩 분석해 본다:</p>
 <ul>
 <li>
-<p><strong><code>module { ... }</code></strong>: 모든 MLIR 프로그램은 module에 포함됩니다. module은 모든 코드를 담는 최상위 컨테이너로, C의 컴파일 단위(compilation unit)나 .NET의 어셈블리와 유사합니다.</p>
+<p><strong><code>module { ... }</code></strong>: 모든 MLIR 프로그램은 module에 포함된다. module은 모든 코드를 담는 최상위 컨테이너로, C의 컴파일 단위(compilation unit)나 .NET의 어셈블리와 유사하다.</p>
 </li>
 <li>
-<p><strong><code>func.func @add(...) -&gt; i32 { ... }</code></strong>: <code>func</code> dialect의 operation으로, <code>@add</code>라는 이름의 함수를 정의합니다. <code>@</code> 접두사는 심볼(함수 이름)을 나타냅니다. 이 함수는 두 개의 인자를 받아 <code>i32</code>(32비트 정수)를 반환합니다.</p>
+<p><strong><code>func.func @add(...) -&gt; i32 { ... }</code></strong>: <code>func</code> dialect의 operation으로, <code>@add</code>라는 이름의 함수를 정의한다. <code>@</code> 접두사는 심볼(함수 이름)을 나타낸다. 이 함수는 두 개의 인자를 받아 <code>i32</code>(32비트 정수)를 반환한다.</p>
 </li>
 <li>
-<p><strong><code>%arg0: i32, %arg1: i32</code></strong>: 함수 매개변수입니다. 각 매개변수는 타입 어노테이션(<code>: i32</code>)을 가진 SSA 값(<code>%</code>로 시작)입니다. 이것이 함수의 입력입니다.</p>
+<p><strong><code>%arg0: i32, %arg1: i32</code></strong>: 함수 매개변수이다. 각 매개변수는 타입 어노테이션(<code>: i32</code>)을 가진 SSA 값(<code>%</code>로 시작)이다. 이것이 함수의 입력이다.</p>
 </li>
 <li>
-<p><strong><code>%result = arith.addi %arg0, %arg1 : i32</code></strong>: <code>arith</code> dialect의 산술 덧셈 operation입니다. 두 피연산자(<code>%arg0</code>과 <code>%arg1</code>)를 받아 더한 후, 새로운 SSA 값 <code>%result</code>를 생성합니다. <code>: i32</code> 접미사는 결과 타입을 지정합니다.</p>
+<p><strong><code>%result = arith.addi %arg0, %arg1 : i32</code></strong>: <code>arith</code> dialect의 산술 덧셈 operation이다. 두 피연산자(<code>%arg0</code>과 <code>%arg1</code>)를 받아 더한 후, 새로운 SSA 값 <code>%result</code>를 생성한다. <code>: i32</code> 접미사는 결과 타입을 지정한다.</p>
 </li>
 <li>
-<p><strong><code>return %result : i32</code></strong>: 함수의 return operation입니다. <code>%result</code> 값을 호출자에게 반환합니다. <code>: i32</code> 타입 어노테이션은 타입 안전성을 보장합니다.</p>
+<p><strong><code>return %result : i32</code></strong>: 함수의 return operation이다. <code>%result</code> 값을 호출자에게 반환한다. <code>: i32</code> 타입 어노테이션은 타입 안전성을 보장한다.</p>
 </li>
 </ul>
-<p>MLIR의 모든 요소에는 목적과 타입이 있습니다. 암시적 변환이나 정의되지 않은 동작(undefined behavior)은 없습니다. 이러한 엄격함이 MLIR이 공격적인 최적화와 검증을 수행할 수 있게 해주는 것입니다.</p>
+<p>MLIR의 모든 요소에는 목적과 타입이 있다. 암시적 변환이나 정의되지 않은 동작(undefined behavior)은 없다. 이러한 엄격함이 MLIR이 공격적인 최적화와 검증을 수행할 수 있게 해주는 것이다.</p>
 <h2 id="dialect"><a class="header" href="#dialect">Dialect</a></h2>
-<p><strong>Dialect</strong>은 관련된 operation, 타입, attribute를 그룹화하는 네임스페이스입니다. Dialect은 MLIR의 확장성 메커니즘입니다 — 모든 가능한 operation을 하나의 거대한 IR에 넣는 대신, MLIR은 도메인에 맞는 커스텀 dialect을 정의할 수 있게 해줍니다.</p>
+<p><strong>Dialect</strong>은 관련된 operation, 타입, attribute를 그룹화하는 네임스페이스이다. Dialect은 MLIR의 확장성 메커니즘이다 — 모든 가능한 operation을 하나의 거대한 IR에 넣는 대신, MLIR은 도메인에 맞는 커스텀 dialect을 정의할 수 있게 해준다.</p>
 <h3 id="사용할-내장-dialect"><a class="header" href="#사용할-내장-dialect">사용할 내장 Dialect</a></h3>
-<p>FunLang 컴파일러에서는 주로 다음 표준 dialect들을 사용합니다:</p>
+<p>FunLang 컴파일러에서는 주로 다음 표준 dialect들을 사용한다:</p>
 <ol>
 <li>
 <p><strong><code>arith</code></strong> — 산술 연산</p>
@@ -490,75 +490,75 @@ Native Machine Code
 <p><strong><code>llvm</code></strong> — LLVM dialect (lowering 대상)</p>
 <ul>
 <li><code>llvm.func</code>, <code>llvm.call</code>, <code>llvm.add</code> 등</li>
-<li>이 dialect은 LLVM IR 구성 요소와 1:1로 매핑됩니다</li>
+<li>이 dialect은 LLVM IR 구성 요소와 1:1로 매핑된다</li>
 </ul>
 </li>
 </ol>
 <h3 id="커스텀-dialect"><a class="header" href="#커스텀-dialect">커스텀 Dialect</a></h3>
-<p>이 튜토리얼 시리즈의 후반부(Chapter 10-11)에서는 다음과 같은 operation을 가진 <strong>FunLang dialect</strong>을 정의하게 됩니다:</p>
+<p>이 튜토리얼 시리즈의 후반부(Chapter 10-11)에서는 다음과 같은 operation을 가진 <strong>FunLang dialect</strong>을 정의하게 된다:</p>
 <ul>
 <li><code>funlang.closure</code> (클로저 생성)</li>
 <li><code>funlang.apply</code> (클로저에 인자를 적용)</li>
 <li><code>funlang.match</code> (패턴 매칭)</li>
 </ul>
-<p>커스텀 dialect을 사용하면 컴파일 과정에서 고수준 의미론을 보존할 수 있습니다. FunLang 클로저를 즉시 저수준 구조체 할당과 함수 포인터로 변환하는 대신, 고수준 <code>funlang.closure</code> operation으로 표현합니다. 이렇게 하면 최적화를 작성하고 이해하기가 더 쉬워집니다.</p>
+<p>커스텀 dialect을 사용하면 컴파일 과정에서 고수준 의미론을 보존할 수 있다. FunLang 클로저를 즉시 저수준 구조체 할당과 함수 포인터로 변환하는 대신, 고수준 <code>funlang.closure</code> operation으로 표현한다. 이렇게 하면 최적화를 작성하고 이해하기가 더 쉬워진다.</p>
 <h3 id="dialect-명명-규칙"><a class="header" href="#dialect-명명-규칙">Dialect 명명 규칙</a></h3>
-<p>Operation은 항상 자신이 속한 dialect 이름을 접두사로 가지며, 점(.)으로 구분됩니다:</p>
+<p>Operation은 항상 자신이 속한 dialect 이름을 접두사로 가지며, 점(.)으로 구분된다:</p>
 <pre><code class="language-mlir">arith.addi   // "arith" dialect의 "addi" operation
 func.call    // "func" dialect의 "call" operation
 llvm.load    // "llvm" dialect의 "load" operation
 </code></pre>
-<p>이를 통해 이름 충돌을 방지합니다. <code>arith</code> dialect의 <code>addi</code>는 가상의 <code>mydialect.addi</code>와 구별됩니다.</p>
+<p>이를 통해 이름 충돌을 방지한다. <code>arith</code> dialect의 <code>addi</code>는 가상의 <code>mydialect.addi</code>와 구별된다.</p>
 <h2 id="operation"><a class="header" href="#operation">Operation</a></h2>
-<p><strong>Operation</strong>은 MLIR IR의 기본 단위입니다. MLIR에서는 함수 정의, 산술 명령어, 제어 흐름 등 모든 것이 operation으로 표현됩니다. 심지어 타입과 attribute도 operation에 첨부됩니다.</p>
+<p><strong>Operation</strong>은 MLIR IR의 기본 단위이다. MLIR에서는 함수 정의, 산술 명령어, 제어 흐름 등 모든 것이 operation으로 표현된다. 심지어 타입과 attribute도 operation에 첨부된다.</p>
 <h3 id="operation의-구조"><a class="header" href="#operation의-구조">Operation의 구조</a></h3>
-<p>텍스트 형식에서 operation은 다음과 같은 구조를 가집니다:</p>
+<p>텍스트 형식에서 operation은 다음과 같은 구조를 가진다:</p>
 <pre><code class="language-mlir">%results = dialect.opname(%operands) {attributes} : (types) -&gt; result_type
 </code></pre>
-<p>덧셈 예제에서 각 구성 요소를 살펴보겠습니다:</p>
+<p>덧셈 예제에서 각 구성 요소를 살펴본다:</p>
 <pre><code class="language-mlir">%result = arith.addi %arg0, %arg1 : i32
 </code></pre>
 <ul>
 <li>
-<p><strong><code>%result</code></strong>: 이 operation이 생성하는 SSA 값입니다. 이 값은 이후 operation에서 사용할 수 있습니다. <code>%</code> 접두사는 SSA 값을 심볼(<code>@function_name</code>)과 구별합니다.</p>
+<p><strong><code>%result</code></strong>: 이 operation이 생성하는 SSA 값이다. 이 값은 이후 operation에서 사용할 수 있다. <code>%</code> 접두사는 SSA 값을 심볼(<code>@function_name</code>)과 구별한다.</p>
 </li>
 <li>
-<p><strong><code>arith.addi</code></strong>: operation 이름(dialect + opname)입니다.</p>
+<p><strong><code>arith.addi</code></strong>: operation 이름(dialect + opname)이다.</p>
 </li>
 <li>
-<p><strong><code>%arg0, %arg1</code></strong>: 피연산자(operation의 입력)입니다. 이전에 정의된 SSA 값(이 경우 함수 인자)입니다.</p>
+<p><strong><code>%arg0, %arg1</code></strong>: 피연산자(operation의 입력)이다. 이전에 정의된 SSA 값(이 경우 함수 인자)이다.</p>
 </li>
 <li>
-<p><strong><code>: i32</code></strong>: 타입 제약 조건입니다. 이 operation은 32비트 정수에 대해 동작합니다.</p>
+<p><strong><code>: i32</code></strong>: 타입 제약 조건이다. 이 operation은 32비트 정수에 대해 동작한다.</p>
 </li>
 </ul>
-<p>모든 operation이 결과를 생성하는 것은 아닙니다. 예를 들어, <code>return</code>은 함수를 종료하는 operation이지만 이후에 사용할 값을 생성하지는 않습니다:</p>
+<p>모든 operation이 결과를 생성하는 것은 아니다. 예를 들어, <code>return</code>은 함수를 종료하는 operation이지만 이후에 사용할 값을 생성하지는 않는다:</p>
 <pre><code class="language-mlir">return %result : i32
 </code></pre>
 <h3 id="복수-결과를-가진-operation"><a class="header" href="#복수-결과를-가진-operation">복수 결과를 가진 Operation</a></h3>
-<p>일부 operation은 여러 값을 생성합니다. 예를 들어, 몫과 나머지를 모두 반환하는 나눗셈 operation이 있습니다:</p>
+<p>일부 operation은 여러 값을 생성한다. 예를 들어, 몫과 나머지를 모두 반환하는 나눗셈 operation이 있다:</p>
 <pre><code class="language-mlir">%quot, %rem = arith.divrem %dividend, %divisor : i32
 </code></pre>
-<p>이제 <code>%quot</code>과 <code>%rem</code> 모두 사용 가능한 SSA 값입니다.</p>
+<p>이제 <code>%quot</code>과 <code>%rem</code> 모두 사용 가능한 SSA 값이다.</p>
 <h3 id="attribute를-가진-operation"><a class="header" href="#attribute를-가진-operation">Attribute를 가진 Operation</a></h3>
-<p>Attribute는 컴파일 타임 상수 메타데이터를 제공합니다. 예를 들어, 정수 상수는 다음과 같습니다:</p>
+<p>Attribute는 컴파일 타임 상수 메타데이터를 제공한다. 예를 들어, 정수 상수는 다음과 같다:</p>
 <pre><code class="language-mlir">%zero = arith.constant 0 : i32
 </code></pre>
-<p><code>0</code>은 attribute(상수 값)이고, <code>i32</code>는 타입입니다. Attribute는 런타임 값이 아니라 컴파일 타임에 IR에 내장되는 것입니다.</p>
+<p><code>0</code>은 attribute(상수 값)이고, <code>i32</code>는 타입이다. Attribute는 런타임 값이 아니라 컴파일 타임에 IR에 내장되는 것이다.</p>
 <h2 id="region과-block"><a class="header" href="#region과-block">Region과 Block</a></h2>
-<p>MLIR operation은 <strong>region</strong>을 포함할 수 있고, region은 <strong>block</strong>을 포함합니다. 이것이 MLIR이 중첩된 스코프와 제어 흐름을 표현하는 방식입니다.</p>
+<p>MLIR operation은 <strong>region</strong>을 포함할 수 있고, region은 <strong>block</strong>을 포함한다. 이것이 MLIR이 중첩된 스코프와 제어 흐름을 표현하는 방식이다.</p>
 <h3 id="region"><a class="header" href="#region">Region</a></h3>
-<p><strong>Region</strong>은 block의 목록입니다. 함수 본문은 region입니다. <code>scf.if</code>와 같은 제어 흐름 operation에는 “then“과 “else” 분기를 위한 region이 있습니다.</p>
-<p>다음은 하나의 region에 하나의 block을 포함하는 함수입니다:</p>
+<p><strong>Region</strong>은 block의 목록이다. 함수 본문은 region이다. <code>scf.if</code>와 같은 제어 흐름 operation에는 “then“과 “else” 분기를 위한 region이 있다.</p>
+<p>다음은 하나의 region에 하나의 block을 포함하는 함수이다:</p>
 <pre><code class="language-mlir">func.func @example() -&gt; i32 {
   %one = arith.constant 1 : i32
   return %one : i32
 }
 </code></pre>
-<p>중괄호 <code>{ ... }</code>가 함수의 region을 구분합니다. region 내부에는 두 개의 operation(상수와 return)을 가진 하나의 block이 있습니다.</p>
+<p>중괄호 <code>{ ... }</code>가 함수의 region을 구분한다. region 내부에는 두 개의 operation(상수와 return)을 가진 하나의 block이 있다.</p>
 <h3 id="block"><a class="header" href="#block">Block</a></h3>
-<p><strong>Block</strong>은 선형적으로 실행되는 operation의 시퀀스입니다. 모든 block은 <strong>terminator</strong> operation — 제어를 다른 곳으로 이전하는 operation(return, branch 등) — 으로 끝나야 합니다. Block을 “통과(fall through)“할 수 없습니다.</p>
-<p>제어 흐름이 있을 때 block이 필수적이 됩니다. 다음은 두 개의 block을 가진 함수입니다:</p>
+<p><strong>Block</strong>은 선형적으로 실행되는 operation의 시퀀스이다. 모든 block은 <strong>terminator</strong> operation — 제어를 다른 곳으로 이전하는 operation(return, branch 등) — 으로 끝나야 한다. Block을 “통과(fall through)“할 수 없다.</p>
+<p>제어 흐름이 있을 때 block이 필수적이 된다. 다음은 두 개의 block을 가진 함수이다:</p>
 <pre><code class="language-mlir">func.func @conditional(%cond: i1, %a: i32, %b: i32) -&gt; i32 {
   cf.cond_br %cond, ^then_block, ^else_block
 
@@ -569,27 +569,27 @@ llvm.load    // "llvm" dialect의 "load" operation
   return %b : i32
 }
 </code></pre>
-<p>분석해 보겠습니다:</p>
+<p>분석해 본다:</p>
 <ul>
 <li>
-<p><strong><code>cf.cond_br %cond, ^then_block, ^else_block</code></strong>: 조건 분기 operation(<code>cf</code> control-flow dialect)입니다. <code>%cond</code>가 참이면 <code>^then_block</code>으로, 그렇지 않으면 <code>^else_block</code>으로 점프합니다. 이것이 entry block의 terminator입니다.</p>
+<p><strong><code>cf.cond_br %cond, ^then_block, ^else_block</code></strong>: 조건 분기 operation(<code>cf</code> control-flow dialect)이다. <code>%cond</code>가 참이면 <code>^then_block</code>으로, 그렇지 않으면 <code>^else_block</code>으로 점프한다. 이것이 entry block의 terminator이다.</p>
 </li>
 <li>
-<p><strong><code>^then_block:</code></strong>: block 레이블입니다. <code>^</code> 접두사는 block을 나타냅니다. block 이름은 함수 내에서 로컬입니다.</p>
+<p><strong><code>^then_block:</code></strong>: block 레이블이다. <code>^</code> 접두사는 block을 나타낸다. block 이름은 함수 내에서 로컬이다.</p>
 </li>
 <li>
-<p><strong><code>return %a : i32</code></strong>: <code>^then_block</code>의 terminator입니다. <code>%a</code>를 호출자에게 반환합니다.</p>
+<p><strong><code>return %a : i32</code></strong>: <code>^then_block</code>의 terminator이다. <code>%a</code>를 호출자에게 반환한다.</p>
 </li>
 <li>
-<p><strong><code>^else_block:</code></strong>: 또 다른 block 레이블입니다.</p>
+<p><strong><code>^else_block:</code></strong>: 또 다른 block 레이블이다.</p>
 </li>
 <li>
-<p><strong><code>return %b : i32</code></strong>: <code>^else_block</code>의 terminator입니다. <code>%b</code>를 반환합니다.</p>
+<p><strong><code>return %b : i32</code></strong>: <code>^else_block</code>의 terminator이다. <code>%b</code>를 반환한다.</p>
 </li>
 </ul>
 <h3 id="block-인자-mlir의-phi-node-처리-방식"><a class="header" href="#block-인자-mlir의-phi-node-처리-방식">Block 인자 (MLIR의 Phi Node 처리 방식)</a></h3>
-<p>MLIR은 LLVM의 phi node 대신 <strong>block 인자</strong>를 사용합니다. LLVM IR에서는 여러 선행 block의 값을 병합하기 위해 phi node를 사용합니다. MLIR에서는 block으로 분기할 때 값을 인자로 전달합니다.</p>
-<p>다음은 두 값을 병합하는 예제입니다:</p>
+<p>MLIR은 LLVM의 phi node 대신 <strong>block 인자</strong>를 사용한다. LLVM IR에서는 여러 선행 block의 값을 병합하기 위해 phi node를 사용한다. MLIR에서는 block으로 분기할 때 값을 인자로 전달한다.</p>
+<p>다음은 두 값을 병합하는 예제이다:</p>
 <pre><code class="language-mlir">func.func @merge_example(%cond: i1, %a: i32, %b: i32) -&gt; i32 {
   cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)
 
@@ -597,26 +597,26 @@ llvm.load    // "llvm" dialect의 "load" operation
   return %result : i32
 }
 </code></pre>
-<p>무슨 일이 일어나는지 살펴보겠습니다:</p>
+<p>무슨 일이 일어나는지 살펴본다:</p>
 <ul>
 <li>
-<p><strong><code>cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)</code></strong>: <code>^merge</code> block으로 분기하되, 조건이 참이면 <code>%a</code>를, 거짓이면 <code>%b</code>를 전달합니다.</p>
+<p><strong><code>cf.cond_br %cond, ^merge(%a : i32), ^merge(%b : i32)</code></strong>: <code>^merge</code> block으로 분기하되, 조건이 참이면 <code>%a</code>를, 거짓이면 <code>%b</code>를 전달한다.</p>
 </li>
 <li>
-<p><strong><code>^merge(%result: i32):</code></strong>: <code>^merge</code> block은 <code>i32</code> 타입의 인자 하나를 기대한다고 선언합니다. 어느 분기가 선택되든, 전달된 값이 이 block 내에서 <code>%result</code>가 됩니다.</p>
+<p><strong><code>^merge(%result: i32):</code></strong>: <code>^merge</code> block은 <code>i32</code> 타입의 인자 하나를 기대한다고 선언한다. 어느 분기가 선택되든, 전달된 값이 이 block 내에서 <code>%result</code>가 된다.</p>
 </li>
 </ul>
-<p>이 방식은 LLVM의 phi node보다 깔끔합니다. 데이터 흐름이 분기 지점에서 명시적으로 표현되며, 사후에 재구성할 필요가 없기 때문입니다.</p>
+<p>이 방식은 LLVM의 phi node보다 깔끔하다. 데이터 흐름이 분기 지점에서 명시적으로 표현되며, 사후에 재구성할 필요가 없기 때문이다.</p>
 <h2 id="ssa-form-static-single-assignment"><a class="header" href="#ssa-form-static-single-assignment">SSA Form (Static Single Assignment)</a></h2>
-<p>MLIR은 <strong>SSA form</strong>을 사용합니다. 즉, 모든 값은 정확히 한 번만 정의되고 절대 변경되지 않습니다. <code>%x</code>를 정의하면 다시 할당할 수 없습니다. 이 속성 덕분에 “지금 어떤 버전의 변수를 보고 있는 것인가?“를 추적할 필요가 없어 최적화가 단순해집니다.</p>
+<p>MLIR은 <strong>SSA form</strong>을 사용한다. 즉, 모든 값은 정확히 한 번만 정의되고 절대 변경되지 않는다. <code>%x</code>를 정의하면 다시 할당할 수 없다. 이 속성 덕분에 “지금 어떤 버전의 변수를 보고 있는 것인가?“를 추적할 필요가 없어 최적화가 단순해진다.</p>
 <h3 id="ssa-동작-예시"><a class="header" href="#ssa-동작-예시">SSA 동작 예시</a></h3>
-<p>다음 FunLang 코드를 살펴보겠습니다:</p>
+<p>다음 FunLang 코드를 살펴본다:</p>
 <pre><code class="language-fsharp">let x = 5
 let y = x + 3
 let z = y * 2
 z
 </code></pre>
-<p>MLIR SSA form에서 각 let 바인딩은 새로운 SSA 값이 됩니다:</p>
+<p>MLIR SSA form에서 각 let 바인딩은 새로운 SSA 값이 된다:</p>
 <pre><code class="language-mlir">func.func @example() -&gt; i32 {
   %x = arith.constant 5 : i32
   %three = arith.constant 3 : i32
@@ -628,34 +628,34 @@ z
 </code></pre>
 <p>주목할 점:</p>
 <ul>
-<li>각 <code>let</code> 바인딩은 새로운 SSA 값(<code>%x</code>, <code>%y</code>, <code>%z</code>)이 됩니다.</li>
-<li>상수는 값을 생성하는 operation(<code>arith.constant</code>)입니다.</li>
-<li>어떤 값도 재할당되지 않습니다.</li>
+<li>각 <code>let</code> 바인딩은 새로운 SSA 값(<code>%x</code>, <code>%y</code>, <code>%z</code>)이 된다.</li>
+<li>상수는 값을 생성하는 operation(<code>arith.constant</code>)이다.</li>
+<li>어떤 값도 재할당되지 않는다.</li>
 </ul>
 <h3 id="ssa와-가변성mutability"><a class="header" href="#ssa와-가변성mutability">SSA와 가변성(Mutability)</a></h3>
-<p>FunLang은 불변(immutable)이므로 SSA와 자연스럽게 매핑됩니다. 하지만 변이(mutation)가 있는 명령형 코드는 어떨까요? 다음을 살펴보겠습니다:</p>
+<p>FunLang은 불변(immutable)이므로 SSA와 자연스럽게 매핑된다. 하지만 변이(mutation)가 있는 명령형 코드는 어떨까? 다음을 살펴본다:</p>
 <pre><code class="language-c">int x = 1;
 x = x + 1;
 return x;
 </code></pre>
-<p>SSA에서는 <code>x</code>를 변경할 수 없습니다. 대신, 새로운 버전을 생성합니다:</p>
+<p>SSA에서는 <code>x</code>를 변경할 수 없다. 대신, 새로운 버전을 생성한다:</p>
 <pre><code class="language-mlir">%x0 = arith.constant 1 : i32
 %one = arith.constant 1 : i32
 %x1 = arith.addi %x0, %one : i32
 return %x1 : i32
 </code></pre>
-<p>각 “변이“는 새로운 SSA 값(<code>%x0</code>, <code>%x1</code> 등)을 생성합니다. 이 변환을 <strong>SSA conversion</strong>이라고 하며, 명령형 언어의 컴파일러에서 자동으로 처리됩니다.</p>
-<p>FunLang은 함수형이므로 이 작업은 필요하지 않습니다 — 모든 <code>let</code> 바인딩이 이미 새로운 이름을 도입하기 때문입니다.</p>
+<p>각 “변이“는 새로운 SSA 값(<code>%x0</code>, <code>%x1</code> 등)을 생성한다. 이 변환을 <strong>SSA conversion</strong>이라고 하며, 명령형 언어의 컴파일러에서 자동으로 처리된다.</p>
+<p>FunLang은 함수형이므로 이 작업은 필요하지 않다 — 모든 <code>let</code> 바인딩이 이미 새로운 이름을 도입하기 때문이다.</p>
 <h3 id="핵심-통찰-ssa는-최적화를-가능하게-한다"><a class="header" href="#핵심-통찰-ssa는-최적화를-가능하게-한다">핵심 통찰: SSA는 최적화를 가능하게 한다</a></h3>
-<p>SSA form은 많은 컴파일러 최적화를 간단하게 만들어 줍니다. 예를 들어:</p>
+<p>SSA form은 많은 컴파일러 최적화를 간단하게 만들어 준다. 예를 들어:</p>
 <ul>
-<li><strong>Dead code elimination(죽은 코드 제거):</strong> SSA 값이 정의되었지만 사용되지 않으면, 해당 값을 정의하는 operation을 삭제합니다.</li>
-<li><strong>Constant propagation(상수 전파):</strong> <code>%x</code>가 <code>arith.constant 5</code>로 정의되었다면, <code>%x</code>의 모든 사용을 <code>5</code>로 대체합니다.</li>
-<li><strong>Common subexpression elimination(공통 하위 표현식 제거):</strong> 두 operation이 같은 값을 계산하면, 하나를 재사용하고 다른 하나를 삭제합니다.</li>
+<li><strong>Dead code elimination(죽은 코드 제거):</strong> SSA 값이 정의되었지만 사용되지 않으면, 해당 값을 정의하는 operation을 삭제한다.</li>
+<li><strong>Constant propagation(상수 전파):</strong> <code>%x</code>가 <code>arith.constant 5</code>로 정의되었다면, <code>%x</code>의 모든 사용을 <code>5</code>로 대체한다.</li>
+<li><strong>Common subexpression elimination(공통 하위 표현식 제거):</strong> 두 operation이 같은 값을 계산하면, 하나를 재사용하고 다른 하나를 삭제한다.</li>
 </ul>
-<p>이 모든 최적화는 값이 정의 후 절대 변경되지 않는다는 보장에 의존합니다.</p>
+<p>이 모든 최적화는 값이 정의 후 절대 변경되지 않는다는 보장에 의존한다.</p>
 <h2 id="mlir의-타입"><a class="header" href="#mlir의-타입">MLIR의 타입</a></h2>
-<p>MLIR은 강타입(strongly typed)입니다. 모든 SSA 값, operation, 함수에는 타입이 있습니다. 타입 시스템은 확장 가능하며(dialect이 커스텀 타입을 정의할 수 있음), 다음은 사용하게 될 내장 타입입니다:</p>
+<p>MLIR은 강타입(strongly typed)이다. 모든 SSA 값, operation, 함수에는 타입이 있다. 타입 시스템은 확장 가능하며(dialect이 커스텀 타입을 정의할 수 있음), 다음은 사용하게 될 내장 타입이다:</p>
 <h3 id="정수-타입"><a class="header" href="#정수-타입">정수 타입</a></h3>
 <ul>
 <li><code>i1</code> — 1비트 정수 (boolean)</li>
@@ -682,27 +682,27 @@ return %x1 : i32
 <li><code>(i32, i32) -&gt; i32</code> — 두 개의 <code>i32</code> 인자를 받아 <code>i32</code>를 반환하는 함수</li>
 </ul>
 <h3 id="funlang-타입-매핑"><a class="header" href="#funlang-타입-매핑">FunLang 타입 매핑</a></h3>
-<p>FunLang 타입이 MLIR 타입에 어떻게 매핑되는지 정리하면 다음과 같습니다:</p>
+<p>FunLang 타입이 MLIR 타입에 어떻게 매핑되는지 정리하면 다음과 같다:</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>FunLang 타입</th><th>MLIR 타입</th><th>비고</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Int</code></td><td><code>i64</code></td><td>FunLang 정수는 인터프리터에서 임의 정밀도이지만, 64비트로 컴파일합니다</td></tr>
+<tr><td><code>Int</code></td><td><code>i64</code></td><td>FunLang 정수는 인터프리터에서 임의 정밀도이지만, 64비트로 컴파일한다</td></tr>
 <tr><td><code>Bool</code></td><td><code>i1</code></td><td>True = 1, False = 0</td></tr>
-<tr><td><code>String</code></td><td><code>!llvm.ptr</code> (LLVM dialect 포인터)</td><td>문자열은 힙에 할당된 null 종료 C 문자열입니다</td></tr>
+<tr><td><code>String</code></td><td><code>!llvm.ptr</code> (LLVM dialect 포인터)</td><td>문자열은 힙에 할당된 null 종료 C 문자열이다</td></tr>
 <tr><td><code>Float</code></td><td><code>f64</code></td><td>배정밀도 부동소수점</td></tr>
-<tr><td><code>List&lt;'a&gt;</code></td><td><code>!llvm.ptr</code></td><td>리스트는 힙에 할당된 연결 구조입니다</td></tr>
-<tr><td><code>Tuple&lt;'a, 'b, ...&gt;</code></td><td><code>!llvm.struct&lt;...&gt;</code></td><td>튜플은 LLVM struct로 컴파일됩니다</td></tr>
+<tr><td><code>List&lt;'a&gt;</code></td><td><code>!llvm.ptr</code></td><td>리스트는 힙에 할당된 연결 구조이다</td></tr>
+<tr><td><code>Tuple&lt;'a, 'b, ...&gt;</code></td><td><code>!llvm.struct&lt;...&gt;</code></td><td>튜플은 LLVM struct로 컴파일된다</td></tr>
 </tbody>
 </table>
 </div>
-<p><code>!</code> 접두사는 dialect에서 정의된 타입을 나타냅니다 (예: <code>!llvm.ptr</code>는 LLVM dialect의 포인터 타입).</p>
+<p><code>!</code> 접두사는 dialect에서 정의된 타입을 나타낸다 (예: <code>!llvm.ptr</code>는 LLVM dialect의 포인터 타입).</p>
 <h2 id="progressive-lowering"><a class="header" href="#progressive-lowering">Progressive Lowering</a></h2>
-<p>MLIR의 강력함은 <strong>progressive lowering</strong>에 있습니다: 한 번에 크게 변환하는 대신, 고수준 operation을 여러 단계에 걸쳐 저수준 operation으로 변환하는 방식입니다.</p>
+<p>MLIR의 강력함은 <strong>progressive lowering</strong>에 있다: 한 번에 크게 변환하는 대신, 고수준 operation을 여러 단계에 걸쳐 저수준 operation으로 변환하는 방식이다.</p>
 <h3 id="funlang-컴파일-파이프라인"><a class="header" href="#funlang-컴파일-파이프라인">FunLang 컴파일 파이프라인</a></h3>
-<p>이 튜토리얼에서 구축할 파이프라인은 다음과 같습니다:</p>
+<p>이 튜토리얼에서 구축할 파이프라인은 다음과 같다:</p>
 <pre><code>Stage 1: AST → High-Level MLIR
     FunLang AST (타입 검사기에서 전달)
     ↓
@@ -719,17 +719,17 @@ Stage 3: LLVM Dialect → LLVM IR
 Stage 4: LLVM IR → Native Code
     LLVM 백엔드(llc)가 대상 플랫폼의 머신 코드로 컴파일합니다
 </code></pre>
-<p>각 lowering 단계는 <strong>pass</strong> — IR을 재작성하는 변환 — 입니다. MLIR은 pass 정의, 패턴 기반 재작성, 각 단계 후 검증을 위한 인프라를 제공합니다.</p>
+<p>각 lowering 단계는 <strong>pass</strong> — IR을 재작성하는 변환 — 이다. MLIR은 pass 정의, 패턴 기반 재작성, 각 단계 후 검증을 위한 인프라를 제공한다.</p>
 <h3 id="progressive-lowering이-중요한-이유"><a class="header" href="#progressive-lowering이-중요한-이유">Progressive Lowering이 중요한 이유</a></h3>
-<p>FunLang의 패턴 매칭을 컴파일하는 경우를 생각해 보겠습니다. LLVM IR로 직접 lowering해야 한다면, 즉시 basic block, phi node, 메모리 로드로 이루어진 복잡한 결정 트리로 확장해야 합니다. 하지만 progressive lowering을 사용하면:</p>
+<p>FunLang의 패턴 매칭을 컴파일하는 경우를 생각해 보자. LLVM IR로 직접 lowering해야 한다면, 즉시 basic block, phi node, 메모리 로드로 이루어진 복잡한 결정 트리로 확장해야 한다. 하지만 progressive lowering을 사용하면:</p>
 <ol>
-<li><strong>고수준:</strong> 패턴 매칭을 구조를 보존하는 <code>funlang.match</code> operation으로 표현합니다.</li>
-<li><strong>중간 수준:</strong> <code>funlang.match</code>를 <code>scf.if</code>와 <code>scf.while</code>(구조적 제어 흐름)로 lowering합니다.</li>
-<li><strong>저수준:</strong> <code>scf.if</code>를 LLVM basic block과 branch로 lowering합니다.</li>
+<li><strong>고수준:</strong> 패턴 매칭을 구조를 보존하는 <code>funlang.match</code> operation으로 표현한다.</li>
+<li><strong>중간 수준:</strong> <code>funlang.match</code>를 <code>scf.if</code>와 <code>scf.while</code>(구조적 제어 흐름)로 lowering한다.</li>
+<li><strong>저수준:</strong> <code>scf.if</code>를 LLVM basic block과 branch로 lowering한다.</li>
 </ol>
-<p>각 단계에서 해당 추상화 수준에 맞는 최적화를 수행할 수 있습니다. 패턴 매칭 최적화(중복 검사 제거)는 고수준에서 이루어지고, LLVM 수준 최적화(레지스터 할당, 명령어 스케줄링)는 저수준에서 이루어집니다.</p>
+<p>각 단계에서 해당 추상화 수준에 맞는 최적화를 수행할 수 있다. 패턴 매칭 최적화(중복 검사 제거)는 고수준에서 이루어지고, LLVM 수준 최적화(레지스터 할당, 명령어 스케줄링)는 저수준에서 이루어진다.</p>
 <h2 id="종합-예제"><a class="header" href="#종합-예제">종합 예제</a></h2>
-<p>여러 개념을 함께 사용하는 좀 더 현실적인 MLIR 예제를 살펴보겠습니다:</p>
+<p>여러 개념을 함께 사용하는 좀 더 현실적인 MLIR 예제를 살펴본다:</p>
 <pre><code class="language-mlir">module {
   func.func @factorial(%n: i64) -&gt; i64 {
     %c0 = arith.constant 0 : i64
@@ -748,46 +748,46 @@ Stage 4: LLVM IR → Native Code
   }
 }
 </code></pre>
-<p>이 코드를 추적해 보겠습니다:</p>
+<p>이 코드를 추적해 본다:</p>
 <ol>
 <li>
-<p><strong><code>func.func @factorial(%n: i64) -&gt; i64</code></strong>: 하나의 64비트 정수를 받아 64비트 정수를 반환하는 <code>@factorial</code> 함수를 정의합니다.</p>
+<p><strong><code>func.func @factorial(%n: i64) -&gt; i64</code></strong>: 하나의 64비트 정수를 받아 64비트 정수를 반환하는 <code>@factorial</code> 함수를 정의한다.</p>
 </li>
 <li>
-<p><strong><code>%c0 = arith.constant 0 : i64</code></strong>: 상수 <code>0</code>을 생성합니다.</p>
+<p><strong><code>%c0 = arith.constant 0 : i64</code></strong>: 상수 <code>0</code>을 생성한다.</p>
 </li>
 <li>
-<p><strong><code>%c1 = arith.constant 1 : i64</code></strong>: 상수 <code>1</code>을 생성합니다.</p>
+<p><strong><code>%c1 = arith.constant 1 : i64</code></strong>: 상수 <code>1</code>을 생성한다.</p>
 </li>
 <li>
-<p><strong><code>%is_zero = arith.cmpi eq, %n, %c0 : i64</code></strong>: <code>%n</code>과 <code>0</code>을 동등성 비교합니다. 결과는 <code>i1</code>(boolean)입니다.</p>
+<p><strong><code>%is_zero = arith.cmpi eq, %n, %c0 : i64</code></strong>: <code>%n</code>과 <code>0</code>을 동등성 비교한다. 결과는 <code>i1</code>(boolean)이다.</p>
 </li>
 <li>
-<p><strong><code>cf.cond_br %is_zero, ^base_case, ^recursive_case</code></strong>: 참이면 <code>^base_case</code>로, 아니면 <code>^recursive_case</code>로 분기합니다.</p>
+<p><strong><code>cf.cond_br %is_zero, ^base_case, ^recursive_case</code></strong>: 참이면 <code>^base_case</code>로, 아니면 <code>^recursive_case</code>로 분기한다.</p>
 </li>
 <li>
-<p><strong><code>^base_case:</code></strong>: n == 0이면 1을 반환합니다.</p>
+<p><strong><code>^base_case:</code></strong>: n == 0이면 1을 반환한다.</p>
 </li>
 <li>
-<p><strong><code>^recursive_case:</code></strong>: n &gt; 0이면 <code>n * factorial(n - 1)</code>을 계산합니다:</p>
+<p><strong><code>^recursive_case:</code></strong>: n &gt; 0이면 <code>n * factorial(n - 1)</code>을 계산한다:</p>
 <ul>
-<li><code>%n_minus_1 = arith.subi %n, %c1</code>: <code>n - 1</code>을 계산합니다.</li>
-<li><code>%rec_result = func.call @factorial(%n_minus_1)</code>: 재귀 호출입니다.</li>
-<li><code>%result = arith.muli %n, %rec_result</code>: <code>n</code>과 재귀 결과를 곱합니다.</li>
-<li><code>return %result</code>: 결과를 반환합니다.</li>
+<li><code>%n_minus_1 = arith.subi %n, %c1</code>: <code>n - 1</code>을 계산한다.</li>
+<li><code>%rec_result = func.call @factorial(%n_minus_1)</code>: 재귀 호출이다.</li>
+<li><code>%result = arith.muli %n, %rec_result</code>: <code>n</code>과 재귀 결과를 곱한다.</li>
+<li><code>return %result</code>: 결과를 반환한다.</li>
 </ul>
 </li>
 </ol>
-<p>이 예제는 다음을 보여줍니다:</p>
+<p>이 예제는 다음을 보여준다:</p>
 <ul>
-<li><strong>SSA form:</strong> 모든 값(<code>%c0</code>, <code>%n_minus_1</code> 등)이 한 번만 정의됩니다.</li>
+<li><strong>SSA form:</strong> 모든 값(<code>%c0</code>, <code>%n_minus_1</code> 등)이 한 번만 정의된다.</li>
 <li><strong>Operation:</strong> 상수, 비교, 산술, 함수 호출.</li>
-<li><strong>Region과 block:</strong> 함수 본문은 세 개의 block(entry, <code>^base_case</code>, <code>^recursive_case</code>)을 가진 region입니다.</li>
-<li><strong>Terminator:</strong> 모든 block이 terminator(<code>cf.cond_br</code> 또는 <code>return</code>)로 끝납니다.</li>
-<li><strong>Dialect:</strong> <code>arith</code>, <code>func</code>, <code>cf</code> dialect을 사용합니다.</li>
+<li><strong>Region과 block:</strong> 함수 본문은 세 개의 block(entry, <code>^base_case</code>, <code>^recursive_case</code>)을 가진 region이다.</li>
+<li><strong>Terminator:</strong> 모든 block이 terminator(<code>cf.cond_br</code> 또는 <code>return</code>)로 끝난다.</li>
+<li><strong>Dialect:</strong> <code>arith</code>, <code>func</code>, <code>cf</code> dialect을 사용한다.</li>
 </ul>
 <h2 id="학습-내용-정리"><a class="header" href="#학습-내용-정리">학습 내용 정리</a></h2>
-<p>이제 MLIR의 다섯 가지 핵심 개념을 이해하게 되었습니다:</p>
+<p>이제 MLIR의 다섯 가지 핵심 개념을 이해하게 되었다:</p>
 <ol>
 <li><strong>Dialect:</strong> operation, 타입, attribute의 네임스페이스 (예: <code>arith</code>, <code>func</code>, <code>llvm</code>).</li>
 <li><strong>Operation:</strong> MLIR IR의 기본 단위 (예: <code>arith.addi</code>, <code>func.call</code>).</li>
@@ -795,10 +795,10 @@ Stage 4: LLVM IR → Native Code
 <li><strong>Block:</strong> terminator로 끝나는 operation 시퀀스 (예: 제어 흐름의 basic block).</li>
 <li><strong>SSA form:</strong> 모든 값이 정확히 한 번만 정의되며 불변.</li>
 </ol>
-<p>구체적인 예제(산술, 제어 흐름, 재귀)를 통해 이 개념들이 어떻게 함께 작동하는지 살펴보았습니다. 또한 progressive lowering — IR을 한 번에 큰 점프가 아닌 단계적으로 변환하는 철학 — 을 이해하게 되었습니다.</p>
+<p>구체적인 예제(산술, 제어 흐름, 재귀)를 통해 이 개념들이 어떻게 함께 작동하는지 살펴보았다. 또한 progressive lowering — IR을 한 번에 큰 점프가 아닌 단계적으로 변환하는 철학 — 을 이해하게 되었다.</p>
 <h2 id="다음-단계"><a class="header" href="#다음-단계">다음 단계</a></h2>
-<p>다음 챕터에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성합니다. P/Invoke를 사용하여 MLIR의 C API를 호출하고, 컴파일러의 “Hello, World“인 상수 정수를 반환하는 프로그램을 생성할 것입니다.</p>
-<p>**Chapter 02: Hello MLIR from F#**로 계속됩니다 (작성 예정).</p>
+<p>다음 챕터에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성한다. P/Invoke를 사용하여 MLIR의 C API를 호출하고, 컴파일러의 “Hello, World“인 상수 정수를 반환하는 프로그램을 생성할 것이다.</p>
+<p>**Chapter 02: Hello MLIR from F#**로 계속된다 (작성 예정).</p>
 <h2 id="참고-자료"><a class="header" href="#참고-자료">참고 자료</a></h2>
 <ul>
 <li><a href="https://mlir.llvm.org/docs/LangRef/">MLIR Language Reference</a> — MLIR의 텍스트 형식, dialect, 의미론에 대한 공식 사양.</li>
@@ -809,11 +809,11 @@ Stage 4: LLVM IR → Native Code
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="챕터-02-f에서-hello-mlir"><a class="header" href="#챕터-02-f에서-hello-mlir">챕터 02: F#에서 Hello MLIR</a></h1>
 <h2 id="소개-2"><a class="header" href="#소개-2">소개</a></h2>
-<p>챕터 00에서는 MLIR을 소스에서 빌드하고 .NET SDK를 설치했습니다. 챕터 01에서는 MLIR의 핵심 개념인 dialect, operation, region, block, SSA 형태에 대해 배웠습니다. 이제 코드를 작성할 차례입니다.</p>
-<p>이 챕터는 처음으로 “동작한다!“를 경험하는 순간입니다. F# 스크립트를 작성하여 P/Invoke를 통해 MLIR C API를 호출하고, MLIR context와 module을 생성하며, 산술 연산이 포함된 간단한 함수를 구성한 뒤, 결과 IR을 콘솔에 출력할 것입니다. 이 챕터를 마치면 F#이 MLIR과 상호운용될 수 있다는 것을 증명하는 동작하는 프로토타입을 갖게 됩니다.</p>
-<p>이 챕터의 코드는 의도적으로 즉흥적이고 탐색적입니다. P/Invoke 바인딩을 인라인으로 정의하고 우선 동작하는 것에 집중합니다. 챕터 03에서 이 바인딩들을 적절한 재사용 가능한 모듈로 구성할 것입니다.</p>
+<p>챕터 00에서는 MLIR을 소스에서 빌드하고 .NET SDK를 설치했다. 챕터 01에서는 MLIR의 핵심 개념인 dialect, operation, region, block, SSA 형태에 대해 배웠다. 이제 코드를 작성할 차례다.</p>
+<p>이 챕터는 처음으로 “동작한다!“를 경험하는 순간이다. F# 스크립트를 작성하여 P/Invoke를 통해 MLIR C API를 호출하고, MLIR context와 module을 생성하며, 산술 연산이 포함된 간단한 함수를 구성한 뒤, 결과 IR을 콘솔에 출력할 것이다. 이 챕터를 마치면 F#이 MLIR과 상호운용될 수 있다는 것을 증명하는 동작하는 프로토타입을 갖게 된다.</p>
+<p>이 챕터의 코드는 의도적으로 즉흥적이고 탐색적이다. P/Invoke 바인딩을 인라인으로 정의하고 우선 동작하는 것에 집중한다. 챕터 03에서 이 바인딩들을 적절한 재사용 가능한 모듈로 구성할 것이다.</p>
 <h2 id="만들어-볼-것"><a class="header" href="#만들어-볼-것">만들어 볼 것</a></h2>
-<p>첫 번째 MLIR 프로그램은 상수 정수를 반환하는 함수입니다. MLIR 텍스트 형식으로는 다음과 같습니다:</p>
+<p>첫 번째 MLIR 프로그램은 상수 정수를 반환하는 함수다. MLIR 텍스트 형식으로는 다음과 같다:</p>
 <pre><code class="language-mlir">module {
   func.func @return_forty_two() -&gt; i32 {
     %c42 = arith.constant 42 : i32
@@ -821,59 +821,59 @@ Stage 4: LLVM IR → Native Code
   }
 }
 </code></pre>
-<p>이것은 가장 간단한 MLIR 프로그램입니다:</p>
+<p>이것은 가장 간단한 MLIR 프로그램이다:</p>
 <ul>
 <li><code>@return_forty_two</code>라는 이름의 함수 하나</li>
 <li>매개변수 없음</li>
 <li><code>i32</code> (32비트 정수) 반환</li>
 <li>본문에서 상수 <code>42</code>를 생성하고 반환</li>
 </ul>
-<p>이것을 MLIR의 C API를 사용하여 F#에서 프로그래밍 방식으로 구성할 것입니다.</p>
+<p>이것을 MLIR의 C API를 사용하여 F#에서 프로그래밍 방식으로 구성할 것이다.</p>
 <h2 id="pinvoke-이해하기"><a class="header" href="#pinvoke-이해하기">P/Invoke 이해하기</a></h2>
-<p>P/Invoke (Platform Invoke)는 .NET의 외부 함수 인터페이스(FFI) 메커니즘입니다. 관리 코드(F#, C# 등)에서 공유 라이브러리(Linux의 <code>.so</code>, macOS의 <code>.dylib</code>, Windows의 <code>.dll</code>)에 있는 비관리 네이티브 함수를 호출할 수 있게 해줍니다.</p>
+<p>P/Invoke (Platform Invoke)는 .NET의 외부 함수 인터페이스(FFI) 메커니즘이다. 관리 코드(F#, C# 등)에서 공유 라이브러리(Linux의 <code>.so</code>, macOS의 <code>.dylib</code>, Windows의 <code>.dll</code>)에 있는 비관리 네이티브 함수를 호출할 수 있게 해준다.</p>
 <h3 id="dllimport-속성"><a class="header" href="#dllimport-속성">DllImport 속성</a></h3>
-<p>네이티브 함수를 호출하려면 <code>[&lt;DllImport&gt;]</code> 속성을 사용하여 함수 시그니처를 선언합니다. 패턴은 다음과 같습니다:</p>
+<p>네이티브 함수를 호출하려면 <code>[&lt;DllImport&gt;]</code> 속성을 사용하여 함수 시그니처를 선언한다. 패턴은 다음과 같다:</p>
 <pre><code class="language-fsharp">[&lt;DllImport("library-name", CallingConvention = CallingConvention.Cdecl)&gt;]
 extern ReturnType functionName(ParamType1 param1, ParamType2 param2)
 </code></pre>
-<p>하나씩 살펴보겠습니다:</p>
+<p>하나씩 살펴본다:</p>
 <ul>
 <li>
-<p><strong><code>[&lt;DllImport("library-name")&gt;]</code></strong>: 함수가 포함된 공유 라이브러리를 지정합니다. MLIR의 경우 <code>"MLIR-C"</code>입니다(파일 확장자 없이 — .NET이 플랫폼에 따라 자동으로 <code>.so</code>, <code>.dylib</code>, <code>.dll</code>을 추가합니다).</p>
+<p><strong><code>[&lt;DllImport("library-name")&gt;]</code></strong>: 함수가 포함된 공유 라이브러리를 지정한다. MLIR의 경우 <code>"MLIR-C"</code>이다(파일 확장자 없이 – .NET이 플랫폼에 따라 자동으로 <code>.so</code>, <code>.dylib</code>, <code>.dll</code>을 추가한다).</p>
 </li>
 <li>
-<p><strong><code>CallingConvention = CallingConvention.Cdecl</code></strong>: 인수 전달 및 스택 관리 방식을 지정합니다. MLIR C API는 C 라이브러리의 표준인 C 호출 규약(<code>Cdecl</code>)을 사용합니다.</p>
+<p><strong><code>CallingConvention = CallingConvention.Cdecl</code></strong>: 인수 전달 및 스택 관리 방식을 지정한다. MLIR C API는 C 라이브러리의 표준인 C 호출 규약(<code>Cdecl</code>)을 사용한다.</p>
 </li>
 <li>
-<p><strong><code>extern</code></strong>: 네이티브 코드에 정의된 외부 함수임을 표시합니다.</p>
+<p><strong><code>extern</code></strong>: 네이티브 코드에 정의된 외부 함수임을 표시한다.</p>
 </li>
 <li>
-<p><strong>반환 타입과 매개변수</strong>: C 함수 시그니처와 정확히 일치해야 합니다. MLIR은 불투명 구조체 핸들(내부 데이터 구조에 대한 포인터)을 사용하며, F#에서는 이를 <code>nativeint</code>로 표현합니다.</p>
+<p><strong>반환 타입과 매개변수</strong>: C 함수 시그니처와 정확히 일치해야 한다. MLIR은 불투명 구조체 핸들(내부 데이터 구조에 대한 포인터)을 사용하며, F#에서는 이를 <code>nativeint</code>로 표현한다.</p>
 </li>
 </ul>
 <h3 id="mlir-핸들-타입"><a class="header" href="#mlir-핸들-타입">MLIR 핸들 타입</a></h3>
-<p>MLIR C API는 모든 IR 엔티티에 불투명 구조체 타입을 사용합니다:</p>
+<p>MLIR C API는 모든 IR 엔티티에 불투명 구조체 타입을 사용한다:</p>
 <pre><code class="language-c">// MLIR-C API (C header)
 typedef struct MlirContext { void *ptr; } MlirContext;
 typedef struct MlirModule { void *ptr; } MlirModule;
 typedef struct MlirOperation { void *ptr; } MlirOperation;
 // ... and many more
 </code></pre>
-<p>각 구조체는 포인터를 감싸는 래퍼입니다. F#의 관점에서는 내부 구조에 관심이 없고, MLIR 함수 간에 이 핸들들을 전달하기만 하면 됩니다. 단일 <code>nativeint</code> 필드를 가진 F# 구조체로 표현합니다:</p>
+<p>각 구조체는 포인터를 감싸는 래퍼다. F#의 관점에서는 내부 구조에 관심이 없고, MLIR 함수 간에 이 핸들들을 전달하기만 하면 된다. 단일 <code>nativeint</code> 필드를 가진 F# 구조체로 표현한다:</p>
 <pre><code class="language-fsharp">[&lt;Struct&gt;]
 type MlirContext =
     val Handle: nativeint
     new(handle) = { Handle = handle }
 </code></pre>
-<p>이는 C 메모리 레이아웃(단일 포인터)과 일치하며, P/Invoke 경계를 넘어 안전하게 전달할 수 있습니다.</p>
+<p>이는 C 메모리 레이아웃(단일 포인터)과 일치하며, P/Invoke 경계를 넘어 안전하게 전달할 수 있다.</p>
 <h2 id="f-스크립트-생성"><a class="header" href="#f-스크립트-생성">F# 스크립트 생성</a></h2>
-<p>코드를 작성해 보겠습니다. 작업 디렉터리에 <code>HelloMlir.fsx</code>라는 새 파일을 생성합니다:</p>
+<p>코드를 작성해 본다. 작업 디렉터리에 <code>HelloMlir.fsx</code>라는 새 파일을 생성한다:</p>
 <pre><code class="language-bash">cd $HOME
 mkdir -p mlir-fsharp-tutorial
 cd mlir-fsharp-tutorial
 touch HelloMlir.fsx
 </code></pre>
-<p>텍스트 편집기에서 <code>HelloMlir.fsx</code>를 열고 필요한 import부터 시작합니다:</p>
+<p>텍스트 편집기에서 <code>HelloMlir.fsx</code>를 열고 필요한 import부터 시작한다:</p>
 <pre><code class="language-fsharp">open System
 open System.Runtime.InteropServices
 </code></pre>
@@ -882,7 +882,7 @@ open System.Runtime.InteropServices
 <li><code>System.Runtime.InteropServices</code>: <code>DllImport</code>, <code>CallingConvention</code>, 마샬링 속성 포함</li>
 </ul>
 <h2 id="핸들-타입-정의"><a class="header" href="#핸들-타입-정의">핸들 타입 정의</a></h2>
-<p>먼저 필요한 MLIR 핸들 타입을 정의합니다. 이 간단한 예제에서는 다음이 필요합니다:</p>
+<p>먼저 필요한 MLIR 핸들 타입을 정의한다. 이 간단한 예제에서는 다음이 필요하다:</p>
 <ul>
 <li><code>MlirContext</code>: MLIR 루트 context (메모리, dialect 등을 관리)</li>
 <li><code>MlirModule</code>: module (함수의 최상위 컨테이너)</li>
@@ -893,7 +893,7 @@ open System.Runtime.InteropServices
 <li><code>MlirOperation</code>: operation (함수나 산술 연산 생성 결과)</li>
 <li><code>MlirValue</code>: SSA 값 (operation의 결과)</li>
 </ul>
-<p>스크립트에 다음 타입 정의를 추가합니다:</p>
+<p>스크립트에 다음 타입 정의를 추가한다:</p>
 <pre><code class="language-fsharp">[&lt;Struct&gt;]
 type MlirContext =
     val Handle: nativeint
@@ -934,15 +934,15 @@ type MlirValue =
     val Handle: nativeint
     new(handle) = { Handle = handle }
 </code></pre>
-<p>각 핸들은 네이티브 포인터를 감싸는 얇은 래퍼입니다. <code>[&lt;Struct&gt;]</code> 속성은 이들이 힙에 할당되는 클래스가 아닌 스택에 할당되는 값 타입임을 보장하며, 작은 래퍼에 대해 더 효율적입니다.</p>
+<p>각 핸들은 네이티브 포인터를 감싸는 얇은 래퍼다. <code>[&lt;Struct&gt;]</code> 속성은 이들이 힙에 할당되는 클래스가 아닌 스택에 할당되는 값 타입임을 보장하며, 작은 래퍼에 대해 더 효율적이다.</p>
 <h2 id="문자열-마샬링-mlirstringref"><a class="header" href="#문자열-마샬링-mlirstringref">문자열 마샬링: MlirStringRef</a></h2>
-<p>MLIR의 C API는 소유권 문제 없이 문자열을 전달하기 위해 <code>MlirStringRef</code>라는 사용자 정의 문자열 구조체를 사용합니다. C에서는 다음과 같이 정의되어 있습니다:</p>
+<p>MLIR의 C API는 소유권 문제 없이 문자열을 전달하기 위해 <code>MlirStringRef</code>라는 사용자 정의 문자열 구조체를 사용한다. C에서는 다음과 같이 정의되어 있다:</p>
 <pre><code class="language-c">typedef struct MlirStringRef {
     const char *data;
     size_t length;
 } MlirStringRef;
 </code></pre>
-<p>이 레이아웃을 F#에서 맞춰야 합니다:</p>
+<p>이 레이아웃을 F#에서 맞춰야 한다:</p>
 <pre><code class="language-fsharp">[&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
 type MlirStringRef =
     val Data: nativeint  // const char*
@@ -960,20 +960,20 @@ type MlirStringRef =
         if this.Data &lt;&gt; nativeint 0 then
             Marshal.FreeHGlobal(this.Data)
 </code></pre>
-<p>세부 사항을 살펴보겠습니다:</p>
+<p>세부 사항을 살펴본다:</p>
 <ul>
 <li>
-<p><strong><code>[&lt;StructLayout(LayoutKind.Sequential)&gt;]</code></strong>: 필드가 선언된 순서대로 메모리에 배치되도록 보장합니다 (C 구조체와 일치).</p>
+<p><strong><code>[&lt;StructLayout(LayoutKind.Sequential)&gt;]</code></strong>: 필드가 선언된 순서대로 메모리에 배치되도록 보장한다 (C 구조체와 일치).</p>
 </li>
 <li>
-<p><strong><code>FromString(s: string)</code></strong>: F# 문자열을 <code>MlirStringRef</code>로 변환하는 헬퍼입니다. 비관리 메모리를 할당하고, UTF-8 바이트를 복사한 후, 해당 메모리를 가리키는 <code>MlirStringRef</code>를 반환합니다.</p>
+<p><strong><code>FromString(s: string)</code></strong>: F# 문자열을 <code>MlirStringRef</code>로 변환하는 헬퍼다. 비관리 메모리를 할당하고, UTF-8 바이트를 복사한 후, 해당 메모리를 가리키는 <code>MlirStringRef</code>를 반환한다.</p>
 </li>
 <li>
-<p><strong><code>Free()</code></strong>: 비관리 메모리를 해제합니다. 문자열을 MLIR에 전달한 후 반드시 호출해야 하며, 그렇지 않으면 메모리 누수가 발생합니다.</p>
+<p><strong><code>Free()</code></strong>: 비관리 메모리를 해제한다. 문자열을 MLIR에 전달한 후 반드시 호출해야 하며, 그렇지 않으면 메모리 누수가 발생한다.</p>
 </li>
 </ul>
 <h2 id="pinvoke-함수-선언"><a class="header" href="#pinvoke-함수-선언">P/Invoke 함수 선언</a></h2>
-<p>이제 P/Invoke 선언을 작성합니다. 이 예제에 필요한 함수만 선언합니다. 스크립트에 다음을 추가합니다:</p>
+<p>이제 P/Invoke 선언을 작성한다. 이 예제에 필요한 함수만 선언한다. 스크립트에 다음을 추가한다:</p>
 <pre><code class="language-fsharp">module MlirNative =
     // Context management
     [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
@@ -1032,7 +1032,7 @@ type MlirStringRef =
     [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
     extern void mlirOperationPrint(MlirOperation op, MlirStringCallback callback, nativeint userData)
 </code></pre>
-<p>함수 시그니처에 등장한 추가 핸들 타입도 필요합니다:</p>
+<p>함수 시그니처에 등장한 추가 핸들 타입도 필요하다:</p>
 <pre><code class="language-fsharp">[&lt;Struct&gt;]
 type MlirDialectHandle =
     val Handle: nativeint
@@ -1054,13 +1054,13 @@ type MlirOperationState =
     val Attributes: nativeint  // Pointer to MlirNamedAttribute array
     val EnableResultTypeInference: bool
 </code></pre>
-<p>그리고 출력을 위한 콜백 delegate도 필요합니다:</p>
+<p>그리고 출력을 위한 콜백 delegate도 필요하다:</p>
 <pre><code class="language-fsharp">[&lt;UnmanagedFunctionPointer(CallingConvention.Cdecl)&gt;]
 type MlirStringCallback = delegate of MlirStringRef * nativeint -&gt; unit
 </code></pre>
-<p>이 delegate는 IR 출력 시 MLIR이 F# 코드를 콜백할 수 있게 해줍니다. MLIR은 출력의 각 청크마다 콜백을 호출합니다.</p>
+<p>이 delegate는 IR 출력 시 MLIR이 F# 코드를 콜백할 수 있게 해준다. MLIR은 출력의 각 청크마다 콜백을 호출한다.</p>
 <h2 id="mlir-module-구성하기"><a class="header" href="#mlir-module-구성하기">MLIR Module 구성하기</a></h2>
-<p>이제 MLIR module을 생성하는 로직을 작성합니다. 스크립트에 다음 함수를 추가합니다:</p>
+<p>이제 MLIR module을 생성하는 로직을 작성한다. 스크립트에 다음 함수를 추가한다:</p>
 <pre><code class="language-fsharp">let buildHelloMlir() =
     // Step 1: Create MLIR context
     let ctx = MlirNative.mlirContextCreate()
@@ -1182,50 +1182,50 @@ type MlirStringCallback = delegate of MlirStringRef * nativeint -&gt; unit
     MlirNative.mlirContextDestroy(ctx)
     printfn "Cleaned up MLIR context and module"
 </code></pre>
-<p>이 함수에는 많은 내용이 있으므로 단계별로 살펴보겠습니다.</p>
+<p>이 함수에는 많은 내용이 있으므로 단계별로 살펴본다.</p>
 <h2 id="단계별-분석"><a class="header" href="#단계별-분석">단계별 분석</a></h2>
 <h3 id="1단계-mlir-context-생성"><a class="header" href="#1단계-mlir-context-생성">1단계: MLIR Context 생성</a></h3>
 <pre><code class="language-fsharp">let ctx = MlirNative.mlirContextCreate()
 </code></pre>
-<p>MLIR context는 등록된 dialect, 타입 고유화, 메모리 관리 등 모든 MLIR 상태를 관리하는 루트 객체입니다. 다른 작업을 하기 전에 반드시 context를 생성해야 합니다.</p>
+<p>MLIR context는 등록된 dialect, 타입 고유화, 메모리 관리 등 모든 MLIR 상태를 관리하는 루트 객체다. 다른 작업을 하기 전에 반드시 context를 생성해야 한다.</p>
 <h3 id="2단계-dialect-로드"><a class="header" href="#2단계-dialect-로드">2단계: Dialect 로드</a></h3>
 <pre><code class="language-fsharp">let funcDialect = MlirNative.mlirGetDialectHandle__func__()
 MlirNative.mlirDialectHandleRegisterDialect(funcDialect, ctx)
 let arithDialect = MlirNative.mlirGetDialectHandle__arith__()
 MlirNative.mlirDialectHandleRegisterDialect(arithDialect, ctx)
 </code></pre>
-<p>MLIR dialect은 요청 시 로드됩니다. 함수 정의를 위한 <code>func</code> dialect과 상수 및 산술 연산을 위한 <code>arith</code> dialect이 필요합니다. 각 dialect에는 getter 함수(<code>mlirGetDialectHandle__&lt;dialect&gt;__</code>)가 있으며, 이를 context에 등록합니다.</p>
+<p>MLIR dialect은 요청 시 로드된다. 함수 정의를 위한 <code>func</code> dialect과 상수 및 산술 연산을 위한 <code>arith</code> dialect이 필요하다. 각 dialect에는 getter 함수(<code>mlirGetDialectHandle__&lt;dialect&gt;__</code>)가 있으며, 이를 context에 등록한다.</p>
 <h3 id="3단계-빈-module-생성"><a class="header" href="#3단계-빈-module-생성">3단계: 빈 Module 생성</a></h3>
 <pre><code class="language-fsharp">let loc = MlirNative.mlirLocationUnknownGet(ctx)
 let mlirModule = MlirNative.mlirModuleCreateEmpty(loc)
 </code></pre>
-<p>모든 MLIR operation에는 소스 위치가 필요합니다. 생성된 코드의 경우 “unknown” 위치를 사용합니다. 그런 다음 빈 module을 생성합니다.</p>
+<p>모든 MLIR operation에는 소스 위치가 필요하다. 생성된 코드의 경우 “unknown” 위치를 사용한다. 그런 다음 빈 module을 생성한다.</p>
 <h3 id="4단계-함수-타입-생성"><a class="header" href="#4단계-함수-타입-생성">4단계: 함수 타입 생성</a></h3>
 <pre><code class="language-fsharp">let i32Type = MlirNative.mlirIntegerTypeGet(ctx, 32u)
 let mutable resultType = i32Type
 let funcType = MlirNative.mlirFunctionTypeGet(ctx, nativeint 0, &amp;i32Type, nativeint 1, &amp;resultType)
 </code></pre>
-<p>함수 시그니처를 정의합니다: 입력 없음(<code>nativeint 0</code>), 출력 하나(<code>i32</code>). <code>mlirFunctionTypeGet</code> 함수는 타입 배열에 대한 포인터를 받으므로 <code>&amp;</code>를 사용하여 참조로 전달합니다.</p>
+<p>함수 시그니처를 정의한다: 입력 없음(<code>nativeint 0</code>), 출력 하나(<code>i32</code>). <code>mlirFunctionTypeGet</code> 함수는 타입 배열에 대한 포인터를 받으므로 <code>&amp;</code>를 사용하여 참조로 전달한다.</p>
 <h3 id="5-6단계-함수-operation-및-본문-block-생성"><a class="header" href="#5-6단계-함수-operation-및-본문-block-생성">5-6단계: 함수 Operation 및 본문 Block 생성</a></h3>
-<p>MLIR에서 operation을 생성하려면 <code>MlirOperationState</code>를 구성하고 <code>mlirOperationCreate</code>를 호출해야 합니다. 이것이 모든 operation 생성의 일반적인 패턴입니다:</p>
+<p>MLIR에서 operation을 생성하려면 <code>MlirOperationState</code>를 구성하고 <code>mlirOperationCreate</code>를 호출해야 한다. 이것이 모든 operation 생성의 일반적인 패턴이다:</p>
 <ol>
 <li>operation 이름, 위치, 피연산자, 결과, region 등을 포함하는 <code>MlirOperationState</code> 생성</li>
 <li><code>mlirOperationCreate(&amp;state)</code> 호출</li>
 <li>할당된 메모리(operation 이름 문자열 등) 해제</li>
 </ol>
-<p>함수의 경우 region(함수 본문)과 그 안의 block도 생성합니다.</p>
+<p>함수의 경우 region(함수 본문)과 그 안의 block도 생성한다.</p>
 <h3 id="7-8단계-함수-내부-operation-생성"><a class="header" href="#7-8단계-함수-내부-operation-생성">7-8단계: 함수 내부 Operation 생성</a></h3>
-<p>두 개의 operation을 생성합니다:</p>
+<p>두 개의 operation을 생성한다:</p>
 <ol>
-<li><strong><code>arith.constant 42 : i32</code></strong>: 상수 operation입니다. 하나의 결과(값 42)를 가집니다.</li>
-<li><strong><code>func.return %result</code></strong>: 반환 operation입니다. 하나의 피연산자(상수의 결과)를 가집니다.</li>
+<li><strong><code>arith.constant 42 : i32</code></strong>: 상수 operation이다. 하나의 결과(값 42)를 가진다.</li>
+<li><strong><code>func.return %result</code></strong>: 반환 operation이다. 하나의 피연산자(상수의 결과)를 가진다.</li>
 </ol>
-<p>각 operation은 동일한 패턴을 따릅니다: <code>MlirOperationState</code> 생성, <code>mlirOperationCreate</code> 호출, 정리.</p>
+<p>각 operation은 동일한 패턴을 따른다: <code>MlirOperationState</code> 생성, <code>mlirOperationCreate</code> 호출, 정리.</p>
 <h3 id="9단계-operation을-block에-삽입"><a class="header" href="#9단계-operation을-block에-삽입">9단계: Operation을 Block에 삽입</a></h3>
 <pre><code class="language-fsharp">MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 0, constantOp)
 MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 1, returnOp)
 </code></pre>
-<p>Operation은 실행 순서대로 block에 삽입해야 합니다. 상수가 먼저(위치 0), 그다음 반환(위치 1)입니다.</p>
+<p>Operation은 실행 순서대로 block에 삽입해야 한다. 상수가 먼저(위치 0), 그다음 반환(위치 1)이다.</p>
 <h3 id="10단계-ir-출력"><a class="header" href="#10단계-ir-출력">10단계: IR 출력</a></h3>
 <pre><code class="language-fsharp">let callback = MlirStringCallback(fun strRef _ -&gt;
     // MlirStringRef를 F# 문자열로 변환
@@ -1233,20 +1233,20 @@ MlirNative.mlirBlockInsertOwnedOperation(block, nativeint 1, returnOp)
 )
 MlirNative.mlirOperationPrint(moduleOp, callback, nativeint 0)
 </code></pre>
-<p>MLIR의 출력 함수는 콜백을 사용합니다. 콜백은 출력의 청크마다 여러 번 호출됩니다. 이 청크들을 하나의 문자열로 누적하여 출력합니다.</p>
+<p>MLIR의 출력 함수는 콜백을 사용한다. 콜백은 출력의 청크마다 여러 번 호출된다. 이 청크들을 하나의 문자열로 누적하여 출력한다.</p>
 <h3 id="정리"><a class="header" href="#정리">정리</a></h3>
 <pre><code class="language-fsharp">MlirNative.mlirModuleDestroy(mlirModule)
 MlirNative.mlirContextDestroy(ctx)
 </code></pre>
-<p>메모리 누수를 방지하기 위해 항상 module과 context를 파괴해야 합니다.</p>
+<p>메모리 누수를 방지하기 위해 항상 module과 context를 파괴해야 한다.</p>
 <h2 id="스크립트-실행"><a class="header" href="#스크립트-실행">스크립트 실행</a></h2>
-<p><code>HelloMlir.fsx</code> 파일 끝에 다음을 추가합니다:</p>
+<p><code>HelloMlir.fsx</code> 파일 끝에 다음을 추가한다:</p>
 <pre><code class="language-fsharp">[&lt;EntryPoint&gt;]
 let main argv =
     buildHelloMlir()
     0
 </code></pre>
-<p>이제 F# Interactive로 스크립트를 실행합니다:</p>
+<p>이제 F# Interactive로 스크립트를 실행한다:</p>
 <pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet fsi HelloMlir.fsx
 </code></pre>
 <p><strong>예상 출력:</strong></p>
@@ -1271,37 +1271,37 @@ module {
 
 Cleaned up MLIR context and module
 </code></pre>
-<p>이 출력이 보인다면 성공입니다! F#에서 MLIR을 호출하고 프로그래밍 방식으로 IR을 생성하는 데 성공했습니다.</p>
+<p>이 출력이 보인다면 성공이다! F#에서 MLIR을 호출하고 프로그래밍 방식으로 IR을 생성하는 데 성공한 것이다.</p>
 <h2 id="문제-해결"><a class="header" href="#문제-해결">문제 해결</a></h2>
 <h3 id="dllnotfoundexception-unable-to-load-shared-library-mlir-c"><a class="header" href="#dllnotfoundexception-unable-to-load-shared-library-mlir-c">DllNotFoundException: Unable to load shared library ‘MLIR-C’</a></h3>
-<p><strong>원인:</strong> .NET 런타임이 MLIR-C 공유 라이브러리를 찾을 수 없습니다.</p>
-<p><strong>해결 방법:</strong> <code>LD_LIBRARY_PATH</code> (Linux) 또는 <code>DYLD_LIBRARY_PATH</code> (macOS)에 <code>$HOME/mlir-install/lib</code>이 포함되어 있는지 확인합니다:</p>
+<p><strong>원인:</strong> .NET 런타임이 MLIR-C 공유 라이브러리를 찾을 수 없다.</p>
+<p><strong>해결 방법:</strong> <code>LD_LIBRARY_PATH</code> (Linux) 또는 <code>DYLD_LIBRARY_PATH</code> (macOS)에 <code>$HOME/mlir-install/lib</code>이 포함되어 있는지 확인한다:</p>
 <pre><code class="language-bash">export LD_LIBRARY_PATH=$HOME/mlir-install/lib:$LD_LIBRARY_PATH
 dotnet fsi HelloMlir.fsx
 </code></pre>
-<p>또는 환경 변수를 인라인으로 지정하여 실행합니다:</p>
+<p>또는 환경 변수를 인라인으로 지정하여 실행한다:</p>
 <pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet fsi HelloMlir.fsx
 </code></pre>
 <h3 id="accessviolationexception-또는-segmentation-fault"><a class="header" href="#accessviolationexception-또는-segmentation-fault">AccessViolationException 또는 Segmentation Fault</a></h3>
 <p><strong>원인:</strong> 잘못된 P/Invoke 시그니처 (잘못된 매개변수 타입, byref 매개변수에 <code>&amp;</code> 누락 등).</p>
-<p><strong>해결 방법:</strong> <code>DllImport</code> 선언이 MLIR-C API 헤더 파일과 정확히 일치하는지 확인합니다. <a href="https://mlir.llvm.org/docs/CAPI/">MLIR-C API 문서</a>와 <code>$HOME/mlir-install/include/mlir-c/</code>의 헤더 파일을 확인하세요.</p>
+<p><strong>해결 방법:</strong> <code>DllImport</code> 선언이 MLIR-C API 헤더 파일과 정확히 일치하는지 확인한다. <a href="https://mlir.llvm.org/docs/CAPI/">MLIR-C API 문서</a>와 <code>$HOME/mlir-install/include/mlir-c/</code>의 헤더 파일을 참고한다.</p>
 <h3 id="비어있거나-잘못된-형식의-ir-출력"><a class="header" href="#비어있거나-잘못된-형식의-ir-출력">비어있거나 잘못된 형식의 IR 출력</a></h3>
-<p><strong>원인:</strong> Operation이 block에 제대로 삽입되지 않았거나, region이 operation에 제대로 연결되지 않았습니다.</p>
-<p><strong>해결 방법:</strong> 연산 순서를 확인합니다: operation 생성 -&gt; region 가져오기 -&gt; block 생성 -&gt; block에 operation 삽입.</p>
+<p><strong>원인:</strong> Operation이 block에 제대로 삽입되지 않았거나, region이 operation에 제대로 연결되지 않았다.</p>
+<p><strong>해결 방법:</strong> 연산 순서를 확인한다: operation 생성 -&gt; region 가져오기 -&gt; block 생성 -&gt; block에 operation 삽입.</p>
 <h2 id="배운-내용"><a class="header" href="#배운-내용">배운 내용</a></h2>
-<p>이 챕터에서 다음을 배웠습니다:</p>
+<p>이 챕터에서 다음을 배웠다:</p>
 <ol>
-<li><strong>MLIR 핸들 타입 정의</strong> - 네이티브 포인터를 감싸는 F# 구조체로 정의했습니다.</li>
-<li><strong><code>[&lt;DllImport&gt;]</code> 사용</strong> - 외부 MLIR-C API 함수를 선언했습니다.</li>
-<li><strong>문자열 마샬링</strong> - <code>MlirStringRef</code>와 수동 메모리 관리를 사용했습니다.</li>
-<li><strong>MLIR context와 module 생성</strong> - 처음부터 생성했습니다.</li>
-<li><strong>프로그래밍 방식으로 operation 구성</strong> - <code>MlirOperationState</code>를 사용했습니다.</li>
-<li><strong>MLIR IR 출력</strong> - 콜백을 사용했습니다.</li>
-<li><strong>메모리 관리</strong> - 완료 후 context와 module을 파괴했습니다.</li>
+<li><strong>MLIR 핸들 타입 정의</strong> - 네이티브 포인터를 감싸는 F# 구조체로 정의했다.</li>
+<li><strong><code>[&lt;DllImport&gt;]</code> 사용</strong> - 외부 MLIR-C API 함수를 선언했다.</li>
+<li><strong>문자열 마샬링</strong> - <code>MlirStringRef</code>와 수동 메모리 관리를 사용했다.</li>
+<li><strong>MLIR context와 module 생성</strong> - 처음부터 생성했다.</li>
+<li><strong>프로그래밍 방식으로 operation 구성</strong> - <code>MlirOperationState</code>를 사용했다.</li>
+<li><strong>MLIR IR 출력</strong> - 콜백을 사용했다.</li>
+<li><strong>메모리 관리</strong> - 완료 후 context와 module을 파괴했다.</li>
 </ol>
-<p>이제 F#이 MLIR과 상호운용될 수 있다는 것이 증명되었습니다. 하지만 이 코드는 정돈되지 않았습니다 – 타입과 P/Invoke 함수를 스크립트에 인라인으로 정의하고 있습니다. 실제 컴파일러에서는 이 바인딩들이 재사용 가능한 모듈로 구성되어야 합니다.</p>
+<p>이제 F#이 MLIR과 상호운용될 수 있다는 것이 증명되었다. 하지만 이 코드는 정돈되지 않았다 – 타입과 P/Invoke 함수를 스크립트에 인라인으로 정의하고 있다. 실제 컴파일러에서는 이 바인딩들이 재사용 가능한 모듈로 구성되어야 한다.</p>
 <h2 id="다음-챕터"><a class="header" href="#다음-챕터">다음 챕터</a></h2>
-<p><a href="#chapter-03-pinvoke-바인딩">챕터 03: P/Invoke 바인딩</a>으로 이어서 이 바인딩들을 깔끔한 API와 MLIR-C API의 포괄적인 커버리지를 갖춘 적절한 F# 모듈로 구성하는 방법을 배웁니다.</p>
+<p><a href="#chapter-03-pinvoke-바인딩">챕터 03: P/Invoke 바인딩</a>으로 이어서 이 바인딩들을 깔끔한 API와 MLIR-C API의 포괄적인 커버리지를 갖춘 적절한 F# 모듈로 구성하는 방법을 배운다.</p>
 <h2 id="추가-참고-자료"><a class="header" href="#추가-참고-자료">추가 참고 자료</a></h2>
 <ul>
 <li><a href="https://mlir.llvm.org/docs/CAPI/">MLIR C API Documentation</a> – MLIR C API 설계 및 사용 패턴에 대한 공식 가이드.</li>
@@ -1311,41 +1311,41 @@ dotnet fsi HelloMlir.fsx
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="chapter-03-pinvoke-바인딩"><a class="header" href="#chapter-03-pinvoke-바인딩">Chapter 03: P/Invoke 바인딩</a></h1>
 <h2 id="소개-3"><a class="header" href="#소개-3">소개</a></h2>
-<p>Chapter 02에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성했습니다. 핸들 타입을 정의하고, <code>DllImport</code> 선언을 작성하며, MLIR C API를 성공적으로 호출하여 간단한 함수를 만들었습니다. 하지만 그 코드는 탐색적이고 임시방편적이었습니다 – 모든 바인딩이 스크립트 내에 인라인으로 정의되어 있었습니다.</p>
-<p>실제 컴파일러에는 체계적이고 재사용 가능한 바인딩이 필요합니다. 이 장에서는 Chapter 02에서 배운 모든 것을 가져와 적절한 F# 모듈인 <code>MlirBindings.fs</code>로 체계화합니다. 이 모듈은 이후 모든 장의 기반이 됩니다. 이 장에서 배울 내용은 다음과 같습니다:</p>
+<p>Chapter 02에서는 MLIR IR을 생성하는 첫 번째 F# 프로그램을 작성했다. 핸들 타입을 정의하고, <code>DllImport</code> 선언을 작성하며, MLIR C API를 성공적으로 호출하여 간단한 함수를 만들었다. 하지만 그 코드는 탐색적이고 임시방편적이었다 – 모든 바인딩이 스크립트 내에 인라인으로 정의되어 있었다.</p>
+<p>실제 컴파일러에는 체계적이고 재사용 가능한 바인딩이 필요하다. 이 장에서는 Chapter 02에서 배운 모든 것을 가져와 적절한 F# 모듈인 <code>MlirBindings.fs</code>로 체계화한다. 이 모듈은 이후 모든 장의 기반이 된다. 이 장에서 배울 내용은 다음과 같다:</p>
 <ul>
 <li>기능 영역별(context, module, type, operation 등)로 MLIR C API 바인딩을 구성하는 방법</li>
 <li>문자열 마샬링을 올바르고 안전하게 처리하는 방법</li>
 <li>IR 출력을 위한 콜백 처리 방법</li>
 <li>크로스 플랫폼 고려 사항 (Linux, macOS, Windows)</li>
 </ul>
-<p>이 장을 마치면 MLIR C API에 대한 완전하고 프로덕션에 사용할 수 있는 바인딩 레이어를 갖추게 됩니다.</p>
+<p>이 장을 마치면 MLIR C API에 대한 완전하고 프로덕션에 사용할 수 있는 바인딩 레이어를 갖추게 된다.</p>
 <h2 id="설계-철학"><a class="header" href="#설계-철학">설계 철학</a></h2>
-<p>바인딩 레이어는 다음 원칙을 따릅니다:</p>
+<p>바인딩 레이어는 다음 원칙을 따른다:</p>
 <ol>
-<li><strong>얇은 래퍼:</strong> C API 위에 최소한의 추상화만 적용합니다. 각 F# 함수는 C 함수에 직접 대응됩니다.</li>
-<li><strong>타입 안전성:</strong> MLIR 핸들에 F# struct 타입을 사용하여 컴파일 시점에 타입 오류를 잡습니다.</li>
-<li><strong>메모리 안전성:</strong> 안전한 문자열 마샬링과 정리를 위한 유틸리티를 제공하되, destroy 함수를 호출해야 하는 필요성을 숨기지 않습니다.</li>
-<li><strong>완전성:</strong> 컴파일러에 필요한 모든 MLIR C API 함수를 다룹니다 (context, module, type, operation, region, block, location, attribute, value).</li>
-<li><strong>문서화:</strong> 모든 함수에 목적과 MLIR C API 대응 관계를 설명하는 주석이 있습니다.</li>
+<li><strong>얇은 래퍼:</strong> C API 위에 최소한의 추상화만 적용한다. 각 F# 함수는 C 함수에 직접 대응된다.</li>
+<li><strong>타입 안전성:</strong> MLIR 핸들에 F# struct 타입을 사용하여 컴파일 시점에 타입 오류를 잡는다.</li>
+<li><strong>메모리 안전성:</strong> 안전한 문자열 마샬링과 정리를 위한 유틸리티를 제공하되, destroy 함수를 호출해야 하는 필요성을 숨기지 않는다.</li>
+<li><strong>완전성:</strong> 컴파일러에 필요한 모든 MLIR C API 함수를 다룬다 (context, module, type, operation, region, block, location, attribute, value).</li>
+<li><strong>문서화:</strong> 모든 함수에 목적과 MLIR C API 대응 관계를 설명하는 주석이 있다.</li>
 </ol>
 <h2 id="프로젝트-구조"><a class="header" href="#프로젝트-구조">프로젝트 구조</a></h2>
-<p>코드를 작성하기 전에 적절한 F# 프로젝트를 설정하겠습니다. Chapter 02에서는 스크립트(<code>.fsx</code>)를 사용했지만, 이제 라이브러리 프로젝트를 만들겠습니다:</p>
+<p>코드를 작성하기 전에 적절한 F# 프로젝트를 설정한다. Chapter 02에서는 스크립트(<code>.fsx</code>)를 사용했지만, 이제 라이브러리 프로젝트를 만든다:</p>
 <pre><code class="language-bash">cd $HOME/mlir-fsharp-tutorial
 dotnet new classlib -lang F# -o MlirBindings
 cd MlirBindings
 </code></pre>
-<p>이렇게 하면 다음과 같은 구조의 새 F# 라이브러리 프로젝트가 생성됩니다:</p>
+<p>이렇게 하면 다음과 같은 구조의 새 F# 라이브러리 프로젝트가 생성된다:</p>
 <pre><code>MlirBindings/
 ├── MlirBindings.fsproj
 └── Library.fs
 </code></pre>
-<p>기본 <code>Library.fs</code>를 삭제합니다:</p>
+<p>기본 <code>Library.fs</code>를 삭제한다:</p>
 <pre><code class="language-bash">rm Library.fs
 </code></pre>
-<p><code>MlirBindings.fs</code>를 처음부터 새로 만들겠습니다.</p>
+<p><code>MlirBindings.fs</code>를 처음부터 새로 만든다.</p>
 <h2 id="모듈-구성"><a class="header" href="#모듈-구성">모듈 구성</a></h2>
-<p>바인딩 모듈은 다음과 같은 논리적 섹션으로 구성됩니다:</p>
+<p>바인딩 모듈은 다음과 같은 논리적 섹션으로 구성된다:</p>
 <ol>
 <li><strong>핸들 타입:</strong> MLIR 불투명 타입을 나타내는 F# struct</li>
 <li><strong>문자열 마샬링:</strong> <code>MlirStringRef</code>와 헬퍼 함수</li>
@@ -1358,12 +1358,12 @@ cd MlirBindings
 <li><strong>Region과 Block:</strong> Region 및 Block 생성과 관리</li>
 <li><strong>Value와 Attribute:</strong> SSA value 및 attribute 처리</li>
 </ol>
-<p>단계별로 구축해 보겠습니다.</p>
+<p>단계별로 구축해 본다.</p>
 <h2 id="핸들-타입"><a class="header" href="#핸들-타입">핸들 타입</a></h2>
-<p><code>MlirBindings</code> 디렉토리에 새 파일 <code>MlirBindings.fs</code>를 생성합니다:</p>
+<p><code>MlirBindings</code> 디렉토리에 새 파일 <code>MlirBindings.fs</code>를 생성한다:</p>
 <pre><code class="language-bash">touch MlirBindings.fs
 </code></pre>
-<p>프로젝트 파일 <code>MlirBindings.fsproj</code>를 편집하여 파일을 추가합니다. 내용을 다음으로 교체합니다:</p>
+<p>프로젝트 파일 <code>MlirBindings.fsproj</code>를 편집하여 파일을 추가한다. 내용을 다음으로 교체한다:</p>
 <pre><code class="language-xml">&lt;Project Sdk="Microsoft.NET.Sdk"&gt;
 
   &lt;PropertyGroup&gt;
@@ -1377,13 +1377,13 @@ cd MlirBindings
 
 &lt;/Project&gt;
 </code></pre>
-<p>이제 <code>MlirBindings.fs</code>를 열고 namespace와 import부터 시작합니다:</p>
+<p>이제 <code>MlirBindings.fs</code>를 열고 namespace와 import부터 시작한다:</p>
 <pre><code class="language-fsharp">namespace MlirBindings
 
 open System
 open System.Runtime.InteropServices
 </code></pre>
-<p>필요한 모든 핸들 타입을 정의합니다. 이것들은 MLIR 내부 구조체에 대한 불투명 포인터입니다:</p>
+<p>필요한 모든 핸들 타입을 정의한다. 이것들은 MLIR 내부 구조체에 대한 불투명 포인터이다:</p>
 <pre><code class="language-fsharp">/// MLIR context - manages dialects, types, and global state
 [&lt;Struct&gt;]
 type MlirContext =
@@ -1456,9 +1456,9 @@ type MlirIdentifier =
     val Handle: nativeint
     new(handle) = { Handle = handle }
 </code></pre>
-<p>각 핸들 타입에는 목적을 설명하는 문서 주석이 포함되어 있습니다. <code>[&lt;Struct&gt;]</code> 어트리뷰트는 이들이 스택에 할당되는 값 타입임을 보장합니다.</p>
+<p>각 핸들 타입에는 목적을 설명하는 문서 주석이 포함되어 있다. <code>[&lt;Struct&gt;]</code> 어트리뷰트는 이들이 스택에 할당되는 값 타입임을 보장한다.</p>
 <h2 id="문자열-마샬링"><a class="header" href="#문자열-마샬링">문자열 마샬링</a></h2>
-<p>MLIR은 소유권 의미 없이 문자열을 전달하기 위해 <code>MlirStringRef</code>를 사용합니다. 헬퍼 유틸리티와 함께 정의합니다:</p>
+<p>MLIR은 소유권 의미 없이 문자열을 전달하기 위해 <code>MlirStringRef</code>를 사용한다. 헬퍼 유틸리티와 함께 정의한다:</p>
 <pre><code class="language-fsharp">/// MLIR string reference - non-owning pointer to string data
 [&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
 type MlirStringRef =
@@ -1500,7 +1500,7 @@ type MlirStringRef =
         finally
             strRef.Free()
 </code></pre>
-<p><code>WithString</code> 헬퍼는 특히 유용합니다 – 할당과 정리를 자동으로 처리합니다:</p>
+<p><code>WithString</code> 헬퍼는 특히 유용하다 – 할당과 정리를 자동으로 처리한다:</p>
 <pre><code class="language-fsharp">// 이렇게 하는 대신:
 let strRef = MlirStringRef.FromString("func.func")
 let op = createOp strRef
@@ -1512,7 +1512,7 @@ MlirStringRef.WithString "func.func" (fun strRef -&gt;
 )
 </code></pre>
 <h2 id="콜백-델리게이트"><a class="header" href="#콜백-델리게이트">콜백 델리게이트</a></h2>
-<p>MLIR은 출력과 문자열 처리를 위해 콜백을 사용합니다. 델리게이트 타입을 정의합니다:</p>
+<p>MLIR은 출력과 문자열 처리를 위해 콜백을 사용한다. 델리게이트 타입을 정의한다:</p>
 <pre><code class="language-fsharp">/// Callback for MLIR IR printing (invoked with chunks of output)
 [&lt;UnmanagedFunctionPointer(CallingConvention.Cdecl)&gt;]
 type MlirStringCallback = delegate of MlirStringRef * nativeint -&gt; unit
@@ -1536,7 +1536,7 @@ type MlirLogicalResult =
     member this.IsFailure = this.Value = 0y
 </code></pre>
 <h2 id="operation-state"><a class="header" href="#operation-state">Operation State</a></h2>
-<p><code>MlirOperationState</code> struct는 operation을 빌드하는 데 사용됩니다. 배열에 대한 포인터를 포함하기 때문에 복잡합니다:</p>
+<p><code>MlirOperationState</code> struct는 operation을 빌드하는 데 사용된다. 배열에 대한 포인터를 포함하기 때문에 복잡하다:</p>
 <pre><code class="language-fsharp">/// MLIR operation state - used to construct operations
 [&lt;Struct; StructLayout(LayoutKind.Sequential)&gt;]
 type MlirOperationState =
@@ -1554,9 +1554,9 @@ type MlirOperationState =
     val mutable Attributes: nativeint  // Pointer to MlirNamedAttribute array
     val mutable EnableResultTypeInference: bool
 </code></pre>
-<p>참고: <code>mlirOperationCreate</code>에 전달하기 전에 수정해야 하므로 모든 필드가 mutable입니다.</p>
+<p>참고: <code>mlirOperationCreate</code>에 전달하기 전에 수정해야 하므로 모든 필드가 mutable이다.</p>
 <h2 id="pinvoke-선언"><a class="header" href="#pinvoke-선언">P/Invoke 선언</a></h2>
-<p>이제 핵심 부분입니다: MLIR C API에 대한 P/Invoke 선언입니다. 모듈로 구성합니다:</p>
+<p>이제 핵심 부분이다: MLIR C API에 대한 P/Invoke 선언이다. 모듈로 구성한다:</p>
 <pre><code class="language-fsharp">module MlirNative =
 
     //==========================================================================
@@ -1850,21 +1850,21 @@ type MlirOperationState =
     [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
     extern void mlirValuePrint(MlirValue value, MlirStringCallback callback, nativeint userData)
 </code></pre>
-<p>이것은 컴파일러 구축에 필요한 모든 MLIR C API 함수를 다루는 포괄적인 바인딩 레이어입니다. 각 함수에는 목적을 설명하는 문서가 포함되어 있습니다.</p>
+<p>이것은 컴파일러 구축에 필요한 모든 MLIR C API 함수를 다루는 포괄적인 바인딩 레이어이다. 각 함수에는 목적을 설명하는 문서가 포함되어 있다.</p>
 <h2 id="크로스-플랫폼-라이브러리-로딩"><a class="header" href="#크로스-플랫폼-라이브러리-로딩">크로스 플랫폼 라이브러리 로딩</a></h2>
-<p>중요한 세부 사항이 하나 있습니다: 라이브러리 이름 <code>"MLIR-C"</code>는 .NET이 자동으로 올바른 확장자를 추가하기 때문에 플랫폼 간에 동작합니다:</p>
+<p>중요한 세부 사항이 하나 있다: 라이브러리 이름 <code>"MLIR-C"</code>는 .NET이 자동으로 올바른 확장자를 추가하기 때문에 플랫폼 간에 동작한다:</p>
 <ul>
 <li><strong>Linux:</strong> <code>libMLIR-C.so</code></li>
 <li><strong>macOS:</strong> <code>libMLIR-C.dylib</code></li>
 <li><strong>Windows:</strong> <code>MLIR-C.dll</code></li>
 </ul>
-<p>그러나 .NET은 런타임에 라이브러리를 어디서 찾을 수 있는지 알아야 합니다. 이 내용은 Chapter 00에서 다루었습니다 (<code>LD_LIBRARY_PATH</code> 또는 <code>DYLD_LIBRARY_PATH</code> 설정). 프로덕션 애플리케이션의 경우 여러 가지 옵션이 있습니다:</p>
+<p>그러나 .NET은 런타임에 라이브러리를 어디서 찾을 수 있는지 알아야 한다. 이 내용은 Chapter 00에서 다루었다 (<code>LD_LIBRARY_PATH</code> 또는 <code>DYLD_LIBRARY_PATH</code> 설정). 프로덕션 애플리케이션의 경우 여러 가지 옵션이 있다:</p>
 <h3 id="옵션-1-환경-변수-개발-시"><a class="header" href="#옵션-1-환경-변수-개발-시">옵션 1: 환경 변수 (개발 시)</a></h3>
-<p>실행 전에 라이브러리 경로를 설정합니다:</p>
+<p>실행 전에 라이브러리 경로를 설정한다:</p>
 <pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
 </code></pre>
 <h3 id="옵션-2-nativelibrarysetdllimportresolver-런타임"><a class="header" href="#옵션-2-nativelibrarysetdllimportresolver-런타임">옵션 2: NativeLibrary.SetDllImportResolver (런타임)</a></h3>
-<p>.NET의 <code>NativeLibrary</code> API를 사용하여 커스텀 검색 경로를 지정합니다:</p>
+<p>.NET의 <code>NativeLibrary</code> API를 사용하여 커스텀 검색 경로를 지정한다:</p>
 <pre><code class="language-fsharp">open System.Runtime.InteropServices
 
 module LibraryLoader =
@@ -1889,11 +1889,11 @@ module LibraryLoader =
                     nativeint 0
         )
 </code></pre>
-<p>MLIR 함수를 호출하기 전에 <code>LibraryLoader.initialize()</code>를 호출합니다.</p>
+<p>MLIR 함수를 호출하기 전에 <code>LibraryLoader.initialize()</code>를 호출한다.</p>
 <h3 id="옵션-3-rpath-linuxmacos-바이너리"><a class="header" href="#옵션-3-rpath-linuxmacos-바이너리">옵션 3: rpath (Linux/macOS 바이너리)</a></h3>
-<p>컴파일된 바이너리의 경우, rpath를 사용하여 실행 파일에 라이브러리 검색 경로를 내장합니다. 이 방법은 이 튜토리얼의 범위를 벗어나지만, 배포 애플리케이션의 표준 솔루션입니다.</p>
+<p>컴파일된 바이너리의 경우, rpath를 사용하여 실행 파일에 라이브러리 검색 경로를 내장한다. 이 방법은 이 튜토리얼의 범위를 벗어나지만, 배포 애플리케이션의 표준 솔루션이다.</p>
 <h2 id="헬퍼-유틸리티"><a class="header" href="#헬퍼-유틸리티">헬퍼 유틸리티</a></h2>
-<p>자주 사용되는 패턴을 위한 고수준 헬퍼 함수를 추가합니다:</p>
+<p>자주 사용되는 패턴을 위한 고수준 헬퍼 함수를 추가한다:</p>
 <pre><code class="language-fsharp">module MlirHelpers =
     /// Print an operation to a string
     let operationToString (op: MlirOperation) : string =
@@ -1935,9 +1935,9 @@ module LibraryLoader =
         let mutable dummyLoc = loc
         MlirNative.mlirBlockCreate(nativeint 0, &amp;dummyType, &amp;dummyLoc)
 </code></pre>
-<p>이 유틸리티들은 일반적인 작업을 래핑하여 사용자 코드에서 보일러플레이트를 줄여 줍니다.</p>
+<p>이 유틸리티들은 일반적인 작업을 래핑하여 사용자 코드에서 보일러플레이트를 줄여 준다.</p>
 <h2 id="전체-mlirbindingsfs-목록"><a class="header" href="#전체-mlirbindingsfs-목록">전체 MlirBindings.fs 목록</a></h2>
-<p>다음은 모든 섹션이 통합된 완전한 <code>MlirBindings.fs</code> 파일입니다:</p>
+<p>다음은 모든 섹션이 통합된 완전한 <code>MlirBindings.fs</code> 파일이다:</p>
 <pre><code class="language-fsharp">namespace MlirBindings
 
 open System
@@ -2294,9 +2294,9 @@ module MlirHelpers =
         MlirNative.mlirDialectHandleRegisterDialect(MlirNative.mlirGetDialectHandle__llvm__(), ctx)
         ctx
 </code></pre>
-<p>이것이 완전하고 프로덕션에 사용할 수 있는 MLIR 바인딩 레이어입니다.</p>
+<p>이것이 완전하고 프로덕션에 사용할 수 있는 MLIR 바인딩 레이어이다.</p>
 <h2 id="라이브러리-빌드"><a class="header" href="#라이브러리-빌드">라이브러리 빌드</a></h2>
-<p>라이브러리 프로젝트를 빌드합니다:</p>
+<p>라이브러리 프로젝트를 빌드한다:</p>
 <pre><code class="language-bash">cd $HOME/mlir-fsharp-tutorial/MlirBindings
 dotnet build
 </code></pre>
@@ -2305,15 +2305,15 @@ dotnet build
     0 Warning(s)
     0 Error(s)
 </code></pre>
-<p>컴파일된 라이브러리는 <code>bin/Debug/net8.0/MlirBindings.dll</code>에 위치합니다.</p>
+<p>컴파일된 라이브러리는 <code>bin/Debug/net8.0/MlirBindings.dll</code>에 위치한다.</p>
 <h2 id="바인딩-사용하기"><a class="header" href="#바인딩-사용하기">바인딩 사용하기</a></h2>
-<p>새 바인딩을 사용하여 Chapter 02의 hello-world 예제를 다시 작성해 보겠습니다. 새 콘솔 프로젝트를 생성합니다:</p>
+<p>새 바인딩을 사용하여 Chapter 02의 hello-world 예제를 다시 작성해 본다. 새 콘솔 프로젝트를 생성한다:</p>
 <pre><code class="language-bash">cd $HOME/mlir-fsharp-tutorial
 dotnet new console -lang F# -o HelloMlirWithBindings
 cd HelloMlirWithBindings
 dotnet add reference ../MlirBindings/MlirBindings.fsproj
 </code></pre>
-<p><code>Program.fs</code>의 내용을 다음으로 교체합니다:</p>
+<p><code>Program.fs</code>의 내용을 다음으로 교체한다:</p>
 <pre><code class="language-fsharp">open System
 open MlirBindings
 
@@ -2339,7 +2339,7 @@ let main argv =
 
     0
 </code></pre>
-<p>실행합니다:</p>
+<p>실행한다:</p>
 <pre><code class="language-bash">LD_LIBRARY_PATH=$HOME/mlir-install/lib dotnet run
 </code></pre>
 <p>예상 출력:</p>
@@ -2352,22 +2352,22 @@ module {
 
 Cleaned up
 </code></pre>
-<p>Chapter 02보다 훨씬 깔끔합니다! 바인딩 모듈이 모든 마샬링과 보일러플레이트를 처리합니다.</p>
+<p>Chapter 02보다 훨씬 깔끔하다! 바인딩 모듈이 모든 마샬링과 보일러플레이트를 처리한다.</p>
 <h2 id="이-장에서-배운-내용"><a class="header" href="#이-장에서-배운-내용">이 장에서 배운 내용</a></h2>
-<p>이 장에서는 다음을 수행했습니다:</p>
+<p>이 장에서는 다음을 수행했다:</p>
 <ol>
-<li><strong>MLIR 바인딩을 구성하여</strong> 논리적 섹션으로 나뉜 재사용 가능한 F# 라이브러리 모듈을 만들었습니다.</li>
-<li><strong>포괄적인 핸들 타입을 정의하여</strong> 모든 MLIR 엔티티(context, module, operation, type, region, block, value, attribute)를 다루었습니다.</li>
-<li><strong>안전한 문자열 마샬링을 구현하여</strong> <code>MlirStringRef</code>와 헬퍼 유틸리티를 만들었습니다.</li>
-<li><strong>P/Invoke 바인딩을 선언하여</strong> 컴파일에 필요한 MLIR C API의 전체 표면적을 다루었습니다.</li>
-<li><strong>헬퍼 유틸리티를 생성하여</strong> 보일러플레이트를 줄였습니다 (출력, context 생성).</li>
-<li><strong>크로스 플랫폼 고려 사항을</strong> 이해하여 라이브러리 로딩을 다루었습니다.</li>
-<li><strong>바인딩 라이브러리를 빌드하고 사용하여</strong> 별도의 프로젝트에서 활용했습니다.</li>
+<li><strong>MLIR 바인딩을 구성하여</strong> 논리적 섹션으로 나뉜 재사용 가능한 F# 라이브러리 모듈을 만들었다.</li>
+<li><strong>포괄적인 핸들 타입을 정의하여</strong> 모든 MLIR 엔티티(context, module, operation, type, region, block, value, attribute)를 다루었다.</li>
+<li><strong>안전한 문자열 마샬링을 구현하여</strong> <code>MlirStringRef</code>와 헬퍼 유틸리티를 만들었다.</li>
+<li><strong>P/Invoke 바인딩을 선언하여</strong> 컴파일에 필요한 MLIR C API의 전체 표면적을 다루었다.</li>
+<li><strong>헬퍼 유틸리티를 생성하여</strong> 보일러플레이트를 줄였다 (출력, context 생성).</li>
+<li><strong>크로스 플랫폼 고려 사항을</strong> 이해하여 라이브러리 로딩을 다루었다.</li>
+<li><strong>바인딩 라이브러리를 빌드하고 사용하여</strong> 별도의 프로젝트에서 활용했다.</li>
 </ol>
-<p>이제 MLIR에 대한 완전하고 프로덕션에 사용할 수 있는 바인딩 레이어를 갖추었습니다. 이 <code>MlirBindings</code> 모듈은 FunLang 컴파일러를 구축하는 이후 모든 장의 기반이 됩니다.</p>
+<p>이제 MLIR에 대한 완전하고 프로덕션에 사용할 수 있는 바인딩 레이어를 갖추었다. 이 <code>MlirBindings</code> 모듈은 FunLang 컴파일러를 구축하는 이후 모든 장의 기반이 된다.</p>
 <h2 id="다음-장-1"><a class="header" href="#다음-장-1">다음 장</a></h2>
-<p>다음 장에서는 FunLang 컴파일러 백엔드 구축을 시작합니다. 타입이 지정된 FunLang AST를 F#에서 표현하기 위한 데이터 구조를 정의하고, 여기서 만든 바인딩을 사용하여 FunLang 표현식을 MLIR operation으로 변환하는 코드 생성 로직을 작성하기 시작합니다.</p>
-<p><strong>Chapter 04: FunLang AST에서 MLIR로</strong> (작성 예정)로 이어집니다.</p>
+<p>다음 장에서는 FunLang 컴파일러 백엔드 구축을 시작한다. 타입이 지정된 FunLang AST를 F#에서 표현하기 위한 데이터 구조를 정의하고, 여기서 만든 바인딩을 사용하여 FunLang 표현식을 MLIR operation으로 변환하는 코드 생성 로직을 작성하기 시작한다.</p>
+<p><strong>Chapter 04: FunLang AST에서 MLIR로</strong> (작성 예정)로 이어진다.</p>
 <h2 id="참고-자료-1"><a class="header" href="#참고-자료-1">참고 자료</a></h2>
 <ul>
 <li><a href="https://mlir.llvm.org/docs/CAPI/">MLIR C API Documentation</a> – 공식 C API 가이드</li>
