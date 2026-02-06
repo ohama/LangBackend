@@ -10,32 +10,33 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 2 of 7 (Core Language Basics)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-06 — Completed 02-01-PLAN.md (Arithmetic Expressions with operators, comparisons, and printf)
+Last activity: 2026-02-06 — Completed 02-02-PLAN.md (Let Bindings with SSA form and environment passing)
 
-Progress: [████░░░░░░] 40% (4/10 estimated total plans)
+Progress: [█████░░░░░] 50% (5/10 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 5 min
-- Total execution time: 0.33 hours
+- Total plans completed: 5
+- Average duration: 4 min
+- Total execution time: 0.37 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 - Foundation & Interop | 3/3 | 16 min | 5 min |
-| 2 - Core Language Basics | 1/4 | 4 min | 4 min |
+| 2 - Core Language Basics | 2/4 | 8 min | 4 min |
 
 **Recent Trend:**
-- Last plan: 02-01 (4 min)
+- Last plan: 02-02 (4 min)
+- Previous: 02-01 (4 min)
 - Previous: 01-03 (6 min)
 - Previous: 01-02 (6 min)
 - Previous: 01-01 (4 min)
-- Trend: Fast execution pace maintained
+- Trend: Consistent 4-minute execution for Phase 2
 
 *Updated after each plan completion*
 
@@ -73,6 +74,11 @@ Recent decisions affecting current work:
 - [02-01]: Printf requires declaration + format string global + print_int helper abstraction
 - [02-01]: Format strings must include null terminator (\0) for C compatibility
 - [02-01]: Recursive compileExpr pattern maintains SSA form automatically
+- [02-02]: Environment as Map<string, MlirValue> for immutable scope management
+- [02-02]: Environment passing pattern: compileExpr receives env, Let extends it, others pass through
+- [02-02]: Var case returns existing SSA value from environment (no new MLIR operations)
+- [02-02]: Shadowing creates new SSA values (%x, %x_0) rather than mutation
+- [02-02]: SSA form explained before implementation to establish conceptual foundation
 - [Project]: Tutorial 본문은 한글로 작성 (코드, API명, 기술 용어는 원문 유지)
 - [Project]: Plain Korean style (~이다/~한다) not polite style (~입니다/~합니다) for tutorial text
 
@@ -86,11 +92,11 @@ None yet.
 - ~~MLIR C API completeness for custom dialects is unverified~~ **RESOLVED**: Confirmed C API cannot define custom dialects; C++ wrapper pattern established in Appendix (01-03)
 
 **Phase 2 - Core Language Basics:**
-- None identified yet; Phase 1 foundation is complete and ready
+- None identified; Chapter 07 (Let Bindings) complete and ready as foundation for Chapter 08 (Control Flow)
 
 ## Session Continuity
 
-Last session: 2026-02-06T00:22:31Z
-Stopped at: Completed 02-01-PLAN.md (Arithmetic Expressions)
+Last session: 2026-02-06T00:29:23Z
+Stopped at: Completed 02-02-PLAN.md (Let Bindings)
 Resume file: None
-Next: Plan 02-02 - Let Bindings (symbol table, scoping, variable shadowing)
+Next: Plan 02-03 - Control Flow (if/else with scf.if and block arguments)
