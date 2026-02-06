@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 ## Current Position
 
-Phase: 4 of 7 (Closures & Higher-Order Functions)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 — Completed 04-02-PLAN.md (Higher-Order Functions)
+Phase: 5 of 7 (Custom MLIR Dialect)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-06 — Completed 05-01-PLAN.md (Custom Dialect Design)
 
-Progress: [███████████] 100% (11/11 estimated total plans)
+Progress: [████████████] 100% (12/12 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 5 min
-- Total execution time: 1.0 hours
+- Total plans completed: 12
+- Average duration: 6 min
+- Total execution time: 1.2 hours
 
 **By Phase:**
 
@@ -31,14 +31,15 @@ Progress: [███████████] 100% (11/11 estimated total plans)
 | 2 - Core Language Basics | 4/4 | 19 min | 5 min |
 | 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
 | 4 - Closures & Higher-Order | 2/2 | 11 min | 6 min |
+| 5 - Custom MLIR Dialect | 1/2 | 9 min | 9 min |
 
 **Recent Trend:**
-- Last plan: 04-02 (6 min)
+- Last plan: 05-01 (9 min)
+- Previous: 04-02 (6 min)
 - Previous: 04-01 (5 min)
 - Previous: 03-02 (9 min)
 - Previous: 03-01 (8 min)
-- Previous: 02-04 (6 min)
-- Trend: Consistent 5-6min average, larger chapters take longer
+- Trend: Documentation plans ~9min, implementation plans ~5-6min
 
 *Updated after each plan completion*
 
@@ -118,6 +119,10 @@ Recent decisions affecting current work:
 - [04-02]: Indirect call pattern via llvm.call with function pointer (enables runtime function selection)
 - [04-02]: Heap allocation mandatory for returned closures (solves upward funarg problem)
 - [04-02]: Currying pattern: multi-argument functions as nested single-argument closures
+- [05-01]: Progressive lowering strategy (FunLang → Func/MemRef → LLVM) instead of direct lowering
+- [05-01]: FunLang dialect operations: Phase 5 (make_closure, apply), Phase 6 (match, nil, cons)
+- [05-01]: !funlang.closure opaque type (no parameters, internal representation in lowering)
+- [05-01]: C API shim pattern with wrap/unwrap helpers for F# interop with C++ dialect
 
 ### Pending Todos
 
@@ -138,11 +143,15 @@ None yet.
 - PHASE COMPLETE! All 2 plans finished (closures, higher-order functions)
 - Tutorial chapters: 12 (Closures - 1518 lines), 13 (Higher-Order Functions - 1618 lines)
 - Total Phase 4 content: 3136 lines covering complete functional programming core
-- Ready for Phase 5 (Custom MLIR Dialect)
+
+**Phase 5 - Custom MLIR Dialect:**
+- Plan 05-01 COMPLETE: Custom dialect design theory (Chapter 14 - 2682 lines)
+- Next: Plan 05-02 (FunLang dialect implementation)
+- Theoretical foundation established for progressive lowering strategy
 
 ## Session Continuity
 
-Last session: 2026-02-06T02:50:44Z
-Stopped at: Completed 04-02-PLAN.md (Higher-Order Functions)
+Last session: 2026-02-06T03:23:39Z
+Stopped at: Completed 05-01-PLAN.md (Custom Dialect Design)
 Resume file: None
-Next: Phase 4 complete! Tutorial has 13 chapters (00-13). Phase 5: Custom MLIR Dialect design and implementation.
+Next: Plan 05-02 - FunLang dialect implementation (TableGen, C++ dialect, C API shim, F# bindings, lowering pass)
