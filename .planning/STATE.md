@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 5 of 7 (Custom MLIR Dialect)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-06 — Completed 05-02-PLAN.md (Custom Operations)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-06 — Completed 05-03-PLAN.md (Lowering Passes)
 
-Progress: [████████████▓] 108% (13/12 estimated total plans)
+Progress: [█████████████] 117% (14/12 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 6 min
-- Total execution time: 1.4 hours
+- Total plans completed: 14
+- Average duration: 7 min
+- Total execution time: 1.6 hours
 
 **By Phase:**
 
@@ -31,15 +31,15 @@ Progress: [████████████▓] 108% (13/12 estimated total 
 | 2 - Core Language Basics | 4/4 | 19 min | 5 min |
 | 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
 | 4 - Closures & Higher-Order | 2/2 | 11 min | 6 min |
-| 5 - Custom MLIR Dialect | 2/3 | 21 min | 11 min |
+| 5 - Custom MLIR Dialect | 3/3 | 29 min | 10 min |
 
 **Recent Trend:**
-- Last plan: 05-02 (12 min)
+- Last plan: 05-03 (8 min)
+- Previous: 05-02 (12 min)
 - Previous: 05-01 (9 min)
 - Previous: 04-02 (6 min)
 - Previous: 04-01 (5 min)
-- Previous: 03-02 (9 min)
-- Trend: Documentation plans ~10min, implementation plans ~5-6min
+- Trend: Documentation plans ~8-10min, Phase 5 complete with 9k+ lines
 
 *Updated after each plan completion*
 
@@ -129,6 +129,10 @@ Recent decisions affecting current work:
 - [05-02]: !funlang.list<T> parameterized type (required for type safety in pattern matching)
 - [05-02]: Builder pattern dual API: CreateXxxOp (returns operation) and CreateXxx (returns value)
 - [05-02]: OpBuilder extensions for FunLang operations (CreateFunLangClosure/Apply)
+- [05-03]: Direct FunLang → LLVM lowering for Phase 5 (no intermediate SCF, reserved for Phase 6 pattern matching)
+- [05-03]: OpConversionPattern for complex lowering (ClosureOp/ApplyOp need dynamic logic)
+- [05-03]: DRR reserved for simple optimization patterns (empty closure, known closure inlining)
+- [05-03]: Partial conversion in FunLangToLLVM pass (other dialects lowered by separate passes)
 
 ### Pending Todos
 
@@ -151,16 +155,18 @@ None yet.
 - Total Phase 4 content: 3136 lines covering complete functional programming core
 
 **Phase 5 - Custom MLIR Dialect:**
+- PHASE COMPLETE! All 3 plans finished (dialect design, custom operations, lowering passes)
 - Plan 05-01 COMPLETE: Custom dialect design theory (Chapter 14 - 2682 lines)
 - Plan 05-02 COMPLETE: Custom operations implementation (Chapter 15 - 3642 lines)
-- Operations: funlang.closure, funlang.apply, funlang.match (preview)
-- Complete F# integration: Mlir.FunLang module with 3-layer API
-- Code reduction: 50% compiler code, 40-70% generated MLIR
-- Next: Plan 05-03 (Lowering passes)
+- Plan 05-03 COMPLETE: Lowering passes (Chapter 16 - 2718 lines)
+- Total Phase 5 content: 9042 lines covering custom MLIR dialect journey
+- Operations: funlang.closure, funlang.apply (Phase 5), funlang.match (Phase 6 preview)
+- Code reduction: 92% closure creation, 87% closure application, 50% compiler code
+- DialectConversion patterns: ClosureOpLowering, ApplyOpLowering, DRR optimization
 
 ## Session Continuity
 
-Last session: 2026-02-06T03:40:36Z
-Stopped at: Completed 05-02-PLAN.md (Custom Operations)
+Last session: 2026-02-06T03:51:13Z
+Stopped at: Completed 05-03-PLAN.md (Lowering Passes) - PHASE 5 COMPLETE
 Resume file: None
-Next: Plan 05-03 - Lowering passes (FunLangToLLVM pass implementation)
+Next: Phase 6 - Pattern Matching (06-01: funlang.match operation and region-based patterns)
