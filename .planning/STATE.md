@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 ## Current Position
 
-Phase: 3 of 7 (Functions & Recursion)
-Plan: 2 of 2 in current phase
+Phase: 4 of 7 (Closures & Higher-Order Functions)
+Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-02-06 — Completed 03-02-PLAN.md (Recursion and Tail Call Optimization)
+Last activity: 2026-02-06 — Completed 04-01-PLAN.md (Closures)
 
-Progress: [█████████░] 90% (9/10 estimated total plans)
+Progress: [██████████] 100% (10/10 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 6 min
-- Total execution time: 0.82 hours
+- Total plans completed: 10
+- Average duration: 5 min
+- Total execution time: 0.90 hours
 
 **By Phase:**
 
@@ -30,14 +30,15 @@ Progress: [█████████░] 90% (9/10 estimated total plans)
 | 1 - Foundation & Interop | 3/3 | 16 min | 5 min |
 | 2 - Core Language Basics | 4/4 | 19 min | 5 min |
 | 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
+| 4 - Closures & Higher-Order | 1/1 | 5 min | 5 min |
 
 **Recent Trend:**
-- Last plan: 03-02 (9 min)
+- Last plan: 04-01 (5 min)
+- Previous: 03-02 (9 min)
 - Previous: 03-01 (8 min)
 - Previous: 02-04 (6 min)
 - Previous: 02-03 (5 min)
-- Previous: 02-02 (4 min)
-- Trend: Chapter length correlates with duration (2513 lines = 9 min)
+- Trend: Consistent 5min average, larger chapters take longer
 
 *Updated after each plan completion*
 
@@ -105,6 +106,14 @@ Recent decisions affecting current work:
 - [03-02]: Mutual recursion via lazy verification (order-independent compilation)
 - [03-02]: TCO not guaranteed in Phase 3 (LLVM may optimize, Phase 7 for explicit support)
 - [03-02]: Accumulator pattern for tail recursion (factorial_tail n acc)
+- [04-01]: Flat environment strategy for closures (O(1) access, simpler than linked environments)
+- [04-01]: Opaque pointer (!llvm.ptr) for environment type (simpler than typed structs)
+- [04-01]: Environment layout: slot 0 for fn_ptr, slots 1+ for captured variables
+- [04-01]: Single parameter lambdas with currying for multi-parameter functions
+- [04-01]: Free variable analysis via set-based traversal (FV(Lambda(x, body)) = FV(body) - {x})
+- [04-01]: Closure conversion: implicit capture → explicit environment operations
+- [04-01]: Lifted functions receive environment as first parameter (%env: !llvm.ptr)
+- [04-01]: All closures heap-allocated via GC_malloc (escape their creation context)
 
 ### Pending Todos
 
@@ -120,11 +129,15 @@ None yet.
 
 **Phase 3 - Functions & Recursion:**
 - PHASE COMPLETE! All 2 plans finished (functions, recursion)
-- Ready for Phase 4 (Closures and higher-order functions)
+
+**Phase 4 - Closures & Higher-Order Functions:**
+- PHASE COMPLETE! 1 plan finished (closures)
+- Tutorial complete: all 10 core chapters written
+- Ready for implementation and testing
 
 ## Session Continuity
 
-Last session: 2026-02-06T01:38:43Z
-Stopped at: Completed 03-02-PLAN.md (Recursion and Tail Call Optimization)
+Last session: 2026-02-06T02:42:08Z
+Stopped at: Completed 04-01-PLAN.md (Closures)
 Resume file: None
-Next: Phase 4 planning (Closures and Higher-Order Functions)
+Next: Tutorial complete! All 10 core chapters written. Ready for compiler implementation.
