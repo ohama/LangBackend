@@ -10,33 +10,33 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 2 of 7 (Core Language Basics)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-06 — Completed 02-02-PLAN.md (Let Bindings with SSA form and environment passing)
+Last activity: 2026-02-06 — Completed 02-03-PLAN.md (Control Flow with scf.if and block arguments)
 
-Progress: [█████░░░░░] 50% (5/10 estimated total plans)
+Progress: [██████░░░░] 60% (6/10 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 4 min
-- Total execution time: 0.37 hours
+- Total execution time: 0.43 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 - Foundation & Interop | 3/3 | 16 min | 5 min |
-| 2 - Core Language Basics | 2/4 | 8 min | 4 min |
+| 2 - Core Language Basics | 3/4 | 13 min | 4 min |
 
 **Recent Trend:**
-- Last plan: 02-02 (4 min)
+- Last plan: 02-03 (5 min)
+- Previous: 02-02 (4 min)
 - Previous: 02-01 (4 min)
 - Previous: 01-03 (6 min)
 - Previous: 01-02 (6 min)
-- Previous: 01-01 (4 min)
-- Trend: Consistent 4-minute execution for Phase 2
+- Trend: Consistent 4-5 minute execution for Phase 2
 
 *Updated after each plan completion*
 
@@ -79,6 +79,13 @@ Recent decisions affecting current work:
 - [02-02]: Var case returns existing SSA value from environment (no new MLIR operations)
 - [02-02]: Shadowing creates new SSA values (%x, %x_0) rather than mutation
 - [02-02]: SSA form explained before implementation to establish conceptual foundation
+- [02-03]: Block arguments replace PHI nodes (push vs pull, unified semantics, no lost copy problem)
+- [02-03]: scf.if with scf.yield for conditional expressions (high-level structured control flow)
+- [02-03]: Boolean type as i1 (1-bit integer), true=1, false=0
+- [02-03]: Comparison operations return i1 directly (no extension for if conditions)
+- [02-03]: Region-based compilation: separate blocks for then/else with environment passing
+- [02-03]: SCF→CF lowering pass first in pipeline (before arith/func conversion)
+- [02-03]: Progressive lowering: scf.if → cf.cond_br + block arguments → llvm
 - [Project]: Tutorial 본문은 한글로 작성 (코드, API명, 기술 용어는 원문 유지)
 - [Project]: Plain Korean style (~이다/~한다) not polite style (~입니다/~합니다) for tutorial text
 
@@ -92,11 +99,11 @@ None yet.
 - ~~MLIR C API completeness for custom dialects is unverified~~ **RESOLVED**: Confirmed C API cannot define custom dialects; C++ wrapper pattern established in Appendix (01-03)
 
 **Phase 2 - Core Language Basics:**
-- None identified; Chapter 07 (Let Bindings) complete and ready as foundation for Chapter 08 (Control Flow)
+- None identified; Chapter 08 (Control Flow) complete, ready for Chapter 09 (Memory Management)
 
 ## Session Continuity
 
-Last session: 2026-02-06T00:29:23Z
-Stopped at: Completed 02-02-PLAN.md (Let Bindings)
+Last session: 2026-02-06T00:37:03Z
+Stopped at: Completed 02-03-PLAN.md (Control Flow)
 Resume file: None
-Next: Plan 02-03 - Control Flow (if/else with scf.if and block arguments)
+Next: Plan 02-04 - Memory Management (Boehm GC integration)
