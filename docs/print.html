@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d8498b13.js";
+            window.path_to_searchindex_js = "searchindex-d7fc48ce.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-1fa1ad07.js"></script>
+        <script src="toc-94493ebb.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -12650,8 +12650,2628 @@ Phase 7 (Optimization): 인라인, TCO, 최적화 패스
 <p><strong>축하합니다!</strong> Phase 3를 완료했습니다. FunLang 컴파일러는 이제 재귀 함수를 포함한 완전한 프로그램을 네이티브 코드로 컴파일할 수 있습니다.</p>
 <p><strong>다음 장 (Phase 4)에서:</strong> 클로저와 환경 캡처를 추가하여 진정한 함수형 프로그래밍 기능을 구현할 것입니다.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="appendix-커스텀-mlir-dialect-등록"><a class="header" href="#appendix-커스텀-mlir-dialect-등록">Appendix: 커스텀 MLIR Dialect 등록</a></h1>
+<h1 id="chapter-12-클로저-closures"><a class="header" href="#chapter-12-클로저-closures">Chapter 12: 클로저 (Closures)</a></h1>
 <h2 id="소개-12"><a class="header" href="#소개-12">소개</a></h2>
+<p>**클로저(closure)**는 함수형 프로그래밍의 핵심 기능이다. 클로저는 단순한 함수가 아니라, **함수 + 환경(environment)**의 조합이다.</p>
+<pre><code class="language-fsharp">// Phase 3 함수 - 외부 변수 사용 불가
+let add x y = x + y
+
+// Phase 4 클로저 - 외부 변수 캡처 가능
+let make_adder n =
+    fun x -&gt; x + n   // n을 캡처!
+</code></pre>
+<p><code>fun x -&gt; x + n</code>은 <strong>클로저</strong>다:</p>
+<ul>
+<li><code>x</code>는 <strong>파라미터</strong> (bound variable)</li>
+<li><code>n</code>은 <strong>캡처된 변수</strong> (free variable, captured from environment)</li>
+</ul>
+<p>클로저가 생성될 때, <code>n</code>의 값이 **환경(environment)**에 저장된다. 나중에 클로저가 호출되면, 저장된 <code>n</code> 값을 사용한다.</p>
+<p><strong>왜 클로저가 중요한가?</strong></p>
+<ol>
+<li><strong>고차 함수(Higher-order functions)의 기초</strong>: 함수를 반환하거나 인자로 전달하려면 클로저가 필요하다</li>
+<li><strong>상태 캡처</strong>: 함수 생성 시점의 환경을 저장할 수 있다</li>
+<li><strong>추상화</strong>: 공통 패턴을 클로저로 추상화할 수 있다 (map, filter, fold)</li>
+</ol>
+<p><strong>클로저 vs Phase 3 함수:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase 3 함수</th><th>Phase 4 클로저</th></tr>
+</thead>
+<tbody>
+<tr><td>이름이 있다 (named)</td><td>익명 가능 (anonymous)</td></tr>
+<tr><td>외부 변수 사용 불가</td><td>외부 변수 캡처 가능</td></tr>
+<tr><td><code>func.func</code> 연산</td><td>함수 포인터 + 환경</td></tr>
+<tr><td>정적 바인딩</td><td>환경 저장 필요</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Chapter 12의 범위:</strong></p>
+<p>이 장에서 다루는 것:</p>
+<ol>
+<li><strong>클로저 이론</strong>: 자유 변수(free variables), 바운드 변수(bound variables)</li>
+<li><strong>자유 변수 분석</strong>: 어떤 변수를 캡처해야 하는지 계산</li>
+<li><strong>클로저 변환(Closure conversion)</strong>: 암묵적 캡처를 명시적으로 만들기</li>
+<li><strong>환경 구조체</strong>: 캡처된 변수를 저장하는 힙 객체</li>
+<li><strong>클로저 생성 코드</strong>: GC_malloc으로 환경 할당하기</li>
+</ol>
+<p>이 장을 마치면:</p>
+<ul>
+<li>클로저가 무엇이고 왜 필요한지 이해한다</li>
+<li>자유 변수 분석 알고리즘을 구현할 수 있다</li>
+<li>클로저를 (함수 포인터, 환경 포인터) 쌍으로 표현할 수 있다</li>
+<li>환경을 힙에 할당하고 변수를 저장/로드할 수 있다</li>
+<li>GC_malloc을 사용해 환경을 생성할 수 있다</li>
+</ul>
+<blockquote>
+<p><strong>Preview:</strong> Chapter 13에서는 고차 함수 (map, filter)를 추가한다. Chapter 12는 클로저의 기초를 확립한다.</p>
+</blockquote>
+<h2 id="클로저-이론"><a class="header" href="#클로저-이론">클로저 이론</a></h2>
+<h3 id="lexical-scoping-vs-dynamic-scoping"><a class="header" href="#lexical-scoping-vs-dynamic-scoping">Lexical Scoping vs Dynamic Scoping</a></h3>
+<p>클로저를 이해하려면 먼저 <strong>스코핑(scoping)</strong> 개념을 알아야 한다. 변수의 값이 어떻게 결정되는가?</p>
+<p><strong>Lexical scoping (정적 스코핑):</strong></p>
+<p>변수는 <strong>코드 작성 시점의 위치</strong>로 결정된다.</p>
+<pre><code class="language-fsharp">let x = 10 in
+let f = fun y -&gt; x + y in
+let x = 20 in
+f 5   // 결과: 15 (x = 10 사용)
+</code></pre>
+<p><code>fun y -&gt; x + y</code>에서 <code>x</code>는 <strong>정의 시점의 <code>x</code></strong> (10)을 참조한다. 나중에 <code>x</code>를 20으로 재바인딩해도 영향 없다.</p>
+<p><strong>Dynamic scoping (동적 스코핑):</strong></p>
+<p>변수는 <strong>호출 시점의 환경</strong>에서 찾는다.</p>
+<pre><code class="language-fsharp">// 동적 스코핑 가상 예시 (FunLang은 지원 안 함)
+let x = 10 in
+let f = fun y -&gt; x + y in
+let x = 20 in
+f 5   // 결과: 25 (x = 20 사용)
+</code></pre>
+<p><code>f</code>를 호출할 때, <code>x</code>는 <strong>호출 시점의 환경</strong>에서 찾는다 (20).</p>
+<p><strong>FunLang은 lexical scoping을 사용한다.</strong> 대부분의 현대 언어가 그렇다 (F#, JavaScript, Python, Rust, etc.). Dynamic scoping은 혼란스럽고 디버깅이 어렵다.</p>
+<p><strong>Lexical scoping의 의미:</strong></p>
+<ul>
+<li>함수가 정의될 때, <strong>그 시점의 환경을 기억해야 한다</strong></li>
+<li>함수가 호출될 때, <strong>저장된 환경을 사용해야 한다</strong></li>
+<li>이것이 <strong>클로저</strong>다: function + environment</li>
+</ul>
+<h3 id="free-variables-vs-bound-variables"><a class="header" href="#free-variables-vs-bound-variables">Free Variables vs Bound Variables</a></h3>
+<p>변수는 두 가지로 분류된다:</p>
+<p><strong>Bound variable (바운드 변수):</strong></p>
+<p>함수의 파라미터이거나, let 바인딩으로 정의된 변수.</p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+//  ↑   ↑
+//  바인딩  사용
+</code></pre>
+<p><code>x</code>는 <strong>bound variable</strong>이다. <code>fun x</code>가 <code>x</code>를 바인딩한다.</p>
+<p><strong>Free variable (자유 변수):</strong></p>
+<p>함수 내부에서 사용되지만, 그 함수에서 바인딩되지 않은 변수.</p>
+<pre><code class="language-fsharp">fun x -&gt; x + y
+//           ↑
+//       자유 변수!
+</code></pre>
+<p><code>y</code>는 <strong>free variable</strong>이다. <code>fun x</code>는 <code>y</code>를 바인딩하지 않는다. <code>y</code>는 <strong>외부 환경에서 와야 한다</strong>.</p>
+<p><strong>예시 1: 자유 변수 없음</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+</code></pre>
+<ul>
+<li>Bound: {x}</li>
+<li>Free: {} (empty)</li>
+</ul>
+<p><strong>예시 2: 자유 변수 하나</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + y
+</code></pre>
+<ul>
+<li>Bound: {x}</li>
+<li>Free: {y}</li>
+</ul>
+<p><strong>예시 3: 중첩된 람다</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; fun y -&gt; x + y + z
+</code></pre>
+<p>내부 람다 <code>fun y -&gt; x + y + z</code>를 보면:</p>
+<ul>
+<li>Bound: {y}</li>
+<li>Free: {x, z}</li>
+</ul>
+<p>외부 람다 <code>fun x -&gt; ...</code>를 보면:</p>
+<ul>
+<li>Bound: {x}</li>
+<li>Free: {z}</li>
+</ul>
+<p><strong>전체 표현식의 자유 변수: {z}</strong></p>
+<p><strong>예시 4: Let 바인딩</strong></p>
+<pre><code class="language-fsharp">let a = 10 in
+fun x -&gt; a + x
+</code></pre>
+<p><code>fun x -&gt; a + x</code>:</p>
+<ul>
+<li>Bound: {x}</li>
+<li>Free: {a}</li>
+</ul>
+<p>하지만 전체 표현식은 <code>let a = 10</code>이 <code>a</code>를 바인딩하므로:</p>
+<ul>
+<li>전체 자유 변수: {} (empty)</li>
+</ul>
+<h3 id="환경-캡처-environment-capture"><a class="header" href="#환경-캡처-environment-capture">환경 캡처 (Environment Capture)</a></h3>
+<p>자유 변수가 있으면, 그 값을 어디선가 가져와야 한다. 클로저는 **환경(environment)**을 저장해서 해결한다.</p>
+<p><strong>환경이란?</strong></p>
+<p>환경은 <strong>변수 이름 → 값</strong>의 매핑이다.</p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+fun z -&gt; x + y + z
+</code></pre>
+<p><code>fun z -&gt; x + y + z</code>가 생성될 때:</p>
+<ul>
+<li>자유 변수: {x, y}</li>
+<li>환경에서 찾기: x = 10, y = 20</li>
+<li><strong>환경 캡처</strong>: {x: 10, y: 20}을 저장</li>
+</ul>
+<p>클로저는 <strong>(함수 포인터, 환경 포인터)</strong> 쌍이 된다:</p>
+<pre><code>Closure {
+    fn_ptr: @lambda_123,
+    env: { x: 10, y: 20 }
+}
+</code></pre>
+<p>나중에 클로저를 호출할 때:</p>
+<ol>
+<li>함수 포인터를 찾는다 (@lambda_123)</li>
+<li>환경을 함수에 전달한다 ({x: 10, y: 20})</li>
+<li>함수는 환경에서 x, y 값을 로드한다</li>
+<li>계산: 10 + 20 + z</li>
+</ol>
+<p><strong>Value capture vs Reference capture:</strong></p>
+<p>FunLang은 <strong>value capture</strong>를 사용한다. 변수의 <strong>현재 값</strong>을 복사해서 저장한다.</p>
+<pre><code class="language-fsharp">let x = 10 in
+let f = fun y -&gt; x + y in
+let x = 20 in   // x 재바인딩
+f 5   // 결과: 15 (캡처된 x = 10 사용)
+</code></pre>
+<p>클로저가 생성될 때 <code>x = 10</code>이 환경에 복사된다. 나중에 <code>x</code>가 재바인딩되어도 영향 없다.</p>
+<p>(참조 캡처는 C++의 <code>[&amp;x]</code> 같은 개념인데, FunLang은 순수 함수형이므로 지원 안 함)</p>
+<h3 id="클로저의-구조"><a class="header" href="#클로저의-구조">클로저의 구조</a></h3>
+<p>클로저는 <strong>두 개의 포인터</strong>로 표현된다:</p>
+<pre><code class="language-c">// C 스타일 표현
+struct Closure {
+    void* fn_ptr;      // 함수 코드 포인터
+    void* env_ptr;     // 환경 데이터 포인터
+};
+</code></pre>
+<p><strong>1. 함수 포인터 (fn_ptr):</strong></p>
+<p>실행할 코드의 주소. MLIR에서는 <code>@lambda_N</code> 심볼.</p>
+<p><strong>2. 환경 포인터 (env_ptr):</strong></p>
+<p>캡처된 변수들을 저장한 힙 객체. 구조체의 주소.</p>
+<p><strong>시각적 다이어그램:</strong></p>
+<pre><code>클로저 생성:
+  let x = 10 in
+  let y = 20 in
+  fun z -&gt; x + y + z
+
+메모리 레이아웃:
+┌─────────────────────┐
+│ Closure (스택/레지스터) │
+├─────────────────────┤
+│ fn_ptr: @lambda_0   │───┐
+│ env_ptr: 0x1a3b5c8  │───┼───────┐
+└─────────────────────┘   │       │
+                          │       │
+                          │       v
+                          │  ┌──────────────┐
+                          │  │ Environment  │
+                          │  │ (힙 할당)     │
+                          │  ├──────────────┤
+                          │  │ x: 10        │
+                          │  │ y: 20        │
+                          │  └──────────────┘
+                          │
+                          v
+                    @lambda_0 코드:
+                      ; env를 파라미터로 받음
+                      ; env[0]에서 x 로드
+                      ; env[1]에서 y 로드
+                      ; x + y + z 계산
+</code></pre>
+<p><strong>핵심:</strong></p>
+<ul>
+<li>클로저는 작은 객체 (포인터 2개)</li>
+<li>환경은 힙에 할당 (크기는 캡처된 변수 개수에 따라 다름)</li>
+<li>함수는 환경을 첫 번째 파라미터로 받음</li>
+</ul>
+<h2 id="자유-변수-분석-free-variable-analysis"><a class="header" href="#자유-변수-분석-free-variable-analysis">자유 변수 분석 (Free Variable Analysis)</a></h2>
+<p>클로저를 컴파일하려면, <strong>어떤 변수를 캡처해야 하는지</strong> 알아야 한다. 이것이 **자유 변수 분석(free variable analysis)**이다.</p>
+<h3 id="분석-알고리즘"><a class="header" href="#분석-알고리즘">분석 알고리즘</a></h3>
+<p>자유 변수를 찾는 알고리즘은 <strong>set-based traversal</strong>이다:</p>
+<ol>
+<li>AST를 재귀적으로 순회</li>
+<li>각 표현식에서 자유 변수 set을 계산</li>
+<li>바운드 변수는 자유 변수 set에서 제거</li>
+</ol>
+<p><strong>정의:</strong></p>
+<pre><code>FV(expr) = 표현식 expr의 자유 변수 집합
+BV(expr) = 표현식 expr에서 바인딩되는 변수 집합
+</code></pre>
+<p><strong>규칙:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression</th><th>Free Variables</th><th>Bound Variables</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Var(x)</code></td><td>{x}</td><td>{}</td></tr>
+<tr><td><code>Num(n)</code></td><td>{}</td><td>{}</td></tr>
+<tr><td><code>Add(e1, e2)</code></td><td>FV(e1) ∪ FV(e2)</td><td>{}</td></tr>
+<tr><td><code>Let(x, e1, e2)</code></td><td>FV(e1) ∪ (FV(e2) - {x})</td><td>{x}</td></tr>
+<tr><td><code>Lambda(x, body)</code></td><td>FV(body) - {x}</td><td>{x}</td></tr>
+<tr><td><code>App(f, arg)</code></td><td>FV(f) ∪ FV(arg)</td><td>{}</td></tr>
+<tr><td><code>If(cond, t, f)</code></td><td>FV(cond) ∪ FV(t) ∪ FV(f)</td><td>{}</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>핵심 규칙 설명:</strong></p>
+<p><strong>1. Var(x):</strong></p>
+<p>변수 사용은 자유 변수다 (아직 바인딩 확인 안 함).</p>
+<pre><code>FV(x) = {x}
+</code></pre>
+<p><strong>2. Lambda(x, body):</strong></p>
+<p>람다가 <code>x</code>를 바인딩하므로, body의 자유 변수에서 <code>x</code>를 제거.</p>
+<pre><code>FV(fun x -&gt; body) = FV(body) - {x}
+</code></pre>
+<p><strong>3. Let(x, e1, e2):</strong></p>
+<p><code>e1</code>의 자유 변수 + (<code>e2</code>의 자유 변수 - {x})</p>
+<pre><code>FV(let x = e1 in e2) = FV(e1) ∪ (FV(e2) - {x})
+</code></pre>
+<p><strong>4. 기타 연산:</strong></p>
+<p>자식 표현식들의 자유 변수를 합집합.</p>
+<pre><code>FV(e1 + e2) = FV(e1) ∪ FV(e2)
+</code></pre>
+<h3 id="f-구현"><a class="header" href="#f-구현">F# 구현</a></h3>
+<pre><code class="language-fsharp">// AST 정의 (간략화)
+type Expr =
+    | Var of string
+    | Num of int
+    | Add of Expr * Expr
+    | Sub of Expr * Expr
+    | Let of string * Expr * Expr
+    | Lambda of string * Expr
+    | App of Expr * Expr
+    | If of Expr * Expr * Expr
+
+// 자유 변수 분석
+let rec freeVars (expr: Expr) : Set&lt;string&gt; =
+    match expr with
+    | Var(x) -&gt;
+        // 변수 사용 = 자유 변수 후보
+        Set.singleton x
+
+    | Num(_) -&gt;
+        // 리터럴 = 자유 변수 없음
+        Set.empty
+
+    | Add(e1, e2)
+    | Sub(e1, e2) -&gt;
+        // 이항 연산 = 양쪽의 자유 변수 합
+        Set.union (freeVars e1) (freeVars e2)
+
+    | Let(x, e1, e2) -&gt;
+        // let x = e1 in e2
+        // e1의 자유 변수 + (e2의 자유 변수 - {x})
+        let fv1 = freeVars e1
+        let fv2 = freeVars e2
+        Set.union fv1 (Set.remove x fv2)
+
+    | Lambda(param, body) -&gt;
+        // fun param -&gt; body
+        // body의 자유 변수 - {param}
+        let fvBody = freeVars body
+        Set.remove param fvBody
+
+    | App(func, arg) -&gt;
+        // f arg
+        // f의 자유 변수 + arg의 자유 변수
+        Set.union (freeVars func) (freeVars arg)
+
+    | If(cond, thenExpr, elseExpr) -&gt;
+        // if cond then thenExpr else elseExpr
+        // 세 부분의 자유 변수 합
+        freeVars cond
+        |&gt; Set.union (freeVars thenExpr)
+        |&gt; Set.union (freeVars elseExpr)
+</code></pre>
+<h3 id="예시-분석"><a class="header" href="#예시-분석">예시 분석</a></h3>
+<p><strong>예시 1: 단순 람다</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+</code></pre>
+<p>분석:</p>
+<pre><code>FV(fun x -&gt; x + 1)
+= FV(x + 1) - {x}
+= (FV(x) ∪ FV(1)) - {x}
+= ({x} ∪ {}) - {x}
+= {} (empty)
+</code></pre>
+<p><strong>결과: 자유 변수 없음</strong></p>
+<p><strong>예시 2: 하나의 자유 변수</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + y
+</code></pre>
+<p>분석:</p>
+<pre><code>FV(fun x -&gt; x + y)
+= FV(x + y) - {x}
+= (FV(x) ∪ FV(y)) - {x}
+= ({x} ∪ {y}) - {x}
+= {y}
+</code></pre>
+<p><strong>결과: 자유 변수 = {y}</strong></p>
+<p><strong>예시 3: 중첩 람다</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; fun y -&gt; x + y + z
+</code></pre>
+<p>분석:</p>
+<pre><code>내부: FV(fun y -&gt; x + y + z)
+    = FV(x + y + z) - {y}
+    = ({x} ∪ {y} ∪ {z}) - {y}
+    = {x, z}
+
+외부: FV(fun x -&gt; (fun y -&gt; x + y + z))
+    = FV(fun y -&gt; ...) - {x}
+    = {x, z} - {x}
+    = {z}
+</code></pre>
+<p><strong>결과: 자유 변수 = {z}</strong></p>
+<p><strong>예시 4: Let 바인딩</strong></p>
+<pre><code class="language-fsharp">let a = 10 in
+let b = a + 5 in
+fun x -&gt; a + b + x
+</code></pre>
+<p>분석:</p>
+<pre><code>1. FV(fun x -&gt; a + b + x) = {a, b}
+
+2. FV(let b = a + 5 in (fun x -&gt; ...))
+   = FV(a + 5) ∪ (FV(fun x -&gt; ...) - {b})
+   = {a} ∪ ({a, b} - {b})
+   = {a} ∪ {a}
+   = {a}
+
+3. FV(let a = 10 in (let b = ...))
+   = FV(10) ∪ (FV(let b = ...) - {a})
+   = {} ∪ ({a} - {a})
+   = {} (empty)
+</code></pre>
+<p><strong>결과: 전체 표현식의 자유 변수 없음</strong> (모든 변수가 바인딩됨)</p>
+<p>하지만 <code>fun x -&gt; a + b + x</code> 자체는 {a, b}를 캡처해야 한다.</p>
+<h3 id="스코프와-섀도잉-shadowing"><a class="header" href="#스코프와-섀도잉-shadowing">스코프와 섀도잉 (Shadowing)</a></h3>
+<p>섀도잉은 같은 이름의 변수를 재바인딩하는 것이다.</p>
+<pre><code class="language-fsharp">let x = 10 in
+let f = fun y -&gt; x + y in
+let x = 20 in
+f 5
+</code></pre>
+<p>분석:</p>
+<pre><code>1. 내부 x: let x = 10 에서 바인딩
+2. fun y -&gt; x + y: x는 첫 번째 x (10) 참조
+3. 외부 x: let x = 20 에서 재바인딩 (다른 x)
+4. f 5: f는 x = 10을 캡처한 클로저
+</code></pre>
+<p><strong>중요:</strong> 자유 변수 분석은 <strong>lexical scope</strong>을 따른다. 변수는 <strong>가장 가까운 바인딩 지점</strong>을 참조한다.</p>
+<p>F# 구현에서 <code>Set.remove</code>가 이것을 처리한다:</p>
+<ul>
+<li><code>Let(x, e1, e2)</code>에서 <code>Set.remove x fv2</code></li>
+<li><code>Lambda(x, body)</code>에서 <code>Set.remove x fvBody</code></li>
+</ul>
+<p><strong>예시: 중첩된 섀도잉</strong></p>
+<pre><code class="language-fsharp">let x = 1 in
+let f = fun y -&gt;
+    let x = 2 in
+    fun z -&gt; x + y + z
+in
+f 10 100
+</code></pre>
+<p>내부 람다 <code>fun z -&gt; x + y + z</code>:</p>
+<ul>
+<li>x: let x = 2 참조 (가장 가까운 바인딩)</li>
+<li>y: fun y 참조</li>
+<li>자유 변수: {x (inner), y}</li>
+</ul>
+<p>외부 람다 <code>fun y -&gt; let x = 2 in ...</code>:</p>
+<ul>
+<li>자유 변수: {x (outer)}</li>
+</ul>
+<p><strong>핵심:</strong> 각 바인딩 지점이 새로운 스코프를 생성한다.</p>
+<h2 id="클로저-변환-closure-conversion"><a class="header" href="#클로저-변환-closure-conversion">클로저 변환 (Closure Conversion)</a></h2>
+<p>자유 변수를 분석했으면, 이제 **클로저 변환(closure conversion)**을 적용한다. 클로저 변환은 <strong>암묵적 환경 캡처를 명시적으로 만드는 변환</strong>이다.</p>
+<h3 id="변환-개념"><a class="header" href="#변환-개념">변환 개념</a></h3>
+<p><strong>변환 전 (source code):</strong></p>
+<pre><code class="language-fsharp">let x = 10 in
+fun y -&gt; x + y
+</code></pre>
+<p><code>x</code>가 암묵적으로 캡처된다.</p>
+<p><strong>변환 후 (closure-converted code):</strong></p>
+<pre><code class="language-fsharp">// 의사 코드
+let x = 10 in
+let env = { x: x } in
+let closure = { fn: lambda_0, env: env } in
+closure
+
+// lambda_0 정의:
+fun lambda_0 (env, y) =
+    let x = env.x in
+    x + y
+</code></pre>
+<p><strong>변화:</strong></p>
+<ol>
+<li><strong>환경 생성</strong>: <code>env = { x: 10 }</code></li>
+<li><strong>클로저 생성</strong>: <code>closure = { fn: lambda_0, env: env }</code></li>
+<li><strong>함수 수정</strong>: 환경을 첫 번째 파라미터로 받음</li>
+<li><strong>자유 변수 접근</strong>: 환경에서 로드 (<code>env.x</code>)</li>
+</ol>
+<h3 id="beforeafter-예시"><a class="header" href="#beforeafter-예시">Before/After 예시</a></h3>
+<p><strong>예시 1: 단순 클로저</strong></p>
+<p><strong>Before:</strong></p>
+<pre><code class="language-fsharp">let make_adder n =
+    fun x -&gt; x + n
+</code></pre>
+<p><strong>After:</strong></p>
+<pre><code class="language-mlir">// make_adder 함수
+func.func @make_adder(%n: i32) -&gt; !llvm.ptr {
+    // 1. 환경 할당 (1개 변수)
+    %env_size = arith.constant 16 : i64  // 8 (fn ptr) + 8 (n)
+    %env_ptr = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // 2. 함수 포인터 저장 (env[0])
+    %fn_addr = llvm.mlir.addressof @lambda_adder : !llvm.ptr
+    %fn_slot = llvm.getelementptr %env_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %fn_addr, %fn_slot : !llvm.ptr
+
+    // 3. 캡처된 변수 저장 (env[1])
+    %n_slot = llvm.getelementptr %env_ptr[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %n, %n_slot : i32, !llvm.ptr
+
+    // 4. 환경 포인터 반환 (클로저)
+    func.return %env_ptr : !llvm.ptr
+}
+
+// lambda_adder 함수 (환경 파라미터 추가)
+func.func @lambda_adder(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // 1. 환경에서 n 로드
+    %n_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %n = llvm.load %n_slot : !llvm.ptr -&gt; i32
+
+    // 2. x + n 계산
+    %result = arith.addi %x, %n : i32
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>핵심 변환:</strong></p>
+<ul>
+<li><code>fun x -&gt; x + n</code> → <code>func.func @lambda_adder(%env, %x)</code></li>
+<li><code>n</code> 접근 → <code>llvm.load from env[1]</code></li>
+<li>클로저 생성 → <code>GC_malloc</code> + store fn_ptr + store n</li>
+</ul>
+<p><strong>예시 2: 여러 변수 캡처</strong></p>
+<p><strong>Before:</strong></p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+let z = 30 in
+fun a -&gt; x + y + z + a
+</code></pre>
+<p><strong>After (환경 구조):</strong></p>
+<pre><code class="language-c">// 환경 레이아웃
+struct env {
+    void* fn_ptr;   // [0] 함수 포인터
+    i32 x;          // [1] 캡처된 x
+    i32 y;          // [2] 캡처된 y
+    i32 z;          // [3] 캡처된 z
+};
+
+// 환경 크기 = 8 + 4 + 4 + 4 = 20 바이트
+</code></pre>
+<pre><code class="language-mlir">func.func @lambda_xyz(%env: !llvm.ptr, %a: i32) -&gt; i32 {
+    // x 로드
+    %x_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %x = llvm.load %x_slot : !llvm.ptr -&gt; i32
+
+    // y 로드
+    %y_slot = llvm.getelementptr %env[2] : (!llvm.ptr) -&gt; !llvm.ptr
+    %y = llvm.load %y_slot : !llvm.ptr -&gt; i32
+
+    // z 로드
+    %z_slot = llvm.getelementptr %env[3] : (!llvm.ptr) -&gt; !llvm.ptr
+    %z = llvm.load %z_slot : !llvm.ptr -&gt; i32
+
+    // x + y + z + a
+    %t1 = arith.addi %x, %y : i32
+    %t2 = arith.addi %t1, %z : i32
+    %result = arith.addi %t2, %a : i32
+    func.return %result : i32
+}
+</code></pre>
+<h3 id="환경-파라미터"><a class="header" href="#환경-파라미터">환경 파라미터</a></h3>
+<p>클로저 변환 후, 모든 람다 함수는 <strong>환경을 첫 번째 파라미터로 받는다</strong>.</p>
+<p><strong>일반 함수 (Phase 3):</strong></p>
+<pre><code class="language-mlir">func.func @add(%x: i32, %y: i32) -&gt; i32 {
+    %result = arith.addi %x, %y : i32
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>클로저 함수 (Phase 4):</strong></p>
+<pre><code class="language-mlir">func.func @lambda_closure(%env: !llvm.ptr, %x: i32, %y: i32) -&gt; i32 {
+    // 환경에서 캡처된 변수 로드
+    // ...
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>차이:</strong></p>
+<ul>
+<li>일반 함수: 파라미터만</li>
+<li>클로저 함수: <code>%env: !llvm.ptr</code> + 파라미터</li>
+</ul>
+<p><strong>환경 타입:</strong></p>
+<p>환경은 <strong>opaque pointer</strong>로 표현된다: <code>!llvm.ptr</code></p>
+<p>LLVM은 포인터 타입이 단순화되어, 모든 포인터가 <code>!llvm.ptr</code>이다. 내부 구조는 <code>getelementptr</code>의 인덱스로 관리한다.</p>
+<h3 id="flat-environment-vs-linked-environment"><a class="header" href="#flat-environment-vs-linked-environment">Flat Environment vs Linked Environment</a></h3>
+<p>환경을 표현하는 방법은 두 가지다:</p>
+<p><strong>1. Flat environment (FunLang 선택):</strong></p>
+<p>모든 캡처된 변수를 하나의 배열에 저장.</p>
+<pre><code class="language-c">struct env {
+    void* fn_ptr;
+    int var1;
+    int var2;
+    int var3;
+};
+</code></pre>
+<p><strong>장점:</strong></p>
+<ul>
+<li>O(1) 접근: <code>env[index]</code>로 직접 접근</li>
+<li>메모리 효율: 하나의 할당</li>
+<li>간단한 구현</li>
+</ul>
+<p><strong>단점:</strong></p>
+<ul>
+<li>중첩 클로저가 부모 환경을 통째로 복사해야 함</li>
+</ul>
+<p><strong>2. Linked environment (일부 컴파일러):</strong></p>
+<p>환경을 체인으로 연결.</p>
+<pre><code class="language-c">struct env {
+    void* fn_ptr;
+    struct env* parent;  // 부모 환경 포인터
+    int var1;
+};
+</code></pre>
+<p><strong>장점:</strong></p>
+<ul>
+<li>중첩 클로저가 부모 환경을 공유할 수 있음</li>
+</ul>
+<p><strong>단점:</strong></p>
+<ul>
+<li>O(depth) 접근: 체인을 따라 탐색</li>
+<li>메모리 간접 참조 증가</li>
+</ul>
+<p><strong>FunLang 선택: Flat environment</strong></p>
+<p>이유:</p>
+<ol>
+<li><strong>단순성</strong>: 구현이 간단함</li>
+<li><strong>성능</strong>: O(1) 접근이 빠름</li>
+<li><strong>교육 목적</strong>: 개념을 명확히 이해할 수 있음</li>
+</ol>
+<p>중첩 클로저는 드물고, 복사 오버헤드가 크지 않다.</p>
+<h3 id="클로저-변환-요약"><a class="header" href="#클로저-변환-요약">클로저 변환 요약</a></h3>
+<p>클로저 변환은 다음 단계를 수행한다:</p>
+<ol>
+<li><strong>자유 변수 분석</strong>: <code>freeVars(lambda)</code> → <code>{x, y, z}</code></li>
+<li><strong>환경 크기 계산</strong>: <code>size = 8 (fn ptr) + 4*n (captured vars)</code></li>
+<li><strong>환경 할당</strong>: <code>GC_malloc(size)</code> → heap 객체</li>
+<li><strong>함수 포인터 저장</strong>: <code>env[0] = @lambda_N</code></li>
+<li><strong>변수 저장</strong>: <code>env[1] = x</code>, <code>env[2] = y</code>, …</li>
+<li><strong>함수 정의 수정</strong>: <code>lambda_N(env, params...)</code> 형태로 변환</li>
+<li><strong>변수 접근 수정</strong>: <code>x</code> → <code>load from env[1]</code></li>
+</ol>
+<p>결과: 암묵적 캡처가 명시적 환경 조작으로 변환된다.</p>
+<h2 id="ast-확장-lambda-표현식"><a class="header" href="#ast-확장-lambda-표현식">AST 확장: Lambda 표현식</a></h2>
+<p>클로저를 컴파일하려면, AST에 <strong>Lambda</strong> 케이스를 추가해야 한다.</p>
+<h3 id="expr-타입-확장-1"><a class="header" href="#expr-타입-확장-1">Expr 타입 확장</a></h3>
+<pre><code class="language-fsharp">// Phase 3 AST (Chapter 10-11)
+type Expr =
+    | Var of string
+    | Num of int
+    | Add of Expr * Expr
+    | Sub of Expr * Expr
+    | Mul of Expr * Expr
+    | Div of Expr * Expr
+    | Eq of Expr * Expr
+    | Lt of Expr * Expr
+    | Let of string * Expr * Expr
+    | If of Expr * Expr * Expr
+    | App of string * Expr list  // 함수 호출: f(arg1, arg2, ...)
+
+// Phase 4 AST (Chapter 12+)
+type Expr =
+    | Var of string
+    | Num of int
+    | Add of Expr * Expr
+    | Sub of Expr * Expr
+    | Mul of Expr * Expr
+    | Div of Expr * Expr
+    | Eq of Expr * Expr
+    | Lt of Expr * Expr
+    | Let of string * Expr * Expr
+    | If of Expr * Expr * Expr
+    | Lambda of string * Expr        // NEW: 람다 표현식
+    | App of Expr * Expr             // CHANGED: 일반 함수 적용
+</code></pre>
+<p><strong>변경사항:</strong></p>
+<ol>
+<li>
+<p><strong>Lambda 추가</strong>: <code>Lambda(param, body)</code></p>
+<ul>
+<li><code>param</code>: 파라미터 이름 (단일 파라미터, 다중 파라미터는 currying으로 표현)</li>
+<li><code>body</code>: 함수 본체</li>
+</ul>
+</li>
+<li>
+<p><strong>App 변경</strong>: <code>App(Expr, Expr)</code> (함수 표현식 + 인자 표현식)</p>
+<ul>
+<li>Phase 3: <code>App(string, Expr list)</code> - 이름으로 함수 호출</li>
+<li>Phase 4: <code>App(Expr, Expr)</code> - 표현식이 함수가 될 수 있음 (클로저 호출)</li>
+</ul>
+</li>
+</ol>
+<h3 id="lambda-예시"><a class="header" href="#lambda-예시">Lambda 예시</a></h3>
+<p><strong>예시 1: 단순 람다</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+</code></pre>
+<p>AST:</p>
+<pre><code class="language-fsharp">Lambda("x", Add(Var "x", Num 1))
+</code></pre>
+<p><strong>예시 2: 클로저</strong></p>
+<pre><code class="language-fsharp">let y = 10 in
+fun x -&gt; x + y
+</code></pre>
+<p>AST:</p>
+<pre><code class="language-fsharp">Let("y", Num 10,
+    Lambda("x", Add(Var "x", Var "y")))
+</code></pre>
+<p><strong>예시 3: 고차 함수</strong></p>
+<pre><code class="language-fsharp">fun f -&gt; fun x -&gt; f x
+</code></pre>
+<p>AST:</p>
+<pre><code class="language-fsharp">Lambda("f",
+    Lambda("x",
+        App(Var "f", Var "x")))
+</code></pre>
+<h3 id="currying으로-다중-파라미터-표현"><a class="header" href="#currying으로-다중-파라미터-표현">Currying으로 다중 파라미터 표현</a></h3>
+<p>FunLang은 단일 파라미터 람다만 지원한다. 다중 파라미터는 <strong>currying</strong>으로 표현한다.</p>
+<pre><code class="language-fsharp">// 다중 파라미터 (syntax sugar)
+fun x y -&gt; x + y
+
+// Currying (desugared)
+fun x -&gt; fun y -&gt; x + y
+</code></pre>
+<p>AST:</p>
+<pre><code class="language-fsharp">Lambda("x",
+    Lambda("y",
+        Add(Var "x", Var "y")))
+</code></pre>
+<p>이것이 표준 함수형 언어 패턴이다 (Haskell, OCaml, F#).</p>
+<h3 id="parser-업데이트-개념"><a class="header" href="#parser-업데이트-개념">Parser 업데이트 (개념)</a></h3>
+<p>Lambda를 파싱하려면, <code>fun</code> 키워드를 추가해야 한다.</p>
+<pre><code class="language-fsharp">// LangTutorial의 parser.fsy에서
+// (독자는 LangTutorial을 참고하여 자신의 parser를 업데이트)
+
+Expr:
+    | FUN ID ARROW Expr    { Lambda($2, $4) }
+    | ...
+</code></pre>
+<p><strong>토큰:</strong></p>
+<ul>
+<li><code>FUN</code>: “fun” 키워드</li>
+<li><code>ID</code>: 식별자</li>
+<li><code>ARROW</code>: “-&gt;” 화살표</li>
+<li><code>Expr</code>: 본체 표현식</li>
+</ul>
+<p><strong>결합 순서:</strong></p>
+<ul>
+<li><code>fun x -&gt; fun y -&gt; x + y</code>: 오른쪽 결합</li>
+<li><code>f x y</code>: 왼쪽 결합 (App는 왼쪽 결합)</li>
+</ul>
+<h2 id="mlir-환경-구조체"><a class="header" href="#mlir-환경-구조체">MLIR 환경 구조체</a></h2>
+<p>클로저의 핵심은 <strong>환경(environment)</strong> 구조체다. 환경은 캡처된 변수들을 저장하는 힙 객체다.</p>
+<h3 id="환경-레이아웃"><a class="header" href="#환경-레이아웃">환경 레이아웃</a></h3>
+<p>환경은 **헤테로지니어스 배열(heterogeneous array)**이다:</p>
+<pre><code class="language-c">// C 스타일 표현
+struct closure_env {
+    void* fn_ptr;   // [0] 함수 포인터
+    int var1;       // [1] 첫 번째 캡처된 변수
+    int var2;       // [2] 두 번째 캡처된 변수
+    // ...
+};
+</code></pre>
+<p><strong>인덱스 규칙:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Index</th><th>Content</th><th>Type</th><th>Size</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td>함수 포인터</td><td><code>!llvm.ptr</code></td><td>8 bytes</td></tr>
+<tr><td>1</td><td>첫 번째 변수</td><td><code>i32</code></td><td>4 bytes</td></tr>
+<tr><td>2</td><td>두 번째 변수</td><td><code>i32</code></td><td>4 bytes</td></tr>
+<tr><td>…</td><td>…</td><td>…</td><td>…</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>상수 정의:</strong></p>
+<pre><code class="language-fsharp">// F# 컴파일러에서
+let ENV_FN_PTR = 0         // 함수 포인터 인덱스
+let ENV_FIRST_VAR = 1      // 첫 번째 변수 인덱스
+</code></pre>
+<h3 id="llvm-struct-type"><a class="header" href="#llvm-struct-type">LLVM Struct Type</a></h3>
+<p>MLIR에서 환경은 <code>!llvm.struct</code> 타입으로 표현할 수도 있지만, <strong>opaque pointer</strong> 방식이 더 간단하다.</p>
+<p><strong>Opaque pointer 방식 (FunLang 선택):</strong></p>
+<pre><code class="language-mlir">// 환경은 !llvm.ptr로 표현
+// 내부 구조는 getelementptr 인덱스로 관리
+
+%env_ptr = llvm.call @GC_malloc(%size) : (i64) -&gt; !llvm.ptr
+%slot = llvm.getelementptr %env_ptr[index] : (!llvm.ptr) -&gt; !llvm.ptr
+</code></pre>
+<p><strong>장점:</strong></p>
+<ul>
+<li>타입 시스템이 간단함</li>
+<li>동적 크기 환경 가능</li>
+<li>getelementptr가 바이트 오프셋 자동 계산</li>
+</ul>
+<p><strong>Struct type 방식 (대안):</strong></p>
+<pre><code class="language-mlir">// 환경 타입 정의
+!env_type = !llvm.struct&lt;(ptr, i32, i32)&gt;
+
+// 사용
+%env = llvm.alloca : !llvm.ptr
+%slot = llvm.getelementptr %env[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+</code></pre>
+<p><strong>단점:</strong></p>
+<ul>
+<li>각 클로저마다 다른 타입 필요</li>
+<li>타입 정의가 복잡함</li>
+</ul>
+<p><strong>FunLang 선택:</strong> Opaque pointer 방식</p>
+<h3 id="getelementptr로-슬롯-접근"><a class="header" href="#getelementptr로-슬롯-접근">getelementptr로 슬롯 접근</a></h3>
+<p><code>llvm.getelementptr</code>는 포인터 산술 연산이다. 배열 인덱스를 받아서 해당 위치의 포인터를 계산한다.</p>
+<p><strong>Syntax:</strong></p>
+<pre><code class="language-mlir">%slot_ptr = llvm.getelementptr %base_ptr[index] : (!llvm.ptr) -&gt; !llvm.ptr
+</code></pre>
+<p><strong>예시:</strong></p>
+<pre><code class="language-mlir">// 환경 포인터: %env
+// 인덱스 1번 슬롯 접근 (첫 번째 변수)
+
+%slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+%value = llvm.load %slot : !llvm.ptr -&gt; i32
+</code></pre>
+<p><strong>중요:</strong> getelementptr는 <strong>포인터만 계산</strong>한다. 실제 로드는 <code>llvm.load</code>로 수행한다.</p>
+<p><strong>메모리 레이아웃 예시:</strong></p>
+<pre><code>환경 메모리 (3개 변수 캡처):
+Address     Content
+0x1000      @lambda_N (fn ptr, 8 bytes)
+0x1008      10 (var1, 4 bytes)
+0x100C      20 (var2, 4 bytes)
+0x1010      30 (var3, 4 bytes)
+
+getelementptr %env[0]: 0x1000
+getelementptr %env[1]: 0x1008
+getelementptr %env[2]: 0x100C
+getelementptr %env[3]: 0x1010
+</code></pre>
+<p><strong>바이트 정렬:</strong> LLVM이 자동으로 적절한 정렬을 수행한다.</p>
+<h3 id="helper-함수-createclosureenv"><a class="header" href="#helper-함수-createclosureenv">Helper 함수: CreateClosureEnv</a></h3>
+<p>환경 생성을 간단하게 만드는 helper 함수:</p>
+<pre><code class="language-fsharp">// F# 컴파일러에서
+let createClosureEnv (builder: OpBuilder) (fnAddr: MlirValue) (capturedVars: MlirValue list) : MlirValue =
+    // 1. 환경 크기 계산
+    let fnPtrSize = 8L  // 포인터 크기
+    let varSize = 4L    // i32 크기
+    let totalSize = fnPtrSize + (int64 capturedVars.Length) * varSize
+    let sizeConst = builder.CreateI64Const(totalSize)
+
+    // 2. GC_malloc 호출
+    let envPtr = builder.CreateCall("GC_malloc", [sizeConst])
+
+    // 3. 함수 포인터 저장
+    let fnSlot = builder.CreateGEP(envPtr, 0)
+    builder.CreateStore(fnAddr, fnSlot)
+
+    // 4. 캡처된 변수들 저장
+    capturedVars |&gt; List.iteri (fun i var -&gt;
+        let slot = builder.CreateGEP(envPtr, i + 1)
+        builder.CreateStore(var, slot)
+    )
+
+    // 5. 환경 포인터 반환
+    envPtr
+</code></pre>
+<h3 id="helper-함수-getenvslot"><a class="header" href="#helper-함수-getenvslot">Helper 함수: GetEnvSlot</a></h3>
+<p>환경에서 변수 로드를 간단하게:</p>
+<pre><code class="language-fsharp">let getEnvSlot (builder: OpBuilder) (envPtr: MlirValue) (index: int) : MlirValue =
+    // getelementptr + load
+    let slot = builder.CreateGEP(envPtr, index)
+    builder.CreateLoad(slot, "i32")
+</code></pre>
+<p>사용 예시:</p>
+<pre><code class="language-fsharp">// 환경에서 첫 번째 변수 로드
+let var1 = getEnvSlot builder envPtr ENV_FIRST_VAR
+</code></pre>
+<h2 id="클로저-생성-코드-closure-creation"><a class="header" href="#클로저-생성-코드-closure-creation">클로저 생성 코드 (Closure Creation)</a></h2>
+<p>클로저 생성은 <strong>환경 할당 + 변수 저장 + 환경 포인터 반환</strong>이다.</p>
+<h3 id="compilelambda-함수"><a class="header" href="#compilelambda-함수">compileLambda 함수</a></h3>
+<pre><code class="language-fsharp">// Lambda 표현식 컴파일
+let compileLambda (builder: OpBuilder) (env: Environment) (param: string) (body: Expr) : MlirValue =
+    // 1. 자유 변수 분석
+    let freeVarSet = freeVars (Lambda(param, body))
+    let freeVarList = Set.toList freeVarSet
+
+    // 2. 캡처된 변수들의 SSA 값 가져오기
+    let capturedValues =
+        freeVarList |&gt; List.map (fun varName -&gt;
+            match env.TryFind(varName) with
+            | Some(value) -&gt; value
+            | None -&gt; failwithf "Undefined variable: %s" varName
+        )
+
+    // 3. 람다 함수 정의 생성
+    let lambdaName = generateLambdaName()  // @lambda_0, @lambda_1, ...
+    let lambdaFunc = createLambdaFunction builder lambdaName param body freeVarList env
+
+    // 4. 함수 포인터 얻기
+    let fnAddr = builder.CreateAddressOf(lambdaName)
+
+    // 5. 환경 생성 및 변수 저장
+    let envPtr = createClosureEnv builder fnAddr capturedValues
+
+    // 6. 환경 포인터 반환 (이것이 클로저)
+    envPtr
+</code></pre>
+<p><strong>핵심 단계:</strong></p>
+<ol>
+<li><strong>자유 변수 분석</strong>: <code>freeVars</code>로 캡처할 변수 찾기</li>
+<li><strong>값 가져오기</strong>: 환경에서 SSA 값 로드</li>
+<li><strong>람다 함수 정의</strong>: 별도 함수로 생성 (환경 파라미터 포함)</li>
+<li><strong>함수 포인터</strong>: <code>llvm.mlir.addressof</code>로 주소 얻기</li>
+<li><strong>환경 할당</strong>: <code>GC_malloc</code> + 변수 저장</li>
+<li><strong>반환</strong>: 환경 포인터 (클로저 값)</li>
+</ol>
+<h3 id="createlambdafunction"><a class="header" href="#createlambdafunction">createLambdaFunction</a></h3>
+<p>람다 함수를 별도 <code>func.func</code>로 정의:</p>
+<pre><code class="language-fsharp">let createLambdaFunction (builder: OpBuilder) (name: string) (param: string) (body: Expr) (freeVars: string list) (outerEnv: Environment) : unit =
+    // 1. 함수 시그니처: (%env: !llvm.ptr, %param: i32) -&gt; i32
+    let paramTypes = [builder.GetPtrType(); builder.GetI32Type()]
+    let returnType = builder.GetI32Type()
+
+    // 2. 함수 생성
+    let funcOp = builder.CreateFuncOp(name, paramTypes, returnType)
+    let entryBlock = builder.GetEntryBlock(funcOp)
+    builder.SetInsertionPoint(entryBlock)
+
+    // 3. Block arguments 얻기
+    let envArg = builder.GetBlockArg(entryBlock, 0)   // %env
+    let paramArg = builder.GetBlockArg(entryBlock, 1)  // %param
+
+    // 4. 환경 구축: 파라미터 + 캡처된 변수들
+    let mutable lambdaEnv = Map.empty
+    lambdaEnv &lt;- lambdaEnv.Add(param, paramArg)
+
+    // 캡처된 변수들을 환경에서 로드
+    freeVars |&gt; List.iteri (fun i varName -&gt;
+        let value = getEnvSlot builder envArg (ENV_FIRST_VAR + i)
+        lambdaEnv &lt;- lambdaEnv.Add(varName, value)
+    )
+
+    // 5. 본체 컴파일
+    let bodyValue = compileExpr builder lambdaEnv body
+
+    // 6. 반환
+    builder.CreateFuncReturn(bodyValue)
+</code></pre>
+<p><strong>핵심:</strong></p>
+<ul>
+<li>환경 파라미터 <code>%env: !llvm.ptr</code>가 첫 번째</li>
+<li>실제 파라미터 <code>%param: i32</code>가 두 번째</li>
+<li>캡처된 변수들을 환경에서 로드하여 lambda 환경에 추가</li>
+<li>본체 컴파일은 일반 표현식과 동일</li>
+</ul>
+<h3 id="전체-예시-make_adder-컴파일"><a class="header" href="#전체-예시-make_adder-컴파일">전체 예시: make_adder 컴파일</a></h3>
+<p><strong>Source code:</strong></p>
+<pre><code class="language-fsharp">let make_adder n =
+    fun x -&gt; x + n
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("make_adder",
+    Lambda("n",
+        Lambda("x", Add(Var "x", Var "n"))),
+    ...)
+</code></pre>
+<p><strong>Generated MLIR IR:</strong></p>
+<pre><code class="language-mlir">// make_adder 함수
+func.func @make_adder(%n: i32) -&gt; !llvm.ptr {
+    // 내부 람다: fun x -&gt; x + n
+    // 자유 변수: {n}
+
+    // 1. 환경 크기 계산: 8 (fn ptr) + 4 (n) = 12 bytes
+    %env_size = arith.constant 12 : i64
+
+    // 2. GC_malloc 호출
+    %env_ptr = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // 3. 함수 포인터 저장
+    %fn_addr = llvm.mlir.addressof @lambda_adder : !llvm.ptr
+    %fn_slot = llvm.getelementptr %env_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %fn_addr, %fn_slot : !llvm.ptr, !llvm.ptr
+
+    // 4. 캡처된 변수 n 저장
+    %n_slot = llvm.getelementptr %env_ptr[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %n, %n_slot : i32, !llvm.ptr
+
+    // 5. 환경 포인터 반환 (클로저)
+    func.return %env_ptr : !llvm.ptr
+}
+
+// lambda_adder 함수
+func.func @lambda_adder(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // 1. 환경에서 n 로드
+    %n_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %n = llvm.load %n_slot : !llvm.ptr -&gt; i32
+
+    // 2. x + n 계산
+    %result = arith.addi %x, %n : i32
+
+    // 3. 반환
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>코드 흐름:</strong></p>
+<ol>
+<li><code>make_adder</code> 호출: <code>make_adder(5)</code></li>
+<li>환경 할당: <code>env = GC_malloc(12)</code></li>
+<li>함수 포인터 저장: <code>env[0] = @lambda_adder</code></li>
+<li><code>n</code> 저장: <code>env[1] = 5</code></li>
+<li>클로저 반환: <code>env</code> (포인터)</li>
+<li>나중에 클로저 호출: <code>closure(10)</code></li>
+<li><code>lambda_adder</code> 호출: <code>@lambda_adder(env, 10)</code></li>
+<li><code>n</code> 로드: <code>env[1]</code> → <code>5</code></li>
+<li>계산: <code>10 + 5</code> → <code>15</code></li>
+</ol>
+<h2 id="클로저-본체-컴파일-closure-body"><a class="header" href="#클로저-본체-컴파일-closure-body">클로저 본체 컴파일 (Closure Body)</a></h2>
+<p>클로저 본체는 <strong>lifted function</strong>으로 컴파일된다. Lifted function은 최상위 함수로 추출된 람다 함수다.</p>
+<h3 id="lifting-개념"><a class="header" href="#lifting-개념">Lifting 개념</a></h3>
+<p><strong>Before lifting (nested lambda):</strong></p>
+<pre><code class="language-fsharp">let make_adder n =
+    fun x -&gt; x + n
+</code></pre>
+<p><strong>After lifting (top-level functions):</strong></p>
+<pre><code class="language-fsharp">// Lifted lambda
+let lambda_adder (env, x) =
+    let n = env[1] in
+    x + n
+
+// make_adder는 클로저 생성기
+let make_adder n =
+    let env = allocate_env(@lambda_adder, n) in
+    env
+</code></pre>
+<p>모든 람다 함수가 최상위로 <strong>lift</strong>된다. 중첩된 함수가 flat structure로 변환된다.</p>
+<h3 id="환경-파라미터-타입"><a class="header" href="#환경-파라미터-타입">환경 파라미터 타입</a></h3>
+<p>Lifted function의 시그니처:</p>
+<pre><code class="language-mlir">func.func @lambda_N(%env: !llvm.ptr, %param1: i32, %param2: i32, ...) -&gt; i32
+</code></pre>
+<p><strong>첫 번째 파라미터:</strong></p>
+<ul>
+<li>이름: <code>%env</code></li>
+<li>타입: <code>!llvm.ptr</code> (opaque pointer)</li>
+<li>목적: 캡처된 변수 접근</li>
+</ul>
+<p><strong>나머지 파라미터:</strong></p>
+<ul>
+<li>람다의 실제 파라미터들</li>
+</ul>
+<h3 id="환경에서-변수-로드"><a class="header" href="#환경에서-변수-로드">환경에서 변수 로드</a></h3>
+<p>캡처된 변수를 사용하려면, 환경에서 로드해야 한다:</p>
+<pre><code class="language-mlir">// 첫 번째 캡처된 변수 로드
+%var1_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+%var1 = llvm.load %var1_slot : !llvm.ptr -&gt; i32
+
+// 두 번째 캡처된 변수 로드
+%var2_slot = llvm.getelementptr %env[2] : (!llvm.ptr) -&gt; !llvm.ptr
+%var2 = llvm.load %var2_slot : !llvm.ptr -&gt; i32
+</code></pre>
+<p><strong>패턴:</strong></p>
+<ol>
+<li><code>getelementptr</code>로 슬롯 포인터 계산</li>
+<li><code>llvm.load</code>로 값 로드</li>
+<li>SSA 값으로 사용</li>
+</ol>
+<h3 id="전체-예시-중첩-클로저"><a class="header" href="#전체-예시-중첩-클로저">전체 예시: 중첩 클로저</a></h3>
+<p><strong>Source code:</strong></p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+fun z -&gt; x + y + z
+</code></pre>
+<p><strong>Lifted function:</strong></p>
+<pre><code class="language-mlir">func.func @lambda_xyz(%env: !llvm.ptr, %z: i32) -&gt; i32 {
+    // 1. x 로드 (env[1])
+    %x_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %x = llvm.load %x_slot : !llvm.ptr -&gt; i32
+
+    // 2. y 로드 (env[2])
+    %y_slot = llvm.getelementptr %env[2] : (!llvm.ptr) -&gt; !llvm.ptr
+    %y = llvm.load %y_slot : !llvm.ptr -&gt; i32
+
+    // 3. x + y 계산
+    %t1 = arith.addi %x, %y : i32
+
+    // 4. t1 + z 계산
+    %result = arith.addi %t1, %z : i32
+
+    // 5. 반환
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>클로저 생성 부분:</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+    // 1. x, y 정의
+    %x = arith.constant 10 : i32
+    %y = arith.constant 20 : i32
+
+    // 2. 환경 크기: 8 (fn ptr) + 4 (x) + 4 (y) = 16 bytes
+    %env_size = arith.constant 16 : i64
+
+    // 3. 환경 할당
+    %env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // 4. 함수 포인터 저장
+    %fn = llvm.mlir.addressof @lambda_xyz : !llvm.ptr
+    %fn_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %fn, %fn_slot : !llvm.ptr, !llvm.ptr
+
+    // 5. x 저장
+    %x_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %x, %x_slot : i32, !llvm.ptr
+
+    // 6. y 저장
+    %y_slot = llvm.getelementptr %env[2] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %y, %y_slot : i32, !llvm.ptr
+
+    // 7. 클로저 호출 (나중에 Chapter 13에서)
+    // %result = call_closure %env (%z)
+
+    func.return %0 : i32
+}
+</code></pre>
+<h3 id="함수-명명-규칙"><a class="header" href="#함수-명명-규칙">함수 명명 규칙</a></h3>
+<p>Lifted function의 이름은 자동 생성된다:</p>
+<pre><code class="language-fsharp">let mutable lambdaCounter = 0
+
+let generateLambdaName() =
+    let name = sprintf "lambda_%d" lambdaCounter
+    lambdaCounter &lt;- lambdaCounter + 1
+    name
+</code></pre>
+<p><strong>예시:</strong></p>
+<ul>
+<li>첫 번째 람다: <code>@lambda_0</code></li>
+<li>두 번째 람다: <code>@lambda_1</code></li>
+<li>…</li>
+</ul>
+<p><strong>중요:</strong> 이름은 unique해야 한다. 같은 이름의 함수가 여러 개 있으면 링커 오류가 발생한다.</p>
+<h2 id="공통-오류-common-errors"><a class="header" href="#공통-오류-common-errors">공통 오류 (Common Errors)</a></h2>
+<p>클로저 컴파일에서 자주 발생하는 오류들:</p>
+<h3 id="error-1-환경-인덱스-off-by-one"><a class="header" href="#error-1-환경-인덱스-off-by-one">Error 1: 환경 인덱스 off-by-one</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-mlir">// 잘못된 코드 - 함수 포인터를 변수로 로드
+%var1_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+%var1 = llvm.load %var1_slot : !llvm.ptr -&gt; i32  // ERROR: 타입 불일치!
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>환경 레이아웃을 잊음:</p>
+<ul>
+<li><code>env[0]</code>: 함수 포인터 (<code>!llvm.ptr</code>)</li>
+<li><code>env[1]</code>: 첫 번째 변수 (<code>i32</code>)</li>
+<li><code>env[2]</code>: 두 번째 변수 (<code>i32</code>)</li>
+</ul>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 코드 - 첫 번째 변수는 env[1]
+%var1_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+%var1 = llvm.load %var1_slot : !llvm.ptr -&gt; i32  // OK
+</code></pre>
+<p><strong>팁:</strong> <code>ENV_FN_PTR = 0</code>, <code>ENV_FIRST_VAR = 1</code> 상수 사용하기.</p>
+<h3 id="error-2-환경-파라미터-누락"><a class="header" href="#error-2-환경-파라미터-누락">Error 2: 환경 파라미터 누락</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-mlir">// 잘못된 코드 - 환경 파라미터 없음
+func.func @lambda_adder(%x: i32) -&gt; i32 {
+    %n = ??? // n을 어디서 가져오나?
+}
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>Lifted function에 환경 파라미터를 추가하지 않음.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 코드 - 환경 파라미터 추가
+func.func @lambda_adder(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    %n_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %n = llvm.load %n_slot : !llvm.ptr -&gt; i32
+    // ...
+}
+</code></pre>
+<p><strong>팁:</strong> 모든 람다 함수는 첫 번째 파라미터로 <code>%env: !llvm.ptr</code>를 받는다.</p>
+<h3 id="error-3-스택-vs-힙-할당"><a class="header" href="#error-3-스택-vs-힙-할당">Error 3: 스택 vs 힙 할당</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-mlir">// 잘못된 코드 - 스택 할당
+%env = llvm.alloca 16, i8 : (i32, i8) -&gt; !llvm.ptr
+// ...
+func.return %env : !llvm.ptr  // ERROR: 스택 메모리를 반환!
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>환경을 스택에 할당했는데, 함수 반환 후 사라진다.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 코드 - 힙 할당
+%env_size = arith.constant 16 : i64
+%env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+func.return %env : !llvm.ptr  // OK: 힙 메모리는 살아있음
+</code></pre>
+<p><strong>원칙:</strong></p>
+<ul>
+<li><strong>스택 할당 (<code>llvm.alloca</code>)</strong>: 함수 로컬 변수 (현재 스택 프레임에서만 유효)</li>
+<li><strong>힙 할당 (<code>GC_malloc</code>)</strong>: 탈출하는 값 (함수 반환 후에도 유효)</li>
+</ul>
+<p>클로저는 항상 <strong>힙 할당</strong>해야 한다. 클로저가 생성된 함수가 반환된 후에도 사용되기 때문이다.</p>
+<h3 id="error-4-타입-불일치"><a class="header" href="#error-4-타입-불일치">Error 4: 타입 불일치</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-mlir">// 잘못된 코드
+%fn_addr = llvm.mlir.addressof @lambda_0 : !llvm.ptr
+%fn_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %fn_addr, %fn_slot : i32, !llvm.ptr  // ERROR: 타입 불일치!
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>함수 포인터 타입을 <code>i32</code>로 잘못 지정.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 코드
+%fn_addr = llvm.mlir.addressof @lambda_0 : !llvm.ptr
+%fn_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %fn_addr, %fn_slot : !llvm.ptr, !llvm.ptr  // OK
+</code></pre>
+<p><strong>타입 체크:</strong></p>
+<ul>
+<li>함수 포인터: <code>!llvm.ptr</code></li>
+<li>i32 변수: <code>i32</code></li>
+<li><code>llvm.store</code> 시그니처: <code>llvm.store %value, %ptr : value_type, !llvm.ptr</code></li>
+</ul>
+<h2 id="요약"><a class="header" href="#요약">요약</a></h2>
+<p><strong>이 장에서 배운 것:</strong></p>
+<ol>
+<li>
+<p><strong>클로저 이론</strong></p>
+<ul>
+<li>Lexical scoping: 정의 시점의 환경을 기억</li>
+<li>Free variables: 람다에서 바인딩되지 않은 변수</li>
+<li>Bound variables: 람다 파라미터로 바인딩된 변수</li>
+<li>환경 캡처: 자유 변수의 값을 저장</li>
+</ul>
+</li>
+<li>
+<p><strong>자유 변수 분석</strong></p>
+<ul>
+<li>Set-based traversal 알고리즘</li>
+<li><code>FV(Lambda(x, body)) = FV(body) - {x}</code></li>
+<li>F# 구현: <code>freeVars</code> 재귀 함수</li>
+</ul>
+</li>
+<li>
+<p><strong>클로저 변환</strong></p>
+<ul>
+<li>암묵적 캡처 → 명시적 환경 조작</li>
+<li>Flat environment: 모든 변수를 배열에 저장</li>
+<li>Lifted functions: 람다를 최상위 함수로 추출</li>
+</ul>
+</li>
+<li>
+<p><strong>환경 구조체</strong></p>
+<ul>
+<li>레이아웃: <code>[fn_ptr, var1, var2, ...]</code></li>
+<li><code>env[0]</code>: 함수 포인터</li>
+<li><code>env[1+]</code>: 캡처된 변수들</li>
+<li><code>getelementptr</code>로 슬롯 접근</li>
+</ul>
+</li>
+<li>
+<p><strong>클로저 생성 코드</strong></p>
+<ul>
+<li><code>GC_malloc</code>로 환경 힙 할당</li>
+<li>함수 포인터 저장 (<code>llvm.mlir.addressof</code>)</li>
+<li>캡처된 변수들 저장 (<code>llvm.store</code>)</li>
+<li>환경 포인터 반환 (클로저 값)</li>
+</ul>
+</li>
+<li>
+<p><strong>클로저 본체 컴파일</strong></p>
+<ul>
+<li>Lifted function: <code>@lambda_N(%env, %params...)</code></li>
+<li>환경 파라미터를 첫 번째로 받음</li>
+<li><code>getelementptr</code> + <code>llvm.load</code>로 변수 접근</li>
+</ul>
+</li>
+</ol>
+<p><strong>다음 장 (Chapter 13):</strong></p>
+<ul>
+<li><strong>고차 함수 (Higher-order functions)</strong>: 함수를 인자로 받거나 반환</li>
+<li><strong>클로저 호출</strong>: 환경 포인터에서 함수 포인터 추출 + 간접 호출</li>
+<li><strong>Map/Filter/Fold</strong>: 표준 고차 함수 구현</li>
+<li><strong>Function 타입</strong>: 함수를 first-class value로 취급</li>
+</ul>
+<p>클로저는 함수형 프로그래밍의 핵심이다. 이 장에서 확립한 환경 캡처 메커니즘이 고차 함수의 기초가 된다.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="chapter-13-고차-함수-higher-order-functions"><a class="header" href="#chapter-13-고차-함수-higher-order-functions">Chapter 13: 고차 함수 (Higher-Order Functions)</a></h1>
+<h2 id="소개-13"><a class="header" href="#소개-13">소개</a></h2>
+<p>**고차 함수(higher-order function, HOF)**는 함수를 **일급 값(first-class value)**으로 다루는 함수다:</p>
+<ol>
+<li><strong>함수를 인자로 받는 함수</strong>: <code>apply f x = f x</code></li>
+<li><strong>함수를 반환하는 함수</strong>: <code>makeAdder n = fun x -&gt; x + n</code></li>
+</ol>
+<pre><code class="language-fsharp">// 고차 함수 예시
+let apply f x = f x           // 함수를 인자로 받는다
+let twice f x = f (f x)       // 함수를 두 번 적용한다
+let compose f g x = f (g x)   // 함수 합성
+
+let inc x = x + 1
+let result = twice inc 10     // 결과: 12
+</code></pre>
+<p><strong>왜 고차 함수가 중요한가?</strong></p>
+<ol>
+<li><strong>추상화(Abstraction)</strong>: 공통 패턴을 재사용 가능하게 만든다 (map, filter, fold)</li>
+<li><strong>합성(Composition)</strong>: 작은 함수를 조합해 복잡한 동작을 만든다</li>
+<li><strong>지연 평가(Lazy evaluation)</strong>: 계산을 함수로 감싸서 나중에 실행할 수 있다</li>
+<li><strong>콜백 패턴</strong>: 비동기 작업, 이벤트 처리에 필수</li>
+</ol>
+<p><strong>고차 함수 vs 일반 함수:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>일반 함수 (Phase 3)</th><th>고차 함수 (Phase 4)</th></tr>
+</thead>
+<tbody>
+<tr><td>데이터를 인자로 받는다</td><td>함수를 인자로 받는다</td></tr>
+<tr><td>데이터를 반환한다</td><td>함수를 반환할 수 있다</td></tr>
+<tr><td>직접 호출 (<code>func.call @symbol</code>)</td><td>간접 호출 (function pointer)</td></tr>
+<tr><td>타입: <code>int -&gt; int</code></td><td>타입: <code>(int -&gt; int) -&gt; int</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Chapter 13의 목표:</strong></p>
+<p>이 장을 마치면 다음을 컴파일할 수 있다:</p>
+<pre><code class="language-fsharp">// 함수를 인자로 받기
+let apply f x = f x
+let result1 = apply inc 42   // 43
+
+// 함수를 반환하기
+let makeAdder n = fun x -&gt; x + n
+let add5 = makeAdder 5
+let result2 = add5 10        // 15
+
+// 함수 합성
+let compose f g x = f (g x)
+let inc x = x + 1
+let double x = x * 2
+let incThenDouble = compose double inc
+let result3 = incThenDouble 5   // 12
+</code></pre>
+<p><strong>Chapter 13의 범위:</strong></p>
+<ol>
+<li><strong>함수를 일급 값으로 다루기</strong>: 클로저가 함수의 런타임 표현이다</li>
+<li><strong>간접 호출(Indirect call) 패턴</strong>: <code>llvm.call</code>로 함수 포인터를 호출한다</li>
+<li><strong>Apply 함수</strong>: 가장 단순한 고차 함수</li>
+<li><strong>Compose 함수</strong>: 여러 함수 인자를 다루기</li>
+<li><strong>함수를 반환하기</strong>: makeAdder 패턴, upward funarg problem</li>
+<li><strong>커링(Currying)</strong>: 다중 인자 함수를 중첩 클로저로 표현</li>
+<li><strong>메모리 관리</strong>: GC가 클로저 생명주기를 처리한다</li>
+<li><strong>Complete 예시</strong>: map 함수 (개념적, Phase 6에서 완전 구현)</li>
+</ol>
+<p><strong>Prerequisites:</strong></p>
+<ul>
+<li><strong>Chapter 12 (Closures)</strong>: 클로저 표현, 환경 구조, 자유 변수 분석</li>
+<li>Phase 3 함수 (이름 있는 함수, func.call)</li>
+<li>Phase 2 메모리 관리 (GC_malloc, 힙 할당)</li>
+</ul>
+<p>이 장은 <strong>클로저 + 고차 함수 = 함수형 프로그래밍 핵심</strong>을 완성한다.</p>
+<h2 id="함수를-일급-값으로-다루기"><a class="header" href="#함수를-일급-값으로-다루기">함수를 일급 값으로 다루기</a></h2>
+<h3 id="first-class-functions"><a class="header" href="#first-class-functions">First-Class Functions</a></h3>
+<p>**일급 값(first-class value)**이란:</p>
+<ol>
+<li>변수에 할당할 수 있다</li>
+<li>함수 인자로 전달할 수 있다</li>
+<li>함수 반환값으로 반환할 수 있다</li>
+<li>데이터 구조에 저장할 수 있다</li>
+</ol>
+<p>FunLang에서 <strong>함수는 일급 값이다</strong>:</p>
+<pre><code class="language-fsharp">// 1. 변수에 할당
+let f = fun x -&gt; x + 1
+
+// 2. 함수 인자로 전달
+let apply g x = g x
+let result = apply f 10   // 11
+
+// 3. 함수 반환값으로 반환
+let makeAdder n = fun x -&gt; x + n
+let add5 = makeAdder 5
+
+// 4. 데이터 구조에 저장 (Phase 6에서 리스트 구현 후)
+// let funcs = [inc; double; square]
+</code></pre>
+<p><strong>일급 함수의 런타임 표현:</strong></p>
+<p>Chapter 12에서 배운 <strong>클로저</strong>가 바로 함수의 런타임 표현이다:</p>
+<pre><code>Closure = (function_pointer, environment_pointer)
+</code></pre>
+<ul>
+<li><code>function_pointer</code>: 실행할 코드 (lifted function의 주소)</li>
+<li><code>environment_pointer</code>: 캡처된 변수들 (힙에 할당된 환경)</li>
+</ul>
+<p><strong>모든 함수가 클로저인가?</strong></p>
+<p>논리적으로는 YES. 실제로는 최적화로 구분된다:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>함수 종류</th><th>환경</th><th>표현</th><th>예시</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Top-level named</strong></td><td>비어있음</td><td>함수 포인터만</td><td><code>let add x y = x + y</code></td></tr>
+<tr><td><strong>Lambda (no capture)</strong></td><td>비어있음</td><td>함수 포인터만</td><td><code>fun x -&gt; x + 1</code></td></tr>
+<tr><td><strong>Lambda (capture)</strong></td><td>변수 캡처</td><td>클로저 (ptr, env)</td><td><code>fun x -&gt; x + n</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Uniform representation:</strong></p>
+<p>컴파일러 구현을 단순화하기 위해, <strong>모든 함수를 클로저로 표현</strong>할 수 있다:</p>
+<ul>
+<li>Top-level 함수: 환경이 null이거나 빈 환경</li>
+<li>캡처 없는 람다: 환경이 빈 환경</li>
+<li>캡처 있는 람다: 환경에 변수 저장</li>
+</ul>
+<p>이 장에서는 <strong>uniform representation</strong>을 사용한다. 모든 함수는 <code>(fn_ptr, env_ptr)</code> 쌍이다.</p>
+<h3 id="named-functions-vs-anonymous-lambdas"><a class="header" href="#named-functions-vs-anonymous-lambdas">Named Functions vs Anonymous Lambdas</a></h3>
+<p><strong>Named function (Phase 3 스타일):</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+</code></pre>
+<p>컴파일 결과:</p>
+<pre><code class="language-mlir">func.func @inc(%x: i32) -&gt; i32 {
+    %c1 = arith.constant 1 : i32
+    %result = arith.addi %x, %c1 : i32
+    func.return %result : i32
+}
+</code></pre>
+<ul>
+<li>MLIR 심볼 <code>@inc</code>로 직접 참조 가능</li>
+<li><code>func.call @inc(%arg)</code> 직접 호출</li>
+</ul>
+<p><strong>Anonymous lambda (Chapter 12 스타일):</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+</code></pre>
+<p>컴파일 결과:</p>
+<pre><code class="language-mlir">// Lifted function
+func.func @lambda_0(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    %c1 = arith.constant 1 : i32
+    %result = arith.addi %x, %c1 : i32
+    func.return %result : i32
+}
+
+// Closure 생성 (호출 지점에서)
+%c0 = arith.constant 0 : i64
+%env_size = arith.constant 8 : i64  // 환경 없음, fn_ptr만
+%env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.mlir.addressof @lambda_0 : !llvm.ptr
+llvm.store %fn_ptr, %env : !llvm.ptr, !llvm.ptr
+// %env가 클로저다
+</code></pre>
+<p><strong>Named function을 클로저로 wrapping:</strong></p>
+<p>Named function도 고차 함수에 전달하려면 클로저로 감싸야 한다:</p>
+<pre><code class="language-fsharp">let inc x = x + 1        // Named function
+let apply f x = f x      // HOF
+let result = apply inc 42   // inc를 클로저로 wrap
+</code></pre>
+<p>컴파일:</p>
+<pre><code class="language-mlir">// Named function (그대로)
+func.func @inc(%x: i32) -&gt; i32 { ... }
+
+// inc를 클로저로 wrap
+%env_size = arith.constant 8 : i64
+%env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.mlir.addressof @inc : !llvm.ptr
+llvm.store %fn_ptr, %env : !llvm.ptr, !llvm.ptr
+%closure_inc = %env : !llvm.ptr
+
+// apply에 전달
+%result = func.call @apply(%closure_inc, %c42) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>요약:</strong></p>
+<ul>
+<li><strong>Named function</strong>: MLIR 심볼로 정의, 직접 호출 가능</li>
+<li><strong>Anonymous lambda</strong>: 항상 클로저로 표현</li>
+<li><strong>Named function을 HOF에 전달</strong>: 클로저로 wrapping 필요</li>
+<li><strong>Uniform representation</strong>: 모두 <code>!llvm.ptr</code> (클로저 포인터)로 표현</li>
+</ul>
+<h2 id="클로저-호출-간접-호출-패턴"><a class="header" href="#클로저-호출-간접-호출-패턴">클로저 호출: 간접 호출 패턴</a></h2>
+<h3 id="direct-call-vs-indirect-call"><a class="header" href="#direct-call-vs-indirect-call">Direct Call vs Indirect Call</a></h3>
+<p><strong>Direct call (Phase 3):</strong></p>
+<pre><code class="language-mlir">%result = func.call @inc(%x) : (i32) -&gt; i32
+</code></pre>
+<ul>
+<li>호출 대상이 <strong>컴파일 타임에 결정</strong>됨 (<code>@inc</code> 심볼)</li>
+<li>최적화 가능 (인라이닝, 특수화)</li>
+</ul>
+<p><strong>Indirect call (Phase 4):</strong></p>
+<pre><code class="language-mlir">%fn_ptr = /* 클로저에서 추출 */
+%result = llvm.call %fn_ptr(%closure, %x) : !llvm.ptr, (i32) -&gt; i32
+</code></pre>
+<ul>
+<li>호출 대상이 <strong>런타임에 결정</strong>됨 (함수 포인터)</li>
+<li>최적화 어려움 (가상 함수처럼 동작)</li>
+</ul>
+<p><strong>왜 간접 호출이 필요한가?</strong></p>
+<p>고차 함수는 <strong>어떤 함수가 전달될지 컴파일 타임에 모른다</strong>:</p>
+<pre><code class="language-fsharp">let apply f x = f x   // f는 런타임에 결정된다
+
+apply inc 10      // f = inc
+apply double 10   // f = double
+</code></pre>
+<p>컴파일러는 <code>f</code>가 무엇인지 모르므로, <strong>간접 호출</strong>을 생성해야 한다.</p>
+<h3 id="간접-호출-패턴-indirect-call-pattern"><a class="header" href="#간접-호출-패턴-indirect-call-pattern">간접 호출 패턴 (Indirect Call Pattern)</a></h3>
+<p>클로저를 호출하는 3단계:</p>
+<p><strong>1. 함수 포인터 추출:</strong></p>
+<p>환경의 slot 0에서 함수 포인터를 로드한다:</p>
+<pre><code class="language-mlir">// %closure: !llvm.ptr (클로저 포인터)
+%c0 = arith.constant 0 : i64
+%fn_ptr_addr = llvm.getelementptr %closure[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+</code></pre>
+<p><strong>2. 인자 준비:</strong></p>
+<ul>
+<li><strong>첫 번째 인자</strong>: 클로저 자신 (환경 포인터)</li>
+<li><strong>나머지 인자</strong>: 원래 함수 파라미터</li>
+</ul>
+<pre><code class="language-mlir">%env = %closure : !llvm.ptr   // 클로저 = 환경
+%arg1 = %x : i32               // 실제 인자
+</code></pre>
+<p><strong>3. 간접 호출:</strong></p>
+<p>함수 포인터를 통해 호출한다:</p>
+<pre><code class="language-mlir">%result = llvm.call %fn_ptr(%env, %arg1) : !llvm.ptr, (i32) -&gt; i32
+</code></pre>
+<p><strong>완전한 예시:</strong></p>
+<pre><code class="language-mlir">// 클로저 %closure를 호출: closure(42)
+%c0 = arith.constant 0 : i64
+%c42 = arith.constant 42 : i32
+
+// Step 1: 함수 포인터 추출
+%fn_ptr_addr = llvm.getelementptr %closure[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+
+// Step 2: 인자 준비
+%env = %closure : !llvm.ptr
+
+// Step 3: 간접 호출
+%result = llvm.call %fn_ptr(%env, %c42) : !llvm.ptr, (i32) -&gt; i32
+</code></pre>
+<h3 id="f-helper-callclosure"><a class="header" href="#f-helper-callclosure">F# Helper: CallClosure</a></h3>
+<p>반복되는 패턴을 헬퍼 함수로 추출한다:</p>
+<pre><code class="language-fsharp">type OpBuilder with
+    /// 클로저를 간접 호출한다
+    /// closure: !llvm.ptr (클로저 포인터)
+    /// args: 함수 인자들 (환경 제외)
+    /// Returns: 함수 호출 결과
+    member this.CallClosure(closure: MlirValue, args: MlirValue list, resultType: MlirType) : MlirValue =
+        // 1. 함수 포인터 추출
+        let c0 = this.ConstantInt(0L, 64)
+        let fnPtrAddr = this.CreateGEP(closure, [c0])
+        let fnPtr = this.CreateLoad(this.PtrType(), fnPtrAddr)
+
+        // 2. 인자 리스트 구성 (환경 + 원래 인자)
+        let allArgs = closure :: args
+
+        // 3. 간접 호출
+        this.CreateLLVMCall(fnPtr, allArgs, resultType)
+</code></pre>
+<p><strong>사용 예시:</strong></p>
+<pre><code class="language-fsharp">// compileExpr에서 클로저 호출
+| App(funcExpr, argExpr) -&gt;
+    let funcVal = compileExpr builder env funcExpr
+    let argVal = compileExpr builder env argExpr
+
+    // funcVal은 클로저 (!llvm.ptr)
+    // argVal은 인자 (i32)
+    builder.CallClosure(funcVal, [argVal], builder.IntType(32))
+</code></pre>
+<p><strong>간접 호출의 비용:</strong></p>
+<ul>
+<li><strong>성능</strong>: 직접 호출보다 느리다 (포인터 로드, 인라이닝 불가)</li>
+<li><strong>유연성</strong>: 런타임에 함수 선택 가능 (고차 함수의 핵심)</li>
+</ul>
+<p><strong>최적화 가능성:</strong></p>
+<ul>
+<li><strong>인라이닝</strong>: 클로저가 상수라면 특수화 가능</li>
+<li><strong>Devirtualization</strong>: 타입 분석으로 호출 대상 추론</li>
+<li>Phase 4는 최적화 없이 단순 구현만 한다</li>
+</ul>
+<h2 id="apply-함수"><a class="header" href="#apply-함수">Apply 함수</a></h2>
+<h3 id="apply의-의미"><a class="header" href="#apply의-의미">Apply의 의미</a></h3>
+<p><strong>Apply 함수</strong>는 가장 단순한 고차 함수다:</p>
+<pre><code class="language-fsharp">let apply f x = f x
+</code></pre>
+<ul>
+<li>타입: <code>(a -&gt; b) -&gt; a -&gt; b</code></li>
+<li>의미: 함수 <code>f</code>를 인자 <code>x</code>에 적용한다</li>
+</ul>
+<p><strong>왜 apply가 유용한가?</strong></p>
+<p>일견 쓸모없어 보인다 (<code>f x</code>와 <code>apply f x</code>는 같다). 하지만:</p>
+<ol>
+<li><strong>HOF 테스트</strong>: 가장 단순한 고차 함수로 컴파일러 검증</li>
+<li><strong>파이프라인</strong>: <code>x |&gt; apply f</code> 스타일 (Phase 7 파이프 연산자)</li>
+<li><strong>교육적</strong>: 간접 호출 패턴을 명확히 보여줌</li>
+</ol>
+<p><strong>Apply 예시:</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+let double x = x * 2
+
+let result1 = apply inc 42      // 43
+let result2 = apply double 10   // 20
+</code></pre>
+<h3 id="apply-컴파일-f-구현"><a class="header" href="#apply-컴파일-f-구현">Apply 컴파일: F# 구현</a></h3>
+<p><strong>AST 표현:</strong></p>
+<pre><code class="language-fsharp">// apply f x = f x
+Let("apply",
+    Lambda("f",
+        Lambda("x",
+            App(Var "f", Var "x"))),
+    ...)
+</code></pre>
+<p><strong>컴파일 단계:</strong></p>
+<ol>
+<li><strong>외부 람다</strong>: <code>fun f -&gt; ...</code> (f를 캡처)</li>
+<li><strong>내부 람다</strong>: <code>fun x -&gt; f x</code> (f 사용)</li>
+<li><strong>App</strong>: <code>f x</code> (간접 호출)</li>
+</ol>
+<p><strong>F# 컴파일 함수:</strong></p>
+<pre><code class="language-fsharp">let rec compileExpr (builder: OpBuilder) (env: Map&lt;string, MlirValue&gt;) (expr: Expr) : MlirValue =
+    match expr with
+    // ... (기존 케이스들)
+
+    | App(funcExpr, argExpr) -&gt;
+        // funcExpr를 평가 -&gt; 클로저
+        let closureVal = compileExpr builder env funcExpr
+
+        // argExpr를 평가 -&gt; 인자
+        let argVal = compileExpr builder env argExpr
+
+        // 클로저 간접 호출
+        builder.CallClosure(closureVal, [argVal], builder.IntType(32))
+</code></pre>
+<p><strong>Apply 전체 컴파일:</strong></p>
+<pre><code class="language-fsharp">// let apply f x = f x
+let compileApply (builder: OpBuilder) : MlirValue =
+    // Lifted inner function: fun(env, x) -&gt; env[1](x)
+    //   env[0] = fn_ptr (inner)
+    //   env[1] = f (captured)
+    let innerFunc = builder.CreateFunction("apply_inner",
+        [builder.PtrType(); builder.IntType(32)],
+        builder.IntType(32))
+
+    // Inner function body
+    builder.WithInsertionPoint(innerFunc, fun () -&gt;
+        let env = innerFunc.GetArgument(0)
+        let x = innerFunc.GetArgument(1)
+
+        // Load captured f from env[1]
+        let c1 = builder.ConstantInt(1L, 64)
+        let fAddr = builder.CreateGEP(env, [c1])
+        let f = builder.CreateLoad(builder.PtrType(), fAddr)
+
+        // Call f(x) indirectly
+        let result = builder.CallClosure(f, [x], builder.IntType(32))
+        builder.CreateReturn(result)
+    )
+
+    // Lifted outer function: fun(env_outer, f) -&gt; closure(inner, [f])
+    let outerFunc = builder.CreateFunction("apply_outer",
+        [builder.PtrType(); builder.PtrType()],
+        builder.PtrType())
+
+    // Outer function body
+    builder.WithInsertionPoint(outerFunc, fun () -&gt;
+        let envOuter = outerFunc.GetArgument(0)
+        let f = outerFunc.GetArgument(1)
+
+        // Allocate environment for inner closure
+        let envSize = builder.ConstantInt(16L, 64)  // 2 slots
+        let envInner = builder.CreateGCMalloc(envSize)
+
+        // env[0] = fn_ptr(inner)
+        let c0 = builder.ConstantInt(0L, 64)
+        let fnPtrInner = builder.CreateAddressOf(innerFunc)
+        let slot0 = builder.CreateGEP(envInner, [c0])
+        builder.CreateStore(fnPtrInner, slot0)
+
+        // env[1] = f (captured)
+        let c1 = builder.ConstantInt(1L, 64)
+        let slot1 = builder.CreateGEP(envInner, [c1])
+        builder.CreateStore(f, slot1)
+
+        // Return closure
+        builder.CreateReturn(envInner)
+    )
+
+    // Return outer closure (no captures, empty env)
+    let envOuter = builder.CreateEmptyClosure(outerFunc)
+    envOuter
+</code></pre>
+<h3 id="apply-mlir-ir"><a class="header" href="#apply-mlir-ir">Apply MLIR IR</a></h3>
+<p><strong>예상 MLIR 출력:</strong></p>
+<pre><code class="language-mlir">// Inner lifted function
+func.func @apply_inner(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // Load captured f from env[1]
+    %c1 = arith.constant 1 : i64
+    %f_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %f = llvm.load %f_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Extract f's function pointer
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_addr = llvm.getelementptr %f[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Call f(x) - indirect call
+    %result = llvm.call %fn_ptr(%f, %x) : (!llvm.ptr, i32) -&gt; i32
+    func.return %result : i32
+}
+
+// Outer lifted function
+func.func @apply_outer(%env_outer: !llvm.ptr, %f: !llvm.ptr) -&gt; !llvm.ptr {
+    // Allocate environment for inner closure (2 slots)
+    %env_size = arith.constant 16 : i64
+    %env_inner = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr(inner)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_inner = llvm.mlir.addressof @apply_inner : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_inner[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_inner, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = f (captured)
+    %c1 = arith.constant 1 : i64
+    %slot1 = llvm.getelementptr %env_inner[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %f, %slot1 : !llvm.ptr, !llvm.ptr
+
+    // Return inner closure
+    func.return %env_inner : !llvm.ptr
+}
+</code></pre>
+<p><strong>사용 예시 MLIR:</strong></p>
+<pre><code class="language-mlir">// let inc x = x + 1
+func.func @inc(%x: i32) -&gt; i32 {
+    %c1 = arith.constant 1 : i32
+    %result = arith.addi %x, %c1 : i32
+    func.return %result : i32
+}
+
+// let result = apply inc 42
+func.func @main() -&gt; i32 {
+    // Wrap inc as closure
+    %c8 = arith.constant 8 : i64
+    %env_inc = llvm.call @GC_malloc(%c8) : (i64) -&gt; !llvm.ptr
+    %fn_ptr_inc = llvm.mlir.addressof @inc : !llvm.ptr
+    %c0 = arith.constant 0 : i64
+    %slot0 = llvm.getelementptr %env_inc[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_inc, %slot0 : !llvm.ptr, !llvm.ptr
+    %closure_inc = %env_inc : !llvm.ptr
+
+    // Create apply closure
+    %env_apply_outer = llvm.call @GC_malloc(%c8) : (i64) -&gt; !llvm.ptr
+    %fn_ptr_apply = llvm.mlir.addressof @apply_outer : !llvm.ptr
+    %slot0_apply = llvm.getelementptr %env_apply_outer[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_apply, %slot0_apply : !llvm.ptr, !llvm.ptr
+    %closure_apply = %env_apply_outer : !llvm.ptr
+
+    // Call apply(inc)
+    %fn_ptr_apply_outer = llvm.load %slot0_apply : !llvm.ptr -&gt; !llvm.ptr
+    %closure_partial = llvm.call %fn_ptr_apply_outer(%closure_apply, %closure_inc)
+        : (!llvm.ptr, !llvm.ptr) -&gt; !llvm.ptr
+
+    // Call (apply inc)(42)
+    %c42 = arith.constant 42 : i32
+    %fn_ptr_partial = llvm.getelementptr %closure_partial[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %fn_ptr = llvm.load %fn_ptr_partial : !llvm.ptr -&gt; !llvm.ptr
+    %result = llvm.call %fn_ptr(%closure_partial, %c42) : (!llvm.ptr, i32) -&gt; i32
+
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>테스트:</strong></p>
+<pre><code class="language-bash">$ ./funlang apply_test.fun
+43
+</code></pre>
+<h2 id="여러-함수-인자-받기"><a class="header" href="#여러-함수-인자-받기">여러 함수 인자 받기</a></h2>
+<h3 id="compose-함수"><a class="header" href="#compose-함수">Compose 함수</a></h3>
+<p><strong>Compose</strong>는 두 함수를 합성한다:</p>
+<pre><code class="language-fsharp">let compose f g x = f (g x)
+</code></pre>
+<ul>
+<li>타입: <code>(b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c</code></li>
+<li>의미: <code>g</code>를 먼저 적용하고, 그 결과에 <code>f</code>를 적용한다</li>
+</ul>
+<p><strong>Compose 예시:</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+let double x = x * 2
+
+let incThenDouble = compose double inc
+let result = incThenDouble 5   // double(inc(5)) = double(6) = 12
+</code></pre>
+<p><strong>왜 compose가 유용한가?</strong></p>
+<ol>
+<li><strong>함수 조합</strong>: 작은 함수를 연결해 복잡한 동작 만들기</li>
+<li><strong>파이프라인</strong>: <code>f &lt;&lt; g &lt;&lt; h</code> 스타일 (Phase 7)</li>
+<li><strong>포인트-프리 스타일</strong>: <code>let process = compose validate transform</code></li>
+</ol>
+<h3 id="compose-컴파일"><a class="header" href="#compose-컴파일">Compose 컴파일</a></h3>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">// compose f g x = f (g x)
+Let("compose",
+    Lambda("f",
+        Lambda("g",
+            Lambda("x",
+                App(Var "f", App(Var "g", Var "x"))))),
+    ...)
+</code></pre>
+<p><strong>중첩 람다:</strong></p>
+<ul>
+<li>외부: <code>fun f -&gt; ...</code> (f 캡처)</li>
+<li>중간: <code>fun g -&gt; ...</code> (f, g 캡처)</li>
+<li>내부: <code>fun x -&gt; f (g x)</code> (f, g 사용)</li>
+</ul>
+<p><strong>Lifted functions:</strong></p>
+<ol>
+<li><strong>Innermost</strong>: <code>compose_inner(env, x)</code> - env에 f, g 저장</li>
+<li><strong>Middle</strong>: <code>compose_middle(env, g)</code> - env에 f 저장, g와 f로 inner closure 생성</li>
+<li><strong>Outermost</strong>: <code>compose_outer(env, f)</code> - f로 middle closure 생성</li>
+</ol>
+<p><strong>MLIR IR (간략):</strong></p>
+<pre><code class="language-mlir">// Innermost: fun x -&gt; f (g x)
+func.func @compose_inner(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // Load g from env[1]
+    %c1 = arith.constant 1 : i64
+    %g_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %g = llvm.load %g_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Call g(x)
+    %gx = /* CallClosure(g, x) */ : i32
+
+    // Load f from env[2]
+    %c2 = arith.constant 2 : i64
+    %f_addr = llvm.getelementptr %env[0, %c2] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %f = llvm.load %f_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Call f(g(x))
+    %result = /* CallClosure(f, gx) */ : i32
+    func.return %result : i32
+}
+
+// Middle: fun g -&gt; &lt;inner closure with f, g&gt;
+func.func @compose_middle(%env: !llvm.ptr, %g: !llvm.ptr) -&gt; !llvm.ptr {
+    // Load f from env[1]
+    %c1 = arith.constant 1 : i64
+    %f_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %f = llvm.load %f_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Allocate environment for inner (3 slots: fn_ptr, g, f)
+    %c24 = arith.constant 24 : i64
+    %env_inner = llvm.call @GC_malloc(%c24) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr(inner)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_inner = llvm.mlir.addressof @compose_inner : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_inner[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_inner, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = g
+    %slot1 = llvm.getelementptr %env_inner[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %g, %slot1 : !llvm.ptr, !llvm.ptr
+
+    // env[2] = f
+    %c2 = arith.constant 2 : i64
+    %slot2 = llvm.getelementptr %env_inner[0, %c2] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %f, %slot2 : !llvm.ptr, !llvm.ptr
+
+    func.return %env_inner : !llvm.ptr
+}
+
+// Outermost: fun f -&gt; &lt;middle closure with f&gt;
+func.func @compose_outer(%env: !llvm.ptr, %f: !llvm.ptr) -&gt; !llvm.ptr {
+    // Allocate environment for middle (2 slots: fn_ptr, f)
+    %c16 = arith.constant 16 : i64
+    %env_middle = llvm.call @GC_malloc(%c16) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr(middle)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_middle = llvm.mlir.addressof @compose_middle : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_middle[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_middle, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = f
+    %c1 = arith.constant 1 : i64
+    %slot1 = llvm.getelementptr %env_middle[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %f, %slot1 : !llvm.ptr, !llvm.ptr
+
+    func.return %env_middle : !llvm.ptr
+}
+</code></pre>
+<h3 id="여러-클로저-호출-체이닝"><a class="header" href="#여러-클로저-호출-체이닝">여러 클로저 호출 체이닝</a></h3>
+<p><strong>Compose 사용:</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+let double x = x * 2
+let incThenDouble = compose double inc
+let result = incThenDouble 5
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li><code>compose double inc</code> → 중간 클로저 반환 (middle closure with f=double, g=inc)</li>
+<li><code>(compose double inc) 5</code> → 내부 클로저 호출 (inner with f, g, x=5)</li>
+<li>내부에서 <code>g(5)</code> → 6</li>
+<li>내부에서 <code>f(6)</code> → 12</li>
+</ol>
+<p><strong>MLIR 호출 체인:</strong></p>
+<pre><code class="language-mlir">// 1. Wrap double as closure
+%closure_double = /* ... */
+
+// 2. Wrap inc as closure
+%closure_inc = /* ... */
+
+// 3. Create compose closure
+%closure_compose = /* compose_outer의 empty closure */
+
+// 4. Call compose(double)
+%closure_partial1 = llvm.call %fn_ptr_compose(%closure_compose, %closure_double)
+    : (!llvm.ptr, !llvm.ptr) -&gt; !llvm.ptr
+
+// 5. Call (compose double)(inc)
+%closure_partial2 = llvm.call %fn_ptr_partial1(%closure_partial1, %closure_inc)
+    : (!llvm.ptr, !llvm.ptr) -&gt; !llvm.ptr
+
+// 6. Call (compose double inc)(5)
+%c5 = arith.constant 5 : i32
+%result = llvm.call %fn_ptr_partial2(%closure_partial2, %c5)
+    : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>간접 호출의 연쇄:</strong></p>
+<ul>
+<li><code>compose</code> 호출 → 클로저 반환</li>
+<li><code>(compose double)</code> 호출 → 클로저 반환</li>
+<li><code>(compose double inc)</code> 호출 → 클로저 반환</li>
+<li><code>(compose double inc 5)</code> 호출 → 값 반환 (12)</li>
+</ul>
+<p>모든 중간 단계가 <strong>간접 호출</strong>을 사용한다.</p>
+<h2 id="함수를-반환하기"><a class="header" href="#함수를-반환하기">함수를 반환하기</a></h2>
+<h3 id="upward-funarg-problem"><a class="header" href="#upward-funarg-problem">Upward Funarg Problem</a></h3>
+<p><strong>함수를 반환하는 함수</strong>는 특별한 문제를 야기한다:</p>
+<pre><code class="language-fsharp">let makeAdder n =
+    fun x -&gt; x + n   // 이 클로저가 함수를 벗어나 반환된다
+</code></pre>
+<ul>
+<li><code>makeAdder</code>가 호출되면, 내부 람다 <code>fun x -&gt; x + n</code>이 생성된다</li>
+<li>이 람다는 <code>n</code>을 <strong>캡처</strong>한다</li>
+<li>람다가 <strong>makeAdder를 벗어나</strong> 반환된다</li>
+<li>반환된 후에도 <code>n</code>에 접근할 수 있어야 한다!</li>
+</ul>
+<p><strong>Upward funarg problem:</strong></p>
+<blockquote>
+<p>함수가 생성된 스코프를 벗어나 반환될 때, 캡처된 변수들이 어떻게 유지되는가?</p>
+</blockquote>
+<p><strong>잘못된 해결책: 스택 할당</strong></p>
+<pre><code class="language-c">// 안 되는 C 코드
+typedef int (*func_ptr)(int);
+
+func_ptr makeAdder(int n) {
+    int captured_n = n;   // 스택 변수
+    return &amp;inner_func;    // inner_func이 captured_n을 참조
+}   // 여기서 captured_n이 소멸! Dangling pointer!
+</code></pre>
+<p>함수가 반환되면 스택 프레임이 소멸되므로, <code>captured_n</code>에 접근하면 <strong>undefined behavior</strong>다.</p>
+<p><strong>올바른 해결책: 힙 할당</strong></p>
+<p>환경을 **힙(heap)**에 할당하면, 함수가 반환되어도 환경이 유지된다:</p>
+<pre><code class="language-mlir">func.func @makeAdder(%n: i32) -&gt; !llvm.ptr {
+    // Allocate environment on heap (NOT stack!)
+    %env_size = arith.constant 16 : i64
+    %env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr
+    %fn_ptr = llvm.mlir.addressof @makeAdder_inner : !llvm.ptr
+    // ... store fn_ptr ...
+
+    // env[1] = n (captured)
+    // ... store n ...
+
+    func.return %env : !llvm.ptr   // 환경이 함수를 벗어나 반환
+}
+</code></pre>
+<p><strong>GC의 역할:</strong></p>
+<ul>
+<li>힙에 할당된 환경은 <strong>GC가 관리</strong>한다</li>
+<li>클로저가 살아있는 동안 환경도 유지된다</li>
+<li>클로저가 더 이상 사용되지 않으면 환경도 해제된다</li>
+</ul>
+<p><strong>Chapter 12 설계의 정당성:</strong></p>
+<p>Chapter 12에서 <strong>모든 클로저를 힙에 할당</strong>한 이유가 바로 이것이다. 클로저가 생성 스코프를 벗어날 수 있으므로, 항상 힙에 할당해야 안전하다.</p>
+<h3 id="makeadder-구현"><a class="header" href="#makeadder-구현">MakeAdder 구현</a></h3>
+<p><strong>MakeAdder 함수:</strong></p>
+<pre><code class="language-fsharp">let makeAdder n =
+    fun x -&gt; x + n
+</code></pre>
+<ul>
+<li>타입: <code>int -&gt; (int -&gt; int)</code></li>
+<li>의미: <code>n</code>을 받아서, “n을 더하는 함수“를 반환한다</li>
+</ul>
+<p><strong>사용 예시:</strong></p>
+<pre><code class="language-fsharp">let add5 = makeAdder 5
+let result1 = add5 10   // 15
+
+let add10 = makeAdder 10
+let result2 = add10 20  // 30
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("makeAdder",
+    Lambda("n",
+        Lambda("x",
+            Add(Var "x", Var "n"))),
+    ...)
+</code></pre>
+<p><strong>Closure conversion:</strong></p>
+<ol>
+<li><strong>내부 람다</strong>: <code>fun x -&gt; x + n</code> (n 캡처)
+<ul>
+<li>Lifted: <code>makeAdder_inner(env, x) = x + env[1]</code></li>
+</ul>
+</li>
+<li><strong>외부 람다</strong>: <code>fun n -&gt; &lt;inner closure&gt;</code>
+<ul>
+<li>Lifted: <code>makeAdder_outer(env, n) = create_closure(makeAdder_inner, [n])</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>F# 컴파일 (간략):</strong></p>
+<pre><code class="language-fsharp">let compileMakeAdder (builder: OpBuilder) : unit =
+    // Inner function: fun x -&gt; x + n
+    let innerFunc = builder.CreateFunction("makeAdder_inner",
+        [builder.PtrType(); builder.IntType(32)],
+        builder.IntType(32))
+
+    builder.WithInsertionPoint(innerFunc, fun () -&gt;
+        let env = innerFunc.GetArgument(0)
+        let x = innerFunc.GetArgument(1)
+
+        // Load n from env[1]
+        let c1 = builder.ConstantInt(1L, 64)
+        let nAddr = builder.CreateGEP(env, [c1])
+        let n = builder.CreateLoad(builder.IntType(32), nAddr)
+
+        // Compute x + n
+        let result = builder.CreateAdd(x, n)
+        builder.CreateReturn(result)
+    )
+
+    // Outer function: fun n -&gt; &lt;inner closure&gt;
+    let outerFunc = builder.CreateFunction("makeAdder_outer",
+        [builder.PtrType(); builder.IntType(32)],
+        builder.PtrType())
+
+    builder.WithInsertionPoint(outerFunc, fun () -&gt;
+        let envOuter = outerFunc.GetArgument(0)
+        let n = outerFunc.GetArgument(1)
+
+        // Allocate environment for inner closure (2 slots)
+        let envSize = builder.ConstantInt(16L, 64)
+        let envInner = builder.CreateGCMalloc(envSize)
+
+        // env[0] = fn_ptr(inner)
+        let c0 = builder.ConstantInt(0L, 64)
+        let fnPtrInner = builder.CreateAddressOf(innerFunc)
+        let slot0 = builder.CreateGEP(envInner, [c0])
+        builder.CreateStore(fnPtrInner, slot0)
+
+        // env[1] = n (captured)
+        let c1 = builder.ConstantInt(1L, 64)
+        let slot1 = builder.CreateGEP(envInner, [c1])
+        builder.CreateStore(n, slot1)
+
+        // Return inner closure (escapes function!)
+        builder.CreateReturn(envInner)
+    )
+</code></pre>
+<p><strong>완전한 MLIR IR:</strong></p>
+<pre><code class="language-mlir">// Inner function
+func.func @makeAdder_inner(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // Load n from env[1]
+    %c1 = arith.constant 1 : i64
+    %n_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %n = llvm.load %n_addr : !llvm.ptr -&gt; i32
+
+    // x + n
+    %result = arith.addi %x, %n : i32
+    func.return %result : i32
+}
+
+// Outer function
+func.func @makeAdder_outer(%env_outer: !llvm.ptr, %n: i32) -&gt; !llvm.ptr {
+    // Allocate environment for inner closure
+    %c16 = arith.constant 16 : i64
+    %env_inner = llvm.call @GC_malloc(%c16) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr(inner)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_inner = llvm.mlir.addressof @makeAdder_inner : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_inner[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_inner, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = n
+    %c1 = arith.constant 1 : i64
+    %slot1 = llvm.getelementptr %env_inner[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %n, %slot1 : !llvm.ptr, !llvm.ptr
+
+    // Return closure (environment escapes!)
+    func.return %env_inner : !llvm.ptr
+}
+</code></pre>
+<p><strong>테스트 코드:</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+    // Create makeAdder closure (empty env)
+    %c8 = arith.constant 8 : i64
+    %env_makeAdder = llvm.call @GC_malloc(%c8) : (i64) -&gt; !llvm.ptr
+    %fn_ptr_makeAdder = llvm.mlir.addressof @makeAdder_outer : !llvm.ptr
+    %c0 = arith.constant 0 : i64
+    %slot0 = llvm.getelementptr %env_makeAdder[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_makeAdder, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // Call makeAdder(5)
+    %c5 = arith.constant 5 : i32
+    %fn_ptr = llvm.load %slot0 : !llvm.ptr -&gt; !llvm.ptr
+    %add5 = llvm.call %fn_ptr(%env_makeAdder, %c5) : (!llvm.ptr, i32) -&gt; !llvm.ptr
+    // %add5 is a closure (inner function with n=5)
+
+    // Call add5(10)
+    %c10 = arith.constant 10 : i32
+    %fn_ptr_inner = llvm.getelementptr %add5[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %fn_ptr_loaded = llvm.load %fn_ptr_inner : !llvm.ptr -&gt; !llvm.ptr
+    %result = llvm.call %fn_ptr_loaded(%add5, %c10) : (!llvm.ptr, i32) -&gt; i32
+    // %result = 15
+
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./funlang makeAdder_test.fun
+15
+</code></pre>
+<h3 id="반환된-클로저의-생명주기"><a class="header" href="#반환된-클로저의-생명주기">반환된 클로저의 생명주기</a></h3>
+<p><strong>환경은 언제 해제되는가?</strong></p>
+<pre><code class="language-fsharp">let add5 = makeAdder 5
+// add5가 살아있는 동안, makeAdder의 환경도 유지된다
+let result = add5 10   // OK
+// add5가 스코프를 벗어나면, 환경도 GC에 의해 해제된다
+</code></pre>
+<p><strong>GC의 추적:</strong></p>
+<ul>
+<li><code>add5</code> (클로저 포인터)가 살아있으면 → 환경 유지</li>
+<li><code>add5</code>가 더 이상 참조되지 않으면 → GC가 환경 수거</li>
+</ul>
+<p><strong>여러 클로저가 같은 환경을 공유하지 않는다:</strong></p>
+<pre><code class="language-fsharp">let add5 = makeAdder 5
+let add10 = makeAdder 10
+</code></pre>
+<ul>
+<li><code>add5</code>와 <code>add10</code>은 <strong>서로 다른 환경</strong>을 가진다</li>
+<li>각 <code>makeAdder</code> 호출이 새로운 환경을 힙에 할당한다</li>
+</ul>
+<p><strong>메모리 누수 없음:</strong></p>
+<p>GC가 자동으로 관리하므로, 프로그래머가 <code>free</code>를 호출할 필요 없다.</p>
+<h2 id="커링-패턴"><a class="header" href="#커링-패턴">커링 패턴</a></h2>
+<h3 id="다중-인자-함수를-클로저-체인으로-표현"><a class="header" href="#다중-인자-함수를-클로저-체인으로-표현">다중 인자 함수를 클로저 체인으로 표현</a></h3>
+<p>**커링(Currying)**은 다중 인자 함수를 <strong>중첩된 단일 인자 함수로 변환</strong>하는 것이다:</p>
+<pre><code class="language-fsharp">// 다중 인자 함수 (Phase 3 스타일)
+let add x y = x + y
+
+// 커리된 함수 (Phase 4 스타일)
+let add = fun x -&gt; fun y -&gt; x + y
+</code></pre>
+<ul>
+<li><code>add</code>의 타입: <code>int -&gt; (int -&gt; int)</code></li>
+<li><code>add</code>는 함수를 반환하는 함수다</li>
+</ul>
+<p><strong>커링의 장점:</strong></p>
+<ol>
+<li><strong>부분 적용(Partial application)</strong>: <code>let add5 = add 5</code></li>
+<li><strong>합성 용이</strong>: 커리된 함수는 파이프라인에 쉽게 통합됨</li>
+<li><strong>일관된 타입 시스템</strong>: 모든 함수가 단일 인자</li>
+</ol>
+<p><strong>커링 예시:</strong></p>
+<pre><code class="language-fsharp">let add x y = x + y     // 실제로는 fun x -&gt; fun y -&gt; x + y
+
+let add5 = add 5        // 부분 적용
+let result = add5 10    // 15
+</code></pre>
+<h3 id="커리된-함수의-컴파일"><a class="header" href="#커리된-함수의-컴파일">커리된 함수의 컴파일</a></h3>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("add",
+    Lambda("x",
+        Lambda("y",
+            Add(Var "x", Var "y"))),
+    ...)
+</code></pre>
+<p><strong>Closure conversion:</strong></p>
+<ol>
+<li><strong>내부 람다</strong>: <code>fun y -&gt; x + y</code> (x 캡처)
+<ul>
+<li>Lifted: <code>add_inner(env, y) = env[1] + y</code></li>
+</ul>
+</li>
+<li><strong>외부 람다</strong>: <code>fun x -&gt; &lt;inner closure&gt;</code>
+<ul>
+<li>Lifted: <code>add_outer(env, x) = create_closure(add_inner, [x])</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>MLIR IR:</strong></p>
+<pre><code class="language-mlir">// Inner: fun y -&gt; x + y
+func.func @add_inner(%env: !llvm.ptr, %y: i32) -&gt; i32 {
+    // Load x from env[1]
+    %c1 = arith.constant 1 : i64
+    %x_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %x = llvm.load %x_addr : !llvm.ptr -&gt; i32
+
+    // x + y
+    %result = arith.addi %x, %y : i32
+    func.return %result : i32
+}
+
+// Outer: fun x -&gt; &lt;inner closure&gt;
+func.func @add_outer(%env_outer: !llvm.ptr, %x: i32) -&gt; !llvm.ptr {
+    // Allocate environment for inner
+    %c16 = arith.constant 16 : i64
+    %env_inner = llvm.call @GC_malloc(%c16) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr
+    %c0 = arith.constant 0 : i64
+    %fn_ptr = llvm.mlir.addressof @add_inner : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_inner[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = x
+    %c1 = arith.constant 1 : i64
+    %slot1 = llvm.getelementptr %env_inner[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %x, %slot1 : !llvm.ptr, !llvm.ptr
+
+    func.return %env_inner : !llvm.ptr
+}
+</code></pre>
+<p><strong>부분 적용:</strong></p>
+<pre><code class="language-fsharp">let add5 = add 5
+</code></pre>
+<pre><code class="language-mlir">// Call add(5) -&gt; returns closure with x=5
+%c5 = arith.constant 5 : i32
+%closure_add = /* ... */
+%fn_ptr_add = /* load from closure_add[0] */
+%add5 = llvm.call %fn_ptr_add(%closure_add, %c5) : (!llvm.ptr, i32) -&gt; !llvm.ptr
+// %add5 is inner closure with x=5 captured
+</code></pre>
+<p><strong>완전 적용:</strong></p>
+<pre><code class="language-fsharp">let result = add5 10
+</code></pre>
+<pre><code class="language-mlir">// Call add5(10)
+%c10 = arith.constant 10 : i32
+%fn_ptr_inner = /* load from %add5[0] */
+%result = llvm.call %fn_ptr_inner(%add5, %c10) : (!llvm.ptr, i32) -&gt; i32
+// %result = 15
+</code></pre>
+<p><strong>커링과 makeAdder의 유사성:</strong></p>
+<ul>
+<li><code>makeAdder</code>는 명시적 함수 반환</li>
+<li>커링은 암묵적 함수 반환 (다중 인자를 중첩 람다로 변환)</li>
+<li>둘 다 <strong>upward funarg problem</strong> 해결 필요 (힙 할당)</li>
+</ul>
+<h3 id="3개-이상의-인자"><a class="header" href="#3개-이상의-인자">3개 이상의 인자</a></h3>
+<pre><code class="language-fsharp">let add3 x y z = x + y + z
+// = fun x -&gt; fun y -&gt; fun z -&gt; x + y + z
+</code></pre>
+<p><strong>중첩 구조:</strong></p>
+<ul>
+<li>외부: <code>fun x -&gt; ...</code> (비어있음)</li>
+<li>중간: <code>fun y -&gt; ...</code> (x 캡처)</li>
+<li>내부: <code>fun z -&gt; x + y + z</code> (x, y 캡처)</li>
+</ul>
+<p><strong>MLIR에서 3단계 중첩:</strong></p>
+<p>각 단계가 새로운 클로저를 생성하고, 이전 환경을 캡처한다. 복잡하지만 패턴은 동일하다.</p>
+<h2 id="메모리-관리와-클로저"><a class="header" href="#메모리-관리와-클로저">메모리 관리와 클로저</a></h2>
+<h3 id="gc가-클로저-생명주기를-관리한다"><a class="header" href="#gc가-클로저-생명주기를-관리한다">GC가 클로저 생명주기를 관리한다</a></h3>
+<p><strong>핵심 원칙:</strong></p>
+<ul>
+<li>모든 클로저 환경은 <strong>힙에 할당</strong>된다 (<code>GC_malloc</code>)</li>
+<li><strong>GC가 자동으로 추적</strong>하여, 사용되지 않으면 해제한다</li>
+<li>프로그래머는 메모리 관리를 신경 쓸 필요 없다</li>
+</ul>
+<p><strong>생명주기 예시:</strong></p>
+<pre><code class="language-fsharp">let createAdders () =
+    let add5 = makeAdder 5
+    let add10 = makeAdder 10
+    add5    // add5만 반환, add10은 버려진다
+
+let adder = createAdders()
+let result = adder 20   // 25
+</code></pre>
+<p><strong>메모리 추적:</strong></p>
+<ol>
+<li><code>makeAdder 5</code> 호출 → 환경1 할당 (n=5)</li>
+<li><code>makeAdder 10</code> 호출 → 환경2 할당 (n=10)</li>
+<li><code>add5</code> 반환 → 환경1은 유지</li>
+<li><code>add10</code>은 스코프 벗어남 → 환경2는 GC 수거 대상</li>
+<li><code>adder</code> 사용 → 환경1 유지</li>
+<li><code>adder</code> 스코프 벗어남 → 환경1도 GC 수거</li>
+</ol>
+<p><strong>Dangling pointer 없음:</strong></p>
+<p>C/C++에서는 스택 포인터 반환이 위험하지만, GC 덕분에 FunLang은 안전하다:</p>
+<pre><code class="language-fsharp">let unsafeInC () =
+    let local = 42
+    fun () -&gt; local   // C에서는 dangling pointer, FunLang에서는 OK
+</code></pre>
+<p>FunLang 컴파일러는 <code>local</code>을 환경에 캡처하고 힙에 할당하므로 안전하다.</p>
+<h3 id="순환-참조와-gc"><a class="header" href="#순환-참조와-gc">순환 참조와 GC</a></h3>
+<p><strong>Cyclic closures (순환 클로저):</strong></p>
+<pre><code class="language-fsharp">let rec isEven n =
+    if n = 0 then true
+    else isOdd (n - 1)
+and isOdd n =
+    if n = 0 then false
+    else isEven (n - 1)
+</code></pre>
+<ul>
+<li><code>isEven</code> 클로저가 <code>isOdd</code>를 캡처</li>
+<li><code>isOdd</code> 클로저가 <code>isEven</code>을 캡처</li>
+<li><strong>순환 참조!</strong></li>
+</ul>
+<p><strong>GC의 처리:</strong></p>
+<p>Boehm GC는 <strong>tracing GC</strong>이므로, 순환 참조를 정확히 감지하고 해제한다:</p>
+<ul>
+<li>루트(스택, 전역)에서 도달 가능한 객체만 유지</li>
+<li>순환 참조가 루트에서 도달 불가능하면 → 수거</li>
+</ul>
+<p><strong>Reference counting과의 차이:</strong></p>
+<ul>
+<li><strong>Reference counting</strong>: 순환 참조를 해제하지 못함 (메모리 누수)</li>
+<li><strong>Tracing GC</strong>: 순환 참조도 정확히 처리</li>
+</ul>
+<p>Phase 2에서 Boehm GC를 선택한 이유가 이것이다.</p>
+<h3 id="클로저-생성-비용"><a class="header" href="#클로저-생성-비용">클로저 생성 비용</a></h3>
+<p><strong>힙 할당 비용:</strong></p>
+<ul>
+<li>클로저 생성 = <code>GC_malloc</code> 호출</li>
+<li>스택 할당보다 느리지만, 안전성 보장</li>
+</ul>
+<p><strong>최적화 가능성 (Phase 7):</strong></p>
+<ul>
+<li><strong>Escape analysis</strong>: 클로저가 함수를 벗어나지 않으면 스택 할당 가능</li>
+<li><strong>Closure inlining</strong>: 클로저가 즉시 호출되면 인라이닝 가능</li>
+<li>Phase 4는 최적화 없이 항상 힙 할당</li>
+</ul>
+<p><strong>GC 오버헤드:</strong></p>
+<ul>
+<li>주기적인 GC 실행 (pause time)</li>
+<li>메모리 오버헤드 (fragmentation)</li>
+<li>하지만 프로그래머 생산성은 크게 향상</li>
+</ul>
+<h2 id="complete-예시-map-함수"><a class="header" href="#complete-예시-map-함수">Complete 예시: Map 함수</a></h2>
+<h3 id="map의-개념"><a class="header" href="#map의-개념">Map의 개념</a></h3>
+<p><strong>Map 함수</strong>는 리스트의 각 원소에 함수를 적용한다:</p>
+<pre><code class="language-fsharp">// 개념적 정의 (Phase 6에서 완전 구현)
+let rec map f list =
+    match list with
+    | [] -&gt; []
+    | head :: tail -&gt; (f head) :: (map f tail)
+</code></pre>
+<ul>
+<li>타입: <code>(a -&gt; b) -&gt; list a -&gt; list b</code></li>
+<li>의미: <code>f</code>를 각 원소에 적용해 새 리스트 생성</li>
+</ul>
+<p><strong>Map 예시:</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+let numbers = [1; 2; 3; 4]
+let incremented = map inc numbers   // [2; 3; 4; 5]
+
+let double x = x * 2
+let doubled = map double numbers    // [2; 4; 6; 8]
+</code></pre>
+<h3 id="phase-4의-map-단순화-버전"><a class="header" href="#phase-4의-map-단순화-버전">Phase 4의 Map (단순화 버전)</a></h3>
+<p>Phase 4에는 리스트가 없으므로, <strong>개념적 설명</strong>만 한다. 핵심은 <strong>HOF 패턴</strong>이다:</p>
+<pre><code class="language-fsharp">// 단순화: 두 원소 "리스트"만 처리
+let map2 f x y =
+    let fx = f x
+    let fy = f y
+    (fx, fy)   // Phase 6에서는 실제 리스트 반환
+</code></pre>
+<p><strong>컴파일:</strong></p>
+<pre><code class="language-mlir">func.func @map2(%f: !llvm.ptr, %x: i32, %y: i32) -&gt; (i32, i32) {
+    // Call f(x)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_addr = llvm.getelementptr %f[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+    %fx = llvm.call %fn_ptr(%f, %x) : (!llvm.ptr, i32) -&gt; i32
+
+    // Call f(y)
+    %fy = llvm.call %fn_ptr(%f, %y) : (!llvm.ptr, i32) -&gt; i32
+
+    // Return pair (fx, fy) - Phase 6에서는 리스트
+    // ... (tuple 구현 생략)
+}
+</code></pre>
+<p><strong>Map의 핵심:</strong></p>
+<ul>
+<li>함수 <code>f</code>를 <strong>인자로 받는다</strong> (고차 함수)</li>
+<li><code>f</code>를 <strong>여러 번 호출</strong>한다 (간접 호출)</li>
+<li>각 호출마다 <code>f</code>의 환경을 전달한다</li>
+</ul>
+<p><strong>Map + Closure:</strong></p>
+<pre><code class="language-fsharp">let addN n = fun x -&gt; x + n
+let add5 = addN 5
+let result = map2 add5 10 20   // (15, 25)
+</code></pre>
+<ul>
+<li><code>add5</code>는 클로저 (n=5 캡처)</li>
+<li><code>map2</code>가 <code>add5</code>를 받아서 두 번 호출</li>
+<li>각 호출마다 캡처된 <code>n</code> 사용</li>
+</ul>
+<p>이것이 <strong>클로저 + 고차 함수 = 함수형 프로그래밍 핵심</strong> 조합이다.</p>
+<h2 id="자주-하는-실수-common-errors"><a class="header" href="#자주-하는-실수-common-errors">자주 하는 실수 (Common Errors)</a></h2>
+<h3 id="error-1-클로저를-첫-인자로-전달하지-않음"><a class="header" href="#error-1-클로저를-첫-인자로-전달하지-않음">Error 1: 클로저를 첫 인자로 전달하지 않음</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-mlir">// 잘못된 호출 - 환경 누락
+%result = llvm.call %fn_ptr(%arg) : (i32) -&gt; i32
+</code></pre>
+<p>Lifted function은 <strong>첫 번째 파라미터로 환경을 받는다</strong>:</p>
+<pre><code class="language-mlir">func.func @lifted(%env: !llvm.ptr, %arg: i32) -&gt; i32
+</code></pre>
+<p>환경 없이 호출하면 <strong>타입 미스매치</strong> 또는 <strong>segfault</strong>:</p>
+<pre><code>ERROR: Call argument count mismatch (expected 2, got 1)
+</code></pre>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 호출 - 클로저(환경)를 첫 인자로
+%result = llvm.call %fn_ptr(%closure, %arg) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>F# 헬퍼 사용:</strong></p>
+<pre><code class="language-fsharp">// 자동으로 클로저를 첫 인자로 전달
+builder.CallClosure(closure, [arg], resultType)
+</code></pre>
+<h3 id="error-2-클로저-본체를-직접-호출"><a class="header" href="#error-2-클로저-본체를-직접-호출">Error 2: 클로저 본체를 직접 호출</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-mlir">// 잘못된 호출 - lifted function을 직접 호출
+%result = func.call @lifted_func(%env, %arg) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p>Lifted function은 <strong>내부 함수</strong>이고, 직접 호출하면 <strong>환경이 잘못 전달</strong>될 수 있다.</p>
+<p><strong>올바른 방법:</strong></p>
+<ol>
+<li>클로저에서 함수 포인터 추출</li>
+<li>간접 호출 (<code>llvm.call</code>)</li>
+</ol>
+<pre><code class="language-mlir">// 올바른 호출 - 클로저를 통해 간접 호출
+%fn_ptr_addr = llvm.getelementptr %closure[0, 0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+%result = llvm.call %fn_ptr(%closure, %arg) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>예외:</strong></p>
+<p>테스트 목적으로 직접 호출할 수는 있지만, 일반적인 패턴은 아니다.</p>
+<h3 id="error-3-스택에-반환-클로저의-환경-할당"><a class="header" href="#error-3-스택에-반환-클로저의-환경-할당">Error 3: 스택에 반환 클로저의 환경 할당</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-mlir">func.func @makeAdder_wrong(%n: i32) -&gt; !llvm.ptr {
+    // 잘못됨 - 스택 할당!
+    %c1 = arith.constant 1 : index
+    %env = memref.alloca(%c1) : memref&lt;?xi64&gt;
+    // ... store function pointer and n ...
+    %ptr = memref.extract_aligned_pointer_as_index %env : memref&lt;?xi64&gt; -&gt; !llvm.ptr
+    func.return %ptr : !llvm.ptr
+}   // 함수 종료 시 %env 소멸! Dangling pointer!
+</code></pre>
+<p>함수가 반환되면 <strong>스택 프레임이 소멸</strong>되므로, 환경 접근 시 undefined behavior.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">func.func @makeAdder_correct(%n: i32) -&gt; !llvm.ptr {
+    // 올바름 - 힙 할당
+    %env_size = arith.constant 16 : i64
+    %env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+    // ... store function pointer and n ...
+    func.return %env : !llvm.ptr
+}   // %env는 힙에 있으므로 안전
+</code></pre>
+<p><strong>원칙:</strong></p>
+<ul>
+<li><strong>반환되는 클로저</strong>: 항상 <code>GC_malloc</code> 사용</li>
+<li><strong>로컬 클로저</strong> (스코프 벗어나지 않음): 스택 가능 (Phase 7 최적화)</li>
+</ul>
+<h3 id="error-4-간접-호출-시-타입-미스매치"><a class="header" href="#error-4-간접-호출-시-타입-미스매치">Error 4: 간접 호출 시 타입 미스매치</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-mlir">// Lifted function: (%env: !llvm.ptr, %x: i32) -&gt; i32
+func.func @lifted(%env: !llvm.ptr, %x: i32) -&gt; i32
+
+// 잘못된 호출 - 타입 불일치
+%result = llvm.call %fn_ptr(%closure) : (!llvm.ptr) -&gt; i32   // 인자 누락
+</code></pre>
+<p>LLVM IR에서 타입 불일치는 <strong>검증 실패</strong> 또는 <strong>런타임 크래시</strong>:</p>
+<pre><code>ERROR: Function signature mismatch in indirect call
+</code></pre>
+<p><strong>해결:</strong></p>
+<p>간접 호출 시 <strong>정확한 시그니처</strong> 명시:</p>
+<pre><code class="language-mlir">// 올바른 호출 - 모든 인자와 정확한 타입
+%result = llvm.call %fn_ptr(%closure, %x) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>타입 시그니처 유지:</strong></p>
+<ul>
+<li>Lifted function 정의와 간접 호출 타입이 <strong>정확히 일치</strong>해야 함</li>
+<li>컴파일러가 자동으로 추론하도록 구현</li>
+</ul>
+<h3 id="error-5-클로저-동일성-혼동"><a class="header" href="#error-5-클로저-동일성-혼동">Error 5: 클로저 동일성 혼동</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-fsharp">let f = fun x -&gt; x + 1
+let g = fun x -&gt; x + 1
+// f와 g는 같은가?
+</code></pre>
+<p><strong>답: 아니다!</strong></p>
+<ul>
+<li><code>f</code>와 <code>g</code>는 <strong>서로 다른 클로저</strong>다</li>
+<li>각각 <strong>다른 환경 포인터</strong>를 가진다 (빈 환경이더라도)</li>
+<li><strong>포인터 비교</strong>: <code>f != g</code> (주소가 다름)</li>
+</ul>
+<p><strong>의미적 동등성 vs 포인터 동등성:</strong></p>
+<ul>
+<li><strong>의미적 동등성</strong>: 같은 동작 (extensional equality)</li>
+<li><strong>포인터 동등성</strong>: 같은 객체 (intensional equality)</li>
+</ul>
+<p>FunLang은 <strong>포인터 동등성</strong>만 지원한다 (대부분의 언어와 동일).</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-mlir">// 두 클로저 생성
+%closure1 = /* fun x -&gt; x + 1 */
+%closure2 = /* fun x -&gt; x + 1 */
+
+// 포인터 비교
+%same = llvm.icmp "eq" %closure1, %closure2 : !llvm.ptr
+// %same = false (주소가 다름)
+</code></pre>
+<p><strong>함수 메모이제이션:</strong></p>
+<p>의미적 동등성이 필요하면 <strong>명시적 비교 로직</strong> 구현 필요 (Phase 7).</p>
+<h2 id="phase-4-완료-요약"><a class="header" href="#phase-4-완료-요약">Phase 4 완료 요약</a></h2>
+<h3 id="무엇을-구현했는가"><a class="header" href="#무엇을-구현했는가">무엇을 구현했는가</a></h3>
+<p><strong>Phase 4 - Closures &amp; Higher-Order Functions:</strong></p>
+<ol>
+<li>
+<p><strong>Chapter 12 - Closures:</strong></p>
+<ul>
+<li>클로저 이론 (lexical scoping, free/bound variables)</li>
+<li>자유 변수 분석 알고리즘</li>
+<li>클로저 변환 (closure conversion)</li>
+<li>환경 구조체 (힙 할당)</li>
+<li>GC_malloc으로 클로저 생성</li>
+</ul>
+</li>
+<li>
+<p><strong>Chapter 13 - Higher-Order Functions:</strong></p>
+<ul>
+<li>함수를 일급 값으로 다루기</li>
+<li>간접 호출 패턴 (<code>llvm.call</code> with function pointer)</li>
+<li>Apply 함수 (함수를 인자로 받기)</li>
+<li>Compose 함수 (여러 함수 인자)</li>
+<li>함수를 반환하기 (makeAdder, upward funarg problem)</li>
+<li>커링 패턴 (다중 인자 → 중첩 람다)</li>
+<li>메모리 관리 (GC가 클로저 생명주기 관리)</li>
+<li>자주 하는 실수 5가지</li>
+</ul>
+</li>
+</ol>
+<p><strong>핵심 구현 항목:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>항목</th><th>설명</th><th>MLIR 패턴</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>클로저 표현</strong></td><td>(fn_ptr, env) 쌍</td><td><code>!llvm.ptr</code></td></tr>
+<tr><td><strong>환경 할당</strong></td><td>힙에 GC_malloc</td><td><code>llvm.call @GC_malloc</code></td></tr>
+<tr><td><strong>간접 호출</strong></td><td>함수 포인터 로드 후 호출</td><td><code>llvm.call %fn_ptr(...)</code></td></tr>
+<tr><td><strong>환경 접근</strong></td><td>GEP + load</td><td><code>llvm.getelementptr + llvm.load</code></td></tr>
+<tr><td><strong>클로저 생성</strong></td><td>환경 할당 + 변수 저장</td><td><code>GC_malloc + store</code></td></tr>
+<tr><td><strong>함수 반환</strong></td><td>클로저 반환 (escaping)</td><td><code>func.return %env</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>타입 시스템:</strong></p>
+<ul>
+<li>모든 함수/클로저: <code>!llvm.ptr</code> (opaque pointer)</li>
+<li>함수 타입 (개념적): <code>a -&gt; b</code> = <code>(!llvm.ptr, a) -&gt; b</code> (lifted)</li>
+</ul>
+<h3 id="phase-4가-가능하게-한-것"><a class="header" href="#phase-4가-가능하게-한-것">Phase 4가 가능하게 한 것</a></h3>
+<p><strong>이제 컴파일할 수 있는 것:</strong></p>
+<pre><code class="language-fsharp">// 1. 클로저 생성
+let makeAdder n = fun x -&gt; x + n
+
+// 2. 고차 함수
+let apply f x = f x
+let compose f g x = f (g x)
+
+// 3. 부분 적용
+let add5 = makeAdder 5
+let result = add5 10   // 15
+
+// 4. 함수 합성
+let inc x = x + 1
+let double x = x * 2
+let incThenDouble = compose double inc
+let result2 = incThenDouble 5   // 12
+
+// 5. 콜백 패턴
+let processWithCallback callback data =
+    let result = compute data
+    callback result
+
+// 6. 커링
+let add x y = x + y   // = fun x -&gt; fun y -&gt; x + y
+let add5 = add 5
+</code></pre>
+<p><strong>함수형 프로그래밍의 핵심:</strong></p>
+<ul>
+<li>✅ 클로저 (환경 캡처)</li>
+<li>✅ 고차 함수 (함수 인자/반환)</li>
+<li>✅ 부분 적용</li>
+<li>✅ 함수 합성</li>
+<li>⏸️ Map, filter, fold (Phase 6에서 리스트 추가 후)</li>
+</ul>
+<h3 id="다음-단계-phase-5---custom-mlir-dialect"><a class="header" href="#다음-단계-phase-5---custom-mlir-dialect">다음 단계: Phase 5 - Custom MLIR Dialect</a></h3>
+<p><strong>Phase 5 목표:</strong></p>
+<p>FunLang 전용 MLIR dialect 설계 및 구현:</p>
+<ol>
+<li>
+<p><strong>FunLang Dialect 정의:</strong></p>
+<ul>
+<li><code>funlang.closure</code> 연산 (클로저 생성 추상화)</li>
+<li><code>funlang.closure_call</code> 연산 (간접 호출 추상화)</li>
+<li><code>funlang.capture</code> 연산 (환경 저장 추상화)</li>
+</ul>
+</li>
+<li>
+<p><strong>Lowering passes:</strong></p>
+<ul>
+<li>FunLang dialect → Func/LLVM dialect</li>
+<li>고수준 의미론 → 저수준 MLIR</li>
+</ul>
+</li>
+<li>
+<p><strong>이점:</strong></p>
+<ul>
+<li>컴파일러 코드 단순화 (고수준 연산 사용)</li>
+<li>최적화 pass 추가 용이 (dialect-specific 변환)</li>
+<li>타입 안전성 향상 (dialect 타입 시스템)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Phase 4 vs Phase 5:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase 4</th><th>Phase 5</th></tr>
+</thead>
+<tbody>
+<tr><td>저수준 LLVM dialect 직접 생성</td><td>고수준 FunLang dialect 생성</td></tr>
+<tr><td>GEP, load, store 수동 관리</td><td>추상화된 연산 사용</td></tr>
+<tr><td>최적화 어려움</td><td>Dialect 최적화 pass</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Preview:</strong></p>
+<pre><code class="language-mlir">// Phase 4 (저수준)
+%env = llvm.call @GC_malloc(%c16) : (i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.mlir.addressof @func : !llvm.ptr
+%slot0 = llvm.getelementptr %env[0, 0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+llvm.store %fn_ptr, %slot0 : !llvm.ptr, !llvm.ptr
+// ... (환경 저장)
+
+// Phase 5 (고수준)
+%closure = funlang.closure @func, %captured_vars : (i32) -&gt; i32
+</code></pre>
+<p>Phase 5는 <strong>컴파일러 품질</strong>을 향상시킨다. Phase 4는 <strong>기능 완성</strong>이다.</p>
+<hr>
+<p><strong>Congratulations!</strong> Phase 4 완료. 이제 FunLang은 <strong>완전한 함수형 언어</strong>의 핵심 기능을 지원한다.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-커스텀-mlir-dialect-등록"><a class="header" href="#appendix-커스텀-mlir-dialect-등록">Appendix: 커스텀 MLIR Dialect 등록</a></h1>
+<h2 id="소개-14"><a class="header" href="#소개-14">소개</a></h2>
 <p>Chapter 01-05에서는 MLIR의 빌트인 dialect를 사용했다:</p>
 <ul>
 <li><code>arith</code>: 산술 연산</li>
@@ -12960,7 +15580,7 @@ let resultOp = builder.CreateApply(closureOp, [| yValue |], loc)
 <li><strong>MLIR 학습</strong>: 빌트인 dialect로 시작하면 개념을 빠르게 배울 수 있다</li>
 </ol>
 <p><strong>FunLang의 경우:</strong> Phase 1-4는 빌트인 dialect를 사용한다. Phase 5는 클로저와 고급 기능을 위해 커스텀 dialect를 도입한다.</p>
-<h2 id="요약"><a class="header" href="#요약">요약</a></h2>
+<h2 id="요약-1"><a class="header" href="#요약-1">요약</a></h2>
 <p>이 appendix에서 다음을 배웠다:</p>
 <ol>
 <li><strong>C API 제한</strong>: MLIR C API는 커스텀 dialect 정의를 지원하지 않는다 - C++ 필요</li>

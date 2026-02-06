@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Interop** - MLIR build setup, F# bindings, and architecture validation
 - [x] **Phase 2: Core Language Basics** - Arithmetic, let bindings, control flow, and memory strategy
 - [x] **Phase 3: Functions & Recursion** - Function definitions, calls, and recursive patterns
-- [ ] **Phase 4: Closures & Higher-Order Functions** - Environment capture and closure compilation
+- [x] **Phase 4: Closures & Higher-Order Functions** - Environment capture and closure compilation
 - [ ] **Phase 5: Custom MLIR Dialect** - FunLang dialect design and progressive lowering
 - [ ] **Phase 6: Pattern Matching & Data Structures** - Lists, tuples, and decision tree compilation
 - [ ] **Phase 7: Optimization & Polish** - Optimization passes, quality improvements, and completion
@@ -88,8 +88,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Chapter 12: Closures (theory, free variable analysis, closure conversion, heap allocation)
-- [ ] 04-02-PLAN.md — Chapter 13: Higher-Order Functions (functions as arguments, return values, indirect calls)
+- [x] 04-01-PLAN.md — Chapter 12: Closures (theory, free variable analysis, closure conversion, heap allocation)
+- [x] 04-02-PLAN.md — Chapter 13: Higher-Order Functions (functions as arguments, return values, indirect calls)
 
 ### Phase 5: Custom MLIR Dialect
 **Goal**: Reader can define a custom FunLang dialect with operations, types, and lowering passes
@@ -148,7 +148,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Foundation & Interop | 3/3 | Complete | 2026-02-06 |
 | 2. Core Language Basics | 4/4 | Complete | 2026-02-06 |
 | 3. Functions & Recursion | 2/2 | Complete | 2026-02-06 |
-| 4. Closures & Higher-Order Functions | 0/2 | Planned | - |
+| 4. Closures & Higher-Order Functions | 2/2 | Complete | 2026-02-06 |
 | 5. Custom MLIR Dialect | 0/TBD | Not started | - |
 | 6. Pattern Matching & Data Structures | 0/TBD | Not started | - |
 | 7. Optimization & Polish | 0/TBD | Not started | - |

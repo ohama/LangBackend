@@ -44,11 +44,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Closures & Higher-Order Functions
 
-- [ ] **CLOS-01**: Reader can compile closures with captured variables
-- [ ] **CLOS-02**: Tutorial explains closure conversion (environment passing strategy)
-- [ ] **CLOS-03**: Reader can compile higher-order functions (functions as arguments)
-- [ ] **CLOS-04**: Reader can compile functions as return values
-- [ ] **CLOS-05**: Tutorial explains heap allocation for closure environments
+- [x] **CLOS-01**: Reader can compile closures with captured variables
+- [x] **CLOS-02**: Tutorial explains closure conversion (environment passing strategy)
+- [x] **CLOS-03**: Reader can compile higher-order functions (functions as arguments)
+- [x] **CLOS-04**: Reader can compile functions as return values
+- [x] **CLOS-05**: Tutorial explains heap allocation for closure environments
 
 ### Pattern Matching
 
@@ -77,7 +77,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **MEM-01**: Tutorial explains memory management strategy (stack vs heap allocation)
 - [ ] **MEM-02**: Tutorial integrates Boehm GC for heap-allocated values
-- [ ] **MEM-03**: Reader can compile programs with closures and lists without memory leaks
+- [x] **MEM-03**: Reader can compile programs with closures and lists without memory leaks
 
 ### Tutorial Quality
 
@@ -147,11 +147,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FUNC-03 | Phase 3 | Complete |
 | FUNC-04 | Phase 3 | Complete |
 | FUNC-05 | Phase 3 | Complete |
-| CLOS-01 | Phase 4 | Pending |
-| CLOS-02 | Phase 4 | Pending |
-| CLOS-03 | Phase 4 | Pending |
-| CLOS-04 | Phase 4 | Pending |
-| CLOS-05 | Phase 4 | Pending |
+| CLOS-01 | Phase 4 | Complete |
+| CLOS-02 | Phase 4 | Complete |
+| CLOS-03 | Phase 4 | Complete |
+| CLOS-04 | Phase 4 | Complete |
+| CLOS-05 | Phase 4 | Complete |
 | PMTC-01 | Phase 6 | Pending |
 | PMTC-02 | Phase 6 | Pending |
 | PMTC-03 | Phase 6 | Pending |
@@ -168,7 +168,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPT-04 | Phase 7 | Pending |
 | MEM-01 | Phase 2 | Pending |
 | MEM-02 | Phase 2 | Pending |
-| MEM-03 | Phase 4 | Pending |
+| MEM-03 | Phase 4 | Complete |
 | QUAL-01 | Phase 2 | Pending |
 | QUAL-02 | Phase 2 | Pending |
 | QUAL-03 | Phase 1 | Pending |

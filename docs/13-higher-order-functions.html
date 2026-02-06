@@ -1,0 +1,1612 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 13: 고차 함수 - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-d7fc48ce.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-94493ebb.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./13-higher-order-functions.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-13-고차-함수-higher-order-functions"><a class="header" href="#chapter-13-고차-함수-higher-order-functions">Chapter 13: 고차 함수 (Higher-Order Functions)</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p>**고차 함수(higher-order function, HOF)**는 함수를 **일급 값(first-class value)**으로 다루는 함수다:</p>
+<ol>
+<li><strong>함수를 인자로 받는 함수</strong>: <code>apply f x = f x</code></li>
+<li><strong>함수를 반환하는 함수</strong>: <code>makeAdder n = fun x -&gt; x + n</code></li>
+</ol>
+<pre><code class="language-fsharp">// 고차 함수 예시
+let apply f x = f x           // 함수를 인자로 받는다
+let twice f x = f (f x)       // 함수를 두 번 적용한다
+let compose f g x = f (g x)   // 함수 합성
+
+let inc x = x + 1
+let result = twice inc 10     // 결과: 12
+</code></pre>
+<p><strong>왜 고차 함수가 중요한가?</strong></p>
+<ol>
+<li><strong>추상화(Abstraction)</strong>: 공통 패턴을 재사용 가능하게 만든다 (map, filter, fold)</li>
+<li><strong>합성(Composition)</strong>: 작은 함수를 조합해 복잡한 동작을 만든다</li>
+<li><strong>지연 평가(Lazy evaluation)</strong>: 계산을 함수로 감싸서 나중에 실행할 수 있다</li>
+<li><strong>콜백 패턴</strong>: 비동기 작업, 이벤트 처리에 필수</li>
+</ol>
+<p><strong>고차 함수 vs 일반 함수:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>일반 함수 (Phase 3)</th><th>고차 함수 (Phase 4)</th></tr>
+</thead>
+<tbody>
+<tr><td>데이터를 인자로 받는다</td><td>함수를 인자로 받는다</td></tr>
+<tr><td>데이터를 반환한다</td><td>함수를 반환할 수 있다</td></tr>
+<tr><td>직접 호출 (<code>func.call @symbol</code>)</td><td>간접 호출 (function pointer)</td></tr>
+<tr><td>타입: <code>int -&gt; int</code></td><td>타입: <code>(int -&gt; int) -&gt; int</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Chapter 13의 목표:</strong></p>
+<p>이 장을 마치면 다음을 컴파일할 수 있다:</p>
+<pre><code class="language-fsharp">// 함수를 인자로 받기
+let apply f x = f x
+let result1 = apply inc 42   // 43
+
+// 함수를 반환하기
+let makeAdder n = fun x -&gt; x + n
+let add5 = makeAdder 5
+let result2 = add5 10        // 15
+
+// 함수 합성
+let compose f g x = f (g x)
+let inc x = x + 1
+let double x = x * 2
+let incThenDouble = compose double inc
+let result3 = incThenDouble 5   // 12
+</code></pre>
+<p><strong>Chapter 13의 범위:</strong></p>
+<ol>
+<li><strong>함수를 일급 값으로 다루기</strong>: 클로저가 함수의 런타임 표현이다</li>
+<li><strong>간접 호출(Indirect call) 패턴</strong>: <code>llvm.call</code>로 함수 포인터를 호출한다</li>
+<li><strong>Apply 함수</strong>: 가장 단순한 고차 함수</li>
+<li><strong>Compose 함수</strong>: 여러 함수 인자를 다루기</li>
+<li><strong>함수를 반환하기</strong>: makeAdder 패턴, upward funarg problem</li>
+<li><strong>커링(Currying)</strong>: 다중 인자 함수를 중첩 클로저로 표현</li>
+<li><strong>메모리 관리</strong>: GC가 클로저 생명주기를 처리한다</li>
+<li><strong>Complete 예시</strong>: map 함수 (개념적, Phase 6에서 완전 구현)</li>
+</ol>
+<p><strong>Prerequisites:</strong></p>
+<ul>
+<li><strong>Chapter 12 (Closures)</strong>: 클로저 표현, 환경 구조, 자유 변수 분석</li>
+<li>Phase 3 함수 (이름 있는 함수, func.call)</li>
+<li>Phase 2 메모리 관리 (GC_malloc, 힙 할당)</li>
+</ul>
+<p>이 장은 <strong>클로저 + 고차 함수 = 함수형 프로그래밍 핵심</strong>을 완성한다.</p>
+<h2 id="함수를-일급-값으로-다루기"><a class="header" href="#함수를-일급-값으로-다루기">함수를 일급 값으로 다루기</a></h2>
+<h3 id="first-class-functions"><a class="header" href="#first-class-functions">First-Class Functions</a></h3>
+<p>**일급 값(first-class value)**이란:</p>
+<ol>
+<li>변수에 할당할 수 있다</li>
+<li>함수 인자로 전달할 수 있다</li>
+<li>함수 반환값으로 반환할 수 있다</li>
+<li>데이터 구조에 저장할 수 있다</li>
+</ol>
+<p>FunLang에서 <strong>함수는 일급 값이다</strong>:</p>
+<pre><code class="language-fsharp">// 1. 변수에 할당
+let f = fun x -&gt; x + 1
+
+// 2. 함수 인자로 전달
+let apply g x = g x
+let result = apply f 10   // 11
+
+// 3. 함수 반환값으로 반환
+let makeAdder n = fun x -&gt; x + n
+let add5 = makeAdder 5
+
+// 4. 데이터 구조에 저장 (Phase 6에서 리스트 구현 후)
+// let funcs = [inc; double; square]
+</code></pre>
+<p><strong>일급 함수의 런타임 표현:</strong></p>
+<p>Chapter 12에서 배운 <strong>클로저</strong>가 바로 함수의 런타임 표현이다:</p>
+<pre><code>Closure = (function_pointer, environment_pointer)
+</code></pre>
+<ul>
+<li><code>function_pointer</code>: 실행할 코드 (lifted function의 주소)</li>
+<li><code>environment_pointer</code>: 캡처된 변수들 (힙에 할당된 환경)</li>
+</ul>
+<p><strong>모든 함수가 클로저인가?</strong></p>
+<p>논리적으로는 YES. 실제로는 최적화로 구분된다:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>함수 종류</th><th>환경</th><th>표현</th><th>예시</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Top-level named</strong></td><td>비어있음</td><td>함수 포인터만</td><td><code>let add x y = x + y</code></td></tr>
+<tr><td><strong>Lambda (no capture)</strong></td><td>비어있음</td><td>함수 포인터만</td><td><code>fun x -&gt; x + 1</code></td></tr>
+<tr><td><strong>Lambda (capture)</strong></td><td>변수 캡처</td><td>클로저 (ptr, env)</td><td><code>fun x -&gt; x + n</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Uniform representation:</strong></p>
+<p>컴파일러 구현을 단순화하기 위해, <strong>모든 함수를 클로저로 표현</strong>할 수 있다:</p>
+<ul>
+<li>Top-level 함수: 환경이 null이거나 빈 환경</li>
+<li>캡처 없는 람다: 환경이 빈 환경</li>
+<li>캡처 있는 람다: 환경에 변수 저장</li>
+</ul>
+<p>이 장에서는 <strong>uniform representation</strong>을 사용한다. 모든 함수는 <code>(fn_ptr, env_ptr)</code> 쌍이다.</p>
+<h3 id="named-functions-vs-anonymous-lambdas"><a class="header" href="#named-functions-vs-anonymous-lambdas">Named Functions vs Anonymous Lambdas</a></h3>
+<p><strong>Named function (Phase 3 스타일):</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+</code></pre>
+<p>컴파일 결과:</p>
+<pre><code class="language-mlir">func.func @inc(%x: i32) -&gt; i32 {
+    %c1 = arith.constant 1 : i32
+    %result = arith.addi %x, %c1 : i32
+    func.return %result : i32
+}
+</code></pre>
+<ul>
+<li>MLIR 심볼 <code>@inc</code>로 직접 참조 가능</li>
+<li><code>func.call @inc(%arg)</code> 직접 호출</li>
+</ul>
+<p><strong>Anonymous lambda (Chapter 12 스타일):</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+</code></pre>
+<p>컴파일 결과:</p>
+<pre><code class="language-mlir">// Lifted function
+func.func @lambda_0(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    %c1 = arith.constant 1 : i32
+    %result = arith.addi %x, %c1 : i32
+    func.return %result : i32
+}
+
+// Closure 생성 (호출 지점에서)
+%c0 = arith.constant 0 : i64
+%env_size = arith.constant 8 : i64  // 환경 없음, fn_ptr만
+%env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.mlir.addressof @lambda_0 : !llvm.ptr
+llvm.store %fn_ptr, %env : !llvm.ptr, !llvm.ptr
+// %env가 클로저다
+</code></pre>
+<p><strong>Named function을 클로저로 wrapping:</strong></p>
+<p>Named function도 고차 함수에 전달하려면 클로저로 감싸야 한다:</p>
+<pre><code class="language-fsharp">let inc x = x + 1        // Named function
+let apply f x = f x      // HOF
+let result = apply inc 42   // inc를 클로저로 wrap
+</code></pre>
+<p>컴파일:</p>
+<pre><code class="language-mlir">// Named function (그대로)
+func.func @inc(%x: i32) -&gt; i32 { ... }
+
+// inc를 클로저로 wrap
+%env_size = arith.constant 8 : i64
+%env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.mlir.addressof @inc : !llvm.ptr
+llvm.store %fn_ptr, %env : !llvm.ptr, !llvm.ptr
+%closure_inc = %env : !llvm.ptr
+
+// apply에 전달
+%result = func.call @apply(%closure_inc, %c42) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>요약:</strong></p>
+<ul>
+<li><strong>Named function</strong>: MLIR 심볼로 정의, 직접 호출 가능</li>
+<li><strong>Anonymous lambda</strong>: 항상 클로저로 표현</li>
+<li><strong>Named function을 HOF에 전달</strong>: 클로저로 wrapping 필요</li>
+<li><strong>Uniform representation</strong>: 모두 <code>!llvm.ptr</code> (클로저 포인터)로 표현</li>
+</ul>
+<h2 id="클로저-호출-간접-호출-패턴"><a class="header" href="#클로저-호출-간접-호출-패턴">클로저 호출: 간접 호출 패턴</a></h2>
+<h3 id="direct-call-vs-indirect-call"><a class="header" href="#direct-call-vs-indirect-call">Direct Call vs Indirect Call</a></h3>
+<p><strong>Direct call (Phase 3):</strong></p>
+<pre><code class="language-mlir">%result = func.call @inc(%x) : (i32) -&gt; i32
+</code></pre>
+<ul>
+<li>호출 대상이 <strong>컴파일 타임에 결정</strong>됨 (<code>@inc</code> 심볼)</li>
+<li>최적화 가능 (인라이닝, 특수화)</li>
+</ul>
+<p><strong>Indirect call (Phase 4):</strong></p>
+<pre><code class="language-mlir">%fn_ptr = /* 클로저에서 추출 */
+%result = llvm.call %fn_ptr(%closure, %x) : !llvm.ptr, (i32) -&gt; i32
+</code></pre>
+<ul>
+<li>호출 대상이 <strong>런타임에 결정</strong>됨 (함수 포인터)</li>
+<li>최적화 어려움 (가상 함수처럼 동작)</li>
+</ul>
+<p><strong>왜 간접 호출이 필요한가?</strong></p>
+<p>고차 함수는 <strong>어떤 함수가 전달될지 컴파일 타임에 모른다</strong>:</p>
+<pre><code class="language-fsharp">let apply f x = f x   // f는 런타임에 결정된다
+
+apply inc 10      // f = inc
+apply double 10   // f = double
+</code></pre>
+<p>컴파일러는 <code>f</code>가 무엇인지 모르므로, <strong>간접 호출</strong>을 생성해야 한다.</p>
+<h3 id="간접-호출-패턴-indirect-call-pattern"><a class="header" href="#간접-호출-패턴-indirect-call-pattern">간접 호출 패턴 (Indirect Call Pattern)</a></h3>
+<p>클로저를 호출하는 3단계:</p>
+<p><strong>1. 함수 포인터 추출:</strong></p>
+<p>환경의 slot 0에서 함수 포인터를 로드한다:</p>
+<pre><code class="language-mlir">// %closure: !llvm.ptr (클로저 포인터)
+%c0 = arith.constant 0 : i64
+%fn_ptr_addr = llvm.getelementptr %closure[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+</code></pre>
+<p><strong>2. 인자 준비:</strong></p>
+<ul>
+<li><strong>첫 번째 인자</strong>: 클로저 자신 (환경 포인터)</li>
+<li><strong>나머지 인자</strong>: 원래 함수 파라미터</li>
+</ul>
+<pre><code class="language-mlir">%env = %closure : !llvm.ptr   // 클로저 = 환경
+%arg1 = %x : i32               // 실제 인자
+</code></pre>
+<p><strong>3. 간접 호출:</strong></p>
+<p>함수 포인터를 통해 호출한다:</p>
+<pre><code class="language-mlir">%result = llvm.call %fn_ptr(%env, %arg1) : !llvm.ptr, (i32) -&gt; i32
+</code></pre>
+<p><strong>완전한 예시:</strong></p>
+<pre><code class="language-mlir">// 클로저 %closure를 호출: closure(42)
+%c0 = arith.constant 0 : i64
+%c42 = arith.constant 42 : i32
+
+// Step 1: 함수 포인터 추출
+%fn_ptr_addr = llvm.getelementptr %closure[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+
+// Step 2: 인자 준비
+%env = %closure : !llvm.ptr
+
+// Step 3: 간접 호출
+%result = llvm.call %fn_ptr(%env, %c42) : !llvm.ptr, (i32) -&gt; i32
+</code></pre>
+<h3 id="f-helper-callclosure"><a class="header" href="#f-helper-callclosure">F# Helper: CallClosure</a></h3>
+<p>반복되는 패턴을 헬퍼 함수로 추출한다:</p>
+<pre><code class="language-fsharp">type OpBuilder with
+    /// 클로저를 간접 호출한다
+    /// closure: !llvm.ptr (클로저 포인터)
+    /// args: 함수 인자들 (환경 제외)
+    /// Returns: 함수 호출 결과
+    member this.CallClosure(closure: MlirValue, args: MlirValue list, resultType: MlirType) : MlirValue =
+        // 1. 함수 포인터 추출
+        let c0 = this.ConstantInt(0L, 64)
+        let fnPtrAddr = this.CreateGEP(closure, [c0])
+        let fnPtr = this.CreateLoad(this.PtrType(), fnPtrAddr)
+
+        // 2. 인자 리스트 구성 (환경 + 원래 인자)
+        let allArgs = closure :: args
+
+        // 3. 간접 호출
+        this.CreateLLVMCall(fnPtr, allArgs, resultType)
+</code></pre>
+<p><strong>사용 예시:</strong></p>
+<pre><code class="language-fsharp">// compileExpr에서 클로저 호출
+| App(funcExpr, argExpr) -&gt;
+    let funcVal = compileExpr builder env funcExpr
+    let argVal = compileExpr builder env argExpr
+
+    // funcVal은 클로저 (!llvm.ptr)
+    // argVal은 인자 (i32)
+    builder.CallClosure(funcVal, [argVal], builder.IntType(32))
+</code></pre>
+<p><strong>간접 호출의 비용:</strong></p>
+<ul>
+<li><strong>성능</strong>: 직접 호출보다 느리다 (포인터 로드, 인라이닝 불가)</li>
+<li><strong>유연성</strong>: 런타임에 함수 선택 가능 (고차 함수의 핵심)</li>
+</ul>
+<p><strong>최적화 가능성:</strong></p>
+<ul>
+<li><strong>인라이닝</strong>: 클로저가 상수라면 특수화 가능</li>
+<li><strong>Devirtualization</strong>: 타입 분석으로 호출 대상 추론</li>
+<li>Phase 4는 최적화 없이 단순 구현만 한다</li>
+</ul>
+<h2 id="apply-함수"><a class="header" href="#apply-함수">Apply 함수</a></h2>
+<h3 id="apply의-의미"><a class="header" href="#apply의-의미">Apply의 의미</a></h3>
+<p><strong>Apply 함수</strong>는 가장 단순한 고차 함수다:</p>
+<pre><code class="language-fsharp">let apply f x = f x
+</code></pre>
+<ul>
+<li>타입: <code>(a -&gt; b) -&gt; a -&gt; b</code></li>
+<li>의미: 함수 <code>f</code>를 인자 <code>x</code>에 적용한다</li>
+</ul>
+<p><strong>왜 apply가 유용한가?</strong></p>
+<p>일견 쓸모없어 보인다 (<code>f x</code>와 <code>apply f x</code>는 같다). 하지만:</p>
+<ol>
+<li><strong>HOF 테스트</strong>: 가장 단순한 고차 함수로 컴파일러 검증</li>
+<li><strong>파이프라인</strong>: <code>x |&gt; apply f</code> 스타일 (Phase 7 파이프 연산자)</li>
+<li><strong>교육적</strong>: 간접 호출 패턴을 명확히 보여줌</li>
+</ol>
+<p><strong>Apply 예시:</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+let double x = x * 2
+
+let result1 = apply inc 42      // 43
+let result2 = apply double 10   // 20
+</code></pre>
+<h3 id="apply-컴파일-f-구현"><a class="header" href="#apply-컴파일-f-구현">Apply 컴파일: F# 구현</a></h3>
+<p><strong>AST 표현:</strong></p>
+<pre><code class="language-fsharp">// apply f x = f x
+Let("apply",
+    Lambda("f",
+        Lambda("x",
+            App(Var "f", Var "x"))),
+    ...)
+</code></pre>
+<p><strong>컴파일 단계:</strong></p>
+<ol>
+<li><strong>외부 람다</strong>: <code>fun f -&gt; ...</code> (f를 캡처)</li>
+<li><strong>내부 람다</strong>: <code>fun x -&gt; f x</code> (f 사용)</li>
+<li><strong>App</strong>: <code>f x</code> (간접 호출)</li>
+</ol>
+<p><strong>F# 컴파일 함수:</strong></p>
+<pre><code class="language-fsharp">let rec compileExpr (builder: OpBuilder) (env: Map&lt;string, MlirValue&gt;) (expr: Expr) : MlirValue =
+    match expr with
+    // ... (기존 케이스들)
+
+    | App(funcExpr, argExpr) -&gt;
+        // funcExpr를 평가 -&gt; 클로저
+        let closureVal = compileExpr builder env funcExpr
+
+        // argExpr를 평가 -&gt; 인자
+        let argVal = compileExpr builder env argExpr
+
+        // 클로저 간접 호출
+        builder.CallClosure(closureVal, [argVal], builder.IntType(32))
+</code></pre>
+<p><strong>Apply 전체 컴파일:</strong></p>
+<pre><code class="language-fsharp">// let apply f x = f x
+let compileApply (builder: OpBuilder) : MlirValue =
+    // Lifted inner function: fun(env, x) -&gt; env[1](x)
+    //   env[0] = fn_ptr (inner)
+    //   env[1] = f (captured)
+    let innerFunc = builder.CreateFunction("apply_inner",
+        [builder.PtrType(); builder.IntType(32)],
+        builder.IntType(32))
+
+    // Inner function body
+    builder.WithInsertionPoint(innerFunc, fun () -&gt;
+        let env = innerFunc.GetArgument(0)
+        let x = innerFunc.GetArgument(1)
+
+        // Load captured f from env[1]
+        let c1 = builder.ConstantInt(1L, 64)
+        let fAddr = builder.CreateGEP(env, [c1])
+        let f = builder.CreateLoad(builder.PtrType(), fAddr)
+
+        // Call f(x) indirectly
+        let result = builder.CallClosure(f, [x], builder.IntType(32))
+        builder.CreateReturn(result)
+    )
+
+    // Lifted outer function: fun(env_outer, f) -&gt; closure(inner, [f])
+    let outerFunc = builder.CreateFunction("apply_outer",
+        [builder.PtrType(); builder.PtrType()],
+        builder.PtrType())
+
+    // Outer function body
+    builder.WithInsertionPoint(outerFunc, fun () -&gt;
+        let envOuter = outerFunc.GetArgument(0)
+        let f = outerFunc.GetArgument(1)
+
+        // Allocate environment for inner closure
+        let envSize = builder.ConstantInt(16L, 64)  // 2 slots
+        let envInner = builder.CreateGCMalloc(envSize)
+
+        // env[0] = fn_ptr(inner)
+        let c0 = builder.ConstantInt(0L, 64)
+        let fnPtrInner = builder.CreateAddressOf(innerFunc)
+        let slot0 = builder.CreateGEP(envInner, [c0])
+        builder.CreateStore(fnPtrInner, slot0)
+
+        // env[1] = f (captured)
+        let c1 = builder.ConstantInt(1L, 64)
+        let slot1 = builder.CreateGEP(envInner, [c1])
+        builder.CreateStore(f, slot1)
+
+        // Return closure
+        builder.CreateReturn(envInner)
+    )
+
+    // Return outer closure (no captures, empty env)
+    let envOuter = builder.CreateEmptyClosure(outerFunc)
+    envOuter
+</code></pre>
+<h3 id="apply-mlir-ir"><a class="header" href="#apply-mlir-ir">Apply MLIR IR</a></h3>
+<p><strong>예상 MLIR 출력:</strong></p>
+<pre><code class="language-mlir">// Inner lifted function
+func.func @apply_inner(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // Load captured f from env[1]
+    %c1 = arith.constant 1 : i64
+    %f_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %f = llvm.load %f_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Extract f's function pointer
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_addr = llvm.getelementptr %f[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Call f(x) - indirect call
+    %result = llvm.call %fn_ptr(%f, %x) : (!llvm.ptr, i32) -&gt; i32
+    func.return %result : i32
+}
+
+// Outer lifted function
+func.func @apply_outer(%env_outer: !llvm.ptr, %f: !llvm.ptr) -&gt; !llvm.ptr {
+    // Allocate environment for inner closure (2 slots)
+    %env_size = arith.constant 16 : i64
+    %env_inner = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr(inner)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_inner = llvm.mlir.addressof @apply_inner : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_inner[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_inner, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = f (captured)
+    %c1 = arith.constant 1 : i64
+    %slot1 = llvm.getelementptr %env_inner[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %f, %slot1 : !llvm.ptr, !llvm.ptr
+
+    // Return inner closure
+    func.return %env_inner : !llvm.ptr
+}
+</code></pre>
+<p><strong>사용 예시 MLIR:</strong></p>
+<pre><code class="language-mlir">// let inc x = x + 1
+func.func @inc(%x: i32) -&gt; i32 {
+    %c1 = arith.constant 1 : i32
+    %result = arith.addi %x, %c1 : i32
+    func.return %result : i32
+}
+
+// let result = apply inc 42
+func.func @main() -&gt; i32 {
+    // Wrap inc as closure
+    %c8 = arith.constant 8 : i64
+    %env_inc = llvm.call @GC_malloc(%c8) : (i64) -&gt; !llvm.ptr
+    %fn_ptr_inc = llvm.mlir.addressof @inc : !llvm.ptr
+    %c0 = arith.constant 0 : i64
+    %slot0 = llvm.getelementptr %env_inc[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_inc, %slot0 : !llvm.ptr, !llvm.ptr
+    %closure_inc = %env_inc : !llvm.ptr
+
+    // Create apply closure
+    %env_apply_outer = llvm.call @GC_malloc(%c8) : (i64) -&gt; !llvm.ptr
+    %fn_ptr_apply = llvm.mlir.addressof @apply_outer : !llvm.ptr
+    %slot0_apply = llvm.getelementptr %env_apply_outer[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_apply, %slot0_apply : !llvm.ptr, !llvm.ptr
+    %closure_apply = %env_apply_outer : !llvm.ptr
+
+    // Call apply(inc)
+    %fn_ptr_apply_outer = llvm.load %slot0_apply : !llvm.ptr -&gt; !llvm.ptr
+    %closure_partial = llvm.call %fn_ptr_apply_outer(%closure_apply, %closure_inc)
+        : (!llvm.ptr, !llvm.ptr) -&gt; !llvm.ptr
+
+    // Call (apply inc)(42)
+    %c42 = arith.constant 42 : i32
+    %fn_ptr_partial = llvm.getelementptr %closure_partial[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %fn_ptr = llvm.load %fn_ptr_partial : !llvm.ptr -&gt; !llvm.ptr
+    %result = llvm.call %fn_ptr(%closure_partial, %c42) : (!llvm.ptr, i32) -&gt; i32
+
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>테스트:</strong></p>
+<pre><code class="language-bash">$ ./funlang apply_test.fun
+43
+</code></pre>
+<h2 id="여러-함수-인자-받기"><a class="header" href="#여러-함수-인자-받기">여러 함수 인자 받기</a></h2>
+<h3 id="compose-함수"><a class="header" href="#compose-함수">Compose 함수</a></h3>
+<p><strong>Compose</strong>는 두 함수를 합성한다:</p>
+<pre><code class="language-fsharp">let compose f g x = f (g x)
+</code></pre>
+<ul>
+<li>타입: <code>(b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c</code></li>
+<li>의미: <code>g</code>를 먼저 적용하고, 그 결과에 <code>f</code>를 적용한다</li>
+</ul>
+<p><strong>Compose 예시:</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+let double x = x * 2
+
+let incThenDouble = compose double inc
+let result = incThenDouble 5   // double(inc(5)) = double(6) = 12
+</code></pre>
+<p><strong>왜 compose가 유용한가?</strong></p>
+<ol>
+<li><strong>함수 조합</strong>: 작은 함수를 연결해 복잡한 동작 만들기</li>
+<li><strong>파이프라인</strong>: <code>f &lt;&lt; g &lt;&lt; h</code> 스타일 (Phase 7)</li>
+<li><strong>포인트-프리 스타일</strong>: <code>let process = compose validate transform</code></li>
+</ol>
+<h3 id="compose-컴파일"><a class="header" href="#compose-컴파일">Compose 컴파일</a></h3>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">// compose f g x = f (g x)
+Let("compose",
+    Lambda("f",
+        Lambda("g",
+            Lambda("x",
+                App(Var "f", App(Var "g", Var "x"))))),
+    ...)
+</code></pre>
+<p><strong>중첩 람다:</strong></p>
+<ul>
+<li>외부: <code>fun f -&gt; ...</code> (f 캡처)</li>
+<li>중간: <code>fun g -&gt; ...</code> (f, g 캡처)</li>
+<li>내부: <code>fun x -&gt; f (g x)</code> (f, g 사용)</li>
+</ul>
+<p><strong>Lifted functions:</strong></p>
+<ol>
+<li><strong>Innermost</strong>: <code>compose_inner(env, x)</code> - env에 f, g 저장</li>
+<li><strong>Middle</strong>: <code>compose_middle(env, g)</code> - env에 f 저장, g와 f로 inner closure 생성</li>
+<li><strong>Outermost</strong>: <code>compose_outer(env, f)</code> - f로 middle closure 생성</li>
+</ol>
+<p><strong>MLIR IR (간략):</strong></p>
+<pre><code class="language-mlir">// Innermost: fun x -&gt; f (g x)
+func.func @compose_inner(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // Load g from env[1]
+    %c1 = arith.constant 1 : i64
+    %g_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %g = llvm.load %g_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Call g(x)
+    %gx = /* CallClosure(g, x) */ : i32
+
+    // Load f from env[2]
+    %c2 = arith.constant 2 : i64
+    %f_addr = llvm.getelementptr %env[0, %c2] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %f = llvm.load %f_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Call f(g(x))
+    %result = /* CallClosure(f, gx) */ : i32
+    func.return %result : i32
+}
+
+// Middle: fun g -&gt; &lt;inner closure with f, g&gt;
+func.func @compose_middle(%env: !llvm.ptr, %g: !llvm.ptr) -&gt; !llvm.ptr {
+    // Load f from env[1]
+    %c1 = arith.constant 1 : i64
+    %f_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %f = llvm.load %f_addr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Allocate environment for inner (3 slots: fn_ptr, g, f)
+    %c24 = arith.constant 24 : i64
+    %env_inner = llvm.call @GC_malloc(%c24) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr(inner)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_inner = llvm.mlir.addressof @compose_inner : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_inner[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_inner, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = g
+    %slot1 = llvm.getelementptr %env_inner[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %g, %slot1 : !llvm.ptr, !llvm.ptr
+
+    // env[2] = f
+    %c2 = arith.constant 2 : i64
+    %slot2 = llvm.getelementptr %env_inner[0, %c2] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %f, %slot2 : !llvm.ptr, !llvm.ptr
+
+    func.return %env_inner : !llvm.ptr
+}
+
+// Outermost: fun f -&gt; &lt;middle closure with f&gt;
+func.func @compose_outer(%env: !llvm.ptr, %f: !llvm.ptr) -&gt; !llvm.ptr {
+    // Allocate environment for middle (2 slots: fn_ptr, f)
+    %c16 = arith.constant 16 : i64
+    %env_middle = llvm.call @GC_malloc(%c16) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr(middle)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_middle = llvm.mlir.addressof @compose_middle : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_middle[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_middle, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = f
+    %c1 = arith.constant 1 : i64
+    %slot1 = llvm.getelementptr %env_middle[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %f, %slot1 : !llvm.ptr, !llvm.ptr
+
+    func.return %env_middle : !llvm.ptr
+}
+</code></pre>
+<h3 id="여러-클로저-호출-체이닝"><a class="header" href="#여러-클로저-호출-체이닝">여러 클로저 호출 체이닝</a></h3>
+<p><strong>Compose 사용:</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+let double x = x * 2
+let incThenDouble = compose double inc
+let result = incThenDouble 5
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li><code>compose double inc</code> → 중간 클로저 반환 (middle closure with f=double, g=inc)</li>
+<li><code>(compose double inc) 5</code> → 내부 클로저 호출 (inner with f, g, x=5)</li>
+<li>내부에서 <code>g(5)</code> → 6</li>
+<li>내부에서 <code>f(6)</code> → 12</li>
+</ol>
+<p><strong>MLIR 호출 체인:</strong></p>
+<pre><code class="language-mlir">// 1. Wrap double as closure
+%closure_double = /* ... */
+
+// 2. Wrap inc as closure
+%closure_inc = /* ... */
+
+// 3. Create compose closure
+%closure_compose = /* compose_outer의 empty closure */
+
+// 4. Call compose(double)
+%closure_partial1 = llvm.call %fn_ptr_compose(%closure_compose, %closure_double)
+    : (!llvm.ptr, !llvm.ptr) -&gt; !llvm.ptr
+
+// 5. Call (compose double)(inc)
+%closure_partial2 = llvm.call %fn_ptr_partial1(%closure_partial1, %closure_inc)
+    : (!llvm.ptr, !llvm.ptr) -&gt; !llvm.ptr
+
+// 6. Call (compose double inc)(5)
+%c5 = arith.constant 5 : i32
+%result = llvm.call %fn_ptr_partial2(%closure_partial2, %c5)
+    : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>간접 호출의 연쇄:</strong></p>
+<ul>
+<li><code>compose</code> 호출 → 클로저 반환</li>
+<li><code>(compose double)</code> 호출 → 클로저 반환</li>
+<li><code>(compose double inc)</code> 호출 → 클로저 반환</li>
+<li><code>(compose double inc 5)</code> 호출 → 값 반환 (12)</li>
+</ul>
+<p>모든 중간 단계가 <strong>간접 호출</strong>을 사용한다.</p>
+<h2 id="함수를-반환하기"><a class="header" href="#함수를-반환하기">함수를 반환하기</a></h2>
+<h3 id="upward-funarg-problem"><a class="header" href="#upward-funarg-problem">Upward Funarg Problem</a></h3>
+<p><strong>함수를 반환하는 함수</strong>는 특별한 문제를 야기한다:</p>
+<pre><code class="language-fsharp">let makeAdder n =
+    fun x -&gt; x + n   // 이 클로저가 함수를 벗어나 반환된다
+</code></pre>
+<ul>
+<li><code>makeAdder</code>가 호출되면, 내부 람다 <code>fun x -&gt; x + n</code>이 생성된다</li>
+<li>이 람다는 <code>n</code>을 <strong>캡처</strong>한다</li>
+<li>람다가 <strong>makeAdder를 벗어나</strong> 반환된다</li>
+<li>반환된 후에도 <code>n</code>에 접근할 수 있어야 한다!</li>
+</ul>
+<p><strong>Upward funarg problem:</strong></p>
+<blockquote>
+<p>함수가 생성된 스코프를 벗어나 반환될 때, 캡처된 변수들이 어떻게 유지되는가?</p>
+</blockquote>
+<p><strong>잘못된 해결책: 스택 할당</strong></p>
+<pre><code class="language-c">// 안 되는 C 코드
+typedef int (*func_ptr)(int);
+
+func_ptr makeAdder(int n) {
+    int captured_n = n;   // 스택 변수
+    return &amp;inner_func;    // inner_func이 captured_n을 참조
+}   // 여기서 captured_n이 소멸! Dangling pointer!
+</code></pre>
+<p>함수가 반환되면 스택 프레임이 소멸되므로, <code>captured_n</code>에 접근하면 <strong>undefined behavior</strong>다.</p>
+<p><strong>올바른 해결책: 힙 할당</strong></p>
+<p>환경을 **힙(heap)**에 할당하면, 함수가 반환되어도 환경이 유지된다:</p>
+<pre><code class="language-mlir">func.func @makeAdder(%n: i32) -&gt; !llvm.ptr {
+    // Allocate environment on heap (NOT stack!)
+    %env_size = arith.constant 16 : i64
+    %env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr
+    %fn_ptr = llvm.mlir.addressof @makeAdder_inner : !llvm.ptr
+    // ... store fn_ptr ...
+
+    // env[1] = n (captured)
+    // ... store n ...
+
+    func.return %env : !llvm.ptr   // 환경이 함수를 벗어나 반환
+}
+</code></pre>
+<p><strong>GC의 역할:</strong></p>
+<ul>
+<li>힙에 할당된 환경은 <strong>GC가 관리</strong>한다</li>
+<li>클로저가 살아있는 동안 환경도 유지된다</li>
+<li>클로저가 더 이상 사용되지 않으면 환경도 해제된다</li>
+</ul>
+<p><strong>Chapter 12 설계의 정당성:</strong></p>
+<p>Chapter 12에서 <strong>모든 클로저를 힙에 할당</strong>한 이유가 바로 이것이다. 클로저가 생성 스코프를 벗어날 수 있으므로, 항상 힙에 할당해야 안전하다.</p>
+<h3 id="makeadder-구현"><a class="header" href="#makeadder-구현">MakeAdder 구현</a></h3>
+<p><strong>MakeAdder 함수:</strong></p>
+<pre><code class="language-fsharp">let makeAdder n =
+    fun x -&gt; x + n
+</code></pre>
+<ul>
+<li>타입: <code>int -&gt; (int -&gt; int)</code></li>
+<li>의미: <code>n</code>을 받아서, “n을 더하는 함수“를 반환한다</li>
+</ul>
+<p><strong>사용 예시:</strong></p>
+<pre><code class="language-fsharp">let add5 = makeAdder 5
+let result1 = add5 10   // 15
+
+let add10 = makeAdder 10
+let result2 = add10 20  // 30
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("makeAdder",
+    Lambda("n",
+        Lambda("x",
+            Add(Var "x", Var "n"))),
+    ...)
+</code></pre>
+<p><strong>Closure conversion:</strong></p>
+<ol>
+<li><strong>내부 람다</strong>: <code>fun x -&gt; x + n</code> (n 캡처)
+<ul>
+<li>Lifted: <code>makeAdder_inner(env, x) = x + env[1]</code></li>
+</ul>
+</li>
+<li><strong>외부 람다</strong>: <code>fun n -&gt; &lt;inner closure&gt;</code>
+<ul>
+<li>Lifted: <code>makeAdder_outer(env, n) = create_closure(makeAdder_inner, [n])</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>F# 컴파일 (간략):</strong></p>
+<pre><code class="language-fsharp">let compileMakeAdder (builder: OpBuilder) : unit =
+    // Inner function: fun x -&gt; x + n
+    let innerFunc = builder.CreateFunction("makeAdder_inner",
+        [builder.PtrType(); builder.IntType(32)],
+        builder.IntType(32))
+
+    builder.WithInsertionPoint(innerFunc, fun () -&gt;
+        let env = innerFunc.GetArgument(0)
+        let x = innerFunc.GetArgument(1)
+
+        // Load n from env[1]
+        let c1 = builder.ConstantInt(1L, 64)
+        let nAddr = builder.CreateGEP(env, [c1])
+        let n = builder.CreateLoad(builder.IntType(32), nAddr)
+
+        // Compute x + n
+        let result = builder.CreateAdd(x, n)
+        builder.CreateReturn(result)
+    )
+
+    // Outer function: fun n -&gt; &lt;inner closure&gt;
+    let outerFunc = builder.CreateFunction("makeAdder_outer",
+        [builder.PtrType(); builder.IntType(32)],
+        builder.PtrType())
+
+    builder.WithInsertionPoint(outerFunc, fun () -&gt;
+        let envOuter = outerFunc.GetArgument(0)
+        let n = outerFunc.GetArgument(1)
+
+        // Allocate environment for inner closure (2 slots)
+        let envSize = builder.ConstantInt(16L, 64)
+        let envInner = builder.CreateGCMalloc(envSize)
+
+        // env[0] = fn_ptr(inner)
+        let c0 = builder.ConstantInt(0L, 64)
+        let fnPtrInner = builder.CreateAddressOf(innerFunc)
+        let slot0 = builder.CreateGEP(envInner, [c0])
+        builder.CreateStore(fnPtrInner, slot0)
+
+        // env[1] = n (captured)
+        let c1 = builder.ConstantInt(1L, 64)
+        let slot1 = builder.CreateGEP(envInner, [c1])
+        builder.CreateStore(n, slot1)
+
+        // Return inner closure (escapes function!)
+        builder.CreateReturn(envInner)
+    )
+</code></pre>
+<p><strong>완전한 MLIR IR:</strong></p>
+<pre><code class="language-mlir">// Inner function
+func.func @makeAdder_inner(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // Load n from env[1]
+    %c1 = arith.constant 1 : i64
+    %n_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %n = llvm.load %n_addr : !llvm.ptr -&gt; i32
+
+    // x + n
+    %result = arith.addi %x, %n : i32
+    func.return %result : i32
+}
+
+// Outer function
+func.func @makeAdder_outer(%env_outer: !llvm.ptr, %n: i32) -&gt; !llvm.ptr {
+    // Allocate environment for inner closure
+    %c16 = arith.constant 16 : i64
+    %env_inner = llvm.call @GC_malloc(%c16) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr(inner)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_inner = llvm.mlir.addressof @makeAdder_inner : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_inner[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_inner, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = n
+    %c1 = arith.constant 1 : i64
+    %slot1 = llvm.getelementptr %env_inner[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %n, %slot1 : !llvm.ptr, !llvm.ptr
+
+    // Return closure (environment escapes!)
+    func.return %env_inner : !llvm.ptr
+}
+</code></pre>
+<p><strong>테스트 코드:</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+    // Create makeAdder closure (empty env)
+    %c8 = arith.constant 8 : i64
+    %env_makeAdder = llvm.call @GC_malloc(%c8) : (i64) -&gt; !llvm.ptr
+    %fn_ptr_makeAdder = llvm.mlir.addressof @makeAdder_outer : !llvm.ptr
+    %c0 = arith.constant 0 : i64
+    %slot0 = llvm.getelementptr %env_makeAdder[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr_makeAdder, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // Call makeAdder(5)
+    %c5 = arith.constant 5 : i32
+    %fn_ptr = llvm.load %slot0 : !llvm.ptr -&gt; !llvm.ptr
+    %add5 = llvm.call %fn_ptr(%env_makeAdder, %c5) : (!llvm.ptr, i32) -&gt; !llvm.ptr
+    // %add5 is a closure (inner function with n=5)
+
+    // Call add5(10)
+    %c10 = arith.constant 10 : i32
+    %fn_ptr_inner = llvm.getelementptr %add5[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %fn_ptr_loaded = llvm.load %fn_ptr_inner : !llvm.ptr -&gt; !llvm.ptr
+    %result = llvm.call %fn_ptr_loaded(%add5, %c10) : (!llvm.ptr, i32) -&gt; i32
+    // %result = 15
+
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./funlang makeAdder_test.fun
+15
+</code></pre>
+<h3 id="반환된-클로저의-생명주기"><a class="header" href="#반환된-클로저의-생명주기">반환된 클로저의 생명주기</a></h3>
+<p><strong>환경은 언제 해제되는가?</strong></p>
+<pre><code class="language-fsharp">let add5 = makeAdder 5
+// add5가 살아있는 동안, makeAdder의 환경도 유지된다
+let result = add5 10   // OK
+// add5가 스코프를 벗어나면, 환경도 GC에 의해 해제된다
+</code></pre>
+<p><strong>GC의 추적:</strong></p>
+<ul>
+<li><code>add5</code> (클로저 포인터)가 살아있으면 → 환경 유지</li>
+<li><code>add5</code>가 더 이상 참조되지 않으면 → GC가 환경 수거</li>
+</ul>
+<p><strong>여러 클로저가 같은 환경을 공유하지 않는다:</strong></p>
+<pre><code class="language-fsharp">let add5 = makeAdder 5
+let add10 = makeAdder 10
+</code></pre>
+<ul>
+<li><code>add5</code>와 <code>add10</code>은 <strong>서로 다른 환경</strong>을 가진다</li>
+<li>각 <code>makeAdder</code> 호출이 새로운 환경을 힙에 할당한다</li>
+</ul>
+<p><strong>메모리 누수 없음:</strong></p>
+<p>GC가 자동으로 관리하므로, 프로그래머가 <code>free</code>를 호출할 필요 없다.</p>
+<h2 id="커링-패턴"><a class="header" href="#커링-패턴">커링 패턴</a></h2>
+<h3 id="다중-인자-함수를-클로저-체인으로-표현"><a class="header" href="#다중-인자-함수를-클로저-체인으로-표현">다중 인자 함수를 클로저 체인으로 표현</a></h3>
+<p>**커링(Currying)**은 다중 인자 함수를 <strong>중첩된 단일 인자 함수로 변환</strong>하는 것이다:</p>
+<pre><code class="language-fsharp">// 다중 인자 함수 (Phase 3 스타일)
+let add x y = x + y
+
+// 커리된 함수 (Phase 4 스타일)
+let add = fun x -&gt; fun y -&gt; x + y
+</code></pre>
+<ul>
+<li><code>add</code>의 타입: <code>int -&gt; (int -&gt; int)</code></li>
+<li><code>add</code>는 함수를 반환하는 함수다</li>
+</ul>
+<p><strong>커링의 장점:</strong></p>
+<ol>
+<li><strong>부분 적용(Partial application)</strong>: <code>let add5 = add 5</code></li>
+<li><strong>합성 용이</strong>: 커리된 함수는 파이프라인에 쉽게 통합됨</li>
+<li><strong>일관된 타입 시스템</strong>: 모든 함수가 단일 인자</li>
+</ol>
+<p><strong>커링 예시:</strong></p>
+<pre><code class="language-fsharp">let add x y = x + y     // 실제로는 fun x -&gt; fun y -&gt; x + y
+
+let add5 = add 5        // 부분 적용
+let result = add5 10    // 15
+</code></pre>
+<h3 id="커리된-함수의-컴파일"><a class="header" href="#커리된-함수의-컴파일">커리된 함수의 컴파일</a></h3>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("add",
+    Lambda("x",
+        Lambda("y",
+            Add(Var "x", Var "y"))),
+    ...)
+</code></pre>
+<p><strong>Closure conversion:</strong></p>
+<ol>
+<li><strong>내부 람다</strong>: <code>fun y -&gt; x + y</code> (x 캡처)
+<ul>
+<li>Lifted: <code>add_inner(env, y) = env[1] + y</code></li>
+</ul>
+</li>
+<li><strong>외부 람다</strong>: <code>fun x -&gt; &lt;inner closure&gt;</code>
+<ul>
+<li>Lifted: <code>add_outer(env, x) = create_closure(add_inner, [x])</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>MLIR IR:</strong></p>
+<pre><code class="language-mlir">// Inner: fun y -&gt; x + y
+func.func @add_inner(%env: !llvm.ptr, %y: i32) -&gt; i32 {
+    // Load x from env[1]
+    %c1 = arith.constant 1 : i64
+    %x_addr = llvm.getelementptr %env[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %x = llvm.load %x_addr : !llvm.ptr -&gt; i32
+
+    // x + y
+    %result = arith.addi %x, %y : i32
+    func.return %result : i32
+}
+
+// Outer: fun x -&gt; &lt;inner closure&gt;
+func.func @add_outer(%env_outer: !llvm.ptr, %x: i32) -&gt; !llvm.ptr {
+    // Allocate environment for inner
+    %c16 = arith.constant 16 : i64
+    %env_inner = llvm.call @GC_malloc(%c16) : (i64) -&gt; !llvm.ptr
+
+    // env[0] = fn_ptr
+    %c0 = arith.constant 0 : i64
+    %fn_ptr = llvm.mlir.addressof @add_inner : !llvm.ptr
+    %slot0 = llvm.getelementptr %env_inner[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %fn_ptr, %slot0 : !llvm.ptr, !llvm.ptr
+
+    // env[1] = x
+    %c1 = arith.constant 1 : i64
+    %slot1 = llvm.getelementptr %env_inner[0, %c1] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    llvm.store %x, %slot1 : !llvm.ptr, !llvm.ptr
+
+    func.return %env_inner : !llvm.ptr
+}
+</code></pre>
+<p><strong>부분 적용:</strong></p>
+<pre><code class="language-fsharp">let add5 = add 5
+</code></pre>
+<pre><code class="language-mlir">// Call add(5) -&gt; returns closure with x=5
+%c5 = arith.constant 5 : i32
+%closure_add = /* ... */
+%fn_ptr_add = /* load from closure_add[0] */
+%add5 = llvm.call %fn_ptr_add(%closure_add, %c5) : (!llvm.ptr, i32) -&gt; !llvm.ptr
+// %add5 is inner closure with x=5 captured
+</code></pre>
+<p><strong>완전 적용:</strong></p>
+<pre><code class="language-fsharp">let result = add5 10
+</code></pre>
+<pre><code class="language-mlir">// Call add5(10)
+%c10 = arith.constant 10 : i32
+%fn_ptr_inner = /* load from %add5[0] */
+%result = llvm.call %fn_ptr_inner(%add5, %c10) : (!llvm.ptr, i32) -&gt; i32
+// %result = 15
+</code></pre>
+<p><strong>커링과 makeAdder의 유사성:</strong></p>
+<ul>
+<li><code>makeAdder</code>는 명시적 함수 반환</li>
+<li>커링은 암묵적 함수 반환 (다중 인자를 중첩 람다로 변환)</li>
+<li>둘 다 <strong>upward funarg problem</strong> 해결 필요 (힙 할당)</li>
+</ul>
+<h3 id="3개-이상의-인자"><a class="header" href="#3개-이상의-인자">3개 이상의 인자</a></h3>
+<pre><code class="language-fsharp">let add3 x y z = x + y + z
+// = fun x -&gt; fun y -&gt; fun z -&gt; x + y + z
+</code></pre>
+<p><strong>중첩 구조:</strong></p>
+<ul>
+<li>외부: <code>fun x -&gt; ...</code> (비어있음)</li>
+<li>중간: <code>fun y -&gt; ...</code> (x 캡처)</li>
+<li>내부: <code>fun z -&gt; x + y + z</code> (x, y 캡처)</li>
+</ul>
+<p><strong>MLIR에서 3단계 중첩:</strong></p>
+<p>각 단계가 새로운 클로저를 생성하고, 이전 환경을 캡처한다. 복잡하지만 패턴은 동일하다.</p>
+<h2 id="메모리-관리와-클로저"><a class="header" href="#메모리-관리와-클로저">메모리 관리와 클로저</a></h2>
+<h3 id="gc가-클로저-생명주기를-관리한다"><a class="header" href="#gc가-클로저-생명주기를-관리한다">GC가 클로저 생명주기를 관리한다</a></h3>
+<p><strong>핵심 원칙:</strong></p>
+<ul>
+<li>모든 클로저 환경은 <strong>힙에 할당</strong>된다 (<code>GC_malloc</code>)</li>
+<li><strong>GC가 자동으로 추적</strong>하여, 사용되지 않으면 해제한다</li>
+<li>프로그래머는 메모리 관리를 신경 쓸 필요 없다</li>
+</ul>
+<p><strong>생명주기 예시:</strong></p>
+<pre><code class="language-fsharp">let createAdders () =
+    let add5 = makeAdder 5
+    let add10 = makeAdder 10
+    add5    // add5만 반환, add10은 버려진다
+
+let adder = createAdders()
+let result = adder 20   // 25
+</code></pre>
+<p><strong>메모리 추적:</strong></p>
+<ol>
+<li><code>makeAdder 5</code> 호출 → 환경1 할당 (n=5)</li>
+<li><code>makeAdder 10</code> 호출 → 환경2 할당 (n=10)</li>
+<li><code>add5</code> 반환 → 환경1은 유지</li>
+<li><code>add10</code>은 스코프 벗어남 → 환경2는 GC 수거 대상</li>
+<li><code>adder</code> 사용 → 환경1 유지</li>
+<li><code>adder</code> 스코프 벗어남 → 환경1도 GC 수거</li>
+</ol>
+<p><strong>Dangling pointer 없음:</strong></p>
+<p>C/C++에서는 스택 포인터 반환이 위험하지만, GC 덕분에 FunLang은 안전하다:</p>
+<pre><code class="language-fsharp">let unsafeInC () =
+    let local = 42
+    fun () -&gt; local   // C에서는 dangling pointer, FunLang에서는 OK
+</code></pre>
+<p>FunLang 컴파일러는 <code>local</code>을 환경에 캡처하고 힙에 할당하므로 안전하다.</p>
+<h3 id="순환-참조와-gc"><a class="header" href="#순환-참조와-gc">순환 참조와 GC</a></h3>
+<p><strong>Cyclic closures (순환 클로저):</strong></p>
+<pre><code class="language-fsharp">let rec isEven n =
+    if n = 0 then true
+    else isOdd (n - 1)
+and isOdd n =
+    if n = 0 then false
+    else isEven (n - 1)
+</code></pre>
+<ul>
+<li><code>isEven</code> 클로저가 <code>isOdd</code>를 캡처</li>
+<li><code>isOdd</code> 클로저가 <code>isEven</code>을 캡처</li>
+<li><strong>순환 참조!</strong></li>
+</ul>
+<p><strong>GC의 처리:</strong></p>
+<p>Boehm GC는 <strong>tracing GC</strong>이므로, 순환 참조를 정확히 감지하고 해제한다:</p>
+<ul>
+<li>루트(스택, 전역)에서 도달 가능한 객체만 유지</li>
+<li>순환 참조가 루트에서 도달 불가능하면 → 수거</li>
+</ul>
+<p><strong>Reference counting과의 차이:</strong></p>
+<ul>
+<li><strong>Reference counting</strong>: 순환 참조를 해제하지 못함 (메모리 누수)</li>
+<li><strong>Tracing GC</strong>: 순환 참조도 정확히 처리</li>
+</ul>
+<p>Phase 2에서 Boehm GC를 선택한 이유가 이것이다.</p>
+<h3 id="클로저-생성-비용"><a class="header" href="#클로저-생성-비용">클로저 생성 비용</a></h3>
+<p><strong>힙 할당 비용:</strong></p>
+<ul>
+<li>클로저 생성 = <code>GC_malloc</code> 호출</li>
+<li>스택 할당보다 느리지만, 안전성 보장</li>
+</ul>
+<p><strong>최적화 가능성 (Phase 7):</strong></p>
+<ul>
+<li><strong>Escape analysis</strong>: 클로저가 함수를 벗어나지 않으면 스택 할당 가능</li>
+<li><strong>Closure inlining</strong>: 클로저가 즉시 호출되면 인라이닝 가능</li>
+<li>Phase 4는 최적화 없이 항상 힙 할당</li>
+</ul>
+<p><strong>GC 오버헤드:</strong></p>
+<ul>
+<li>주기적인 GC 실행 (pause time)</li>
+<li>메모리 오버헤드 (fragmentation)</li>
+<li>하지만 프로그래머 생산성은 크게 향상</li>
+</ul>
+<h2 id="complete-예시-map-함수"><a class="header" href="#complete-예시-map-함수">Complete 예시: Map 함수</a></h2>
+<h3 id="map의-개념"><a class="header" href="#map의-개념">Map의 개념</a></h3>
+<p><strong>Map 함수</strong>는 리스트의 각 원소에 함수를 적용한다:</p>
+<pre><code class="language-fsharp">// 개념적 정의 (Phase 6에서 완전 구현)
+let rec map f list =
+    match list with
+    | [] -&gt; []
+    | head :: tail -&gt; (f head) :: (map f tail)
+</code></pre>
+<ul>
+<li>타입: <code>(a -&gt; b) -&gt; list a -&gt; list b</code></li>
+<li>의미: <code>f</code>를 각 원소에 적용해 새 리스트 생성</li>
+</ul>
+<p><strong>Map 예시:</strong></p>
+<pre><code class="language-fsharp">let inc x = x + 1
+let numbers = [1; 2; 3; 4]
+let incremented = map inc numbers   // [2; 3; 4; 5]
+
+let double x = x * 2
+let doubled = map double numbers    // [2; 4; 6; 8]
+</code></pre>
+<h3 id="phase-4의-map-단순화-버전"><a class="header" href="#phase-4의-map-단순화-버전">Phase 4의 Map (단순화 버전)</a></h3>
+<p>Phase 4에는 리스트가 없으므로, <strong>개념적 설명</strong>만 한다. 핵심은 <strong>HOF 패턴</strong>이다:</p>
+<pre><code class="language-fsharp">// 단순화: 두 원소 "리스트"만 처리
+let map2 f x y =
+    let fx = f x
+    let fy = f y
+    (fx, fy)   // Phase 6에서는 실제 리스트 반환
+</code></pre>
+<p><strong>컴파일:</strong></p>
+<pre><code class="language-mlir">func.func @map2(%f: !llvm.ptr, %x: i32, %y: i32) -&gt; (i32, i32) {
+    // Call f(x)
+    %c0 = arith.constant 0 : i64
+    %fn_ptr_addr = llvm.getelementptr %f[0, %c0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+    %fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+    %fx = llvm.call %fn_ptr(%f, %x) : (!llvm.ptr, i32) -&gt; i32
+
+    // Call f(y)
+    %fy = llvm.call %fn_ptr(%f, %y) : (!llvm.ptr, i32) -&gt; i32
+
+    // Return pair (fx, fy) - Phase 6에서는 리스트
+    // ... (tuple 구현 생략)
+}
+</code></pre>
+<p><strong>Map의 핵심:</strong></p>
+<ul>
+<li>함수 <code>f</code>를 <strong>인자로 받는다</strong> (고차 함수)</li>
+<li><code>f</code>를 <strong>여러 번 호출</strong>한다 (간접 호출)</li>
+<li>각 호출마다 <code>f</code>의 환경을 전달한다</li>
+</ul>
+<p><strong>Map + Closure:</strong></p>
+<pre><code class="language-fsharp">let addN n = fun x -&gt; x + n
+let add5 = addN 5
+let result = map2 add5 10 20   // (15, 25)
+</code></pre>
+<ul>
+<li><code>add5</code>는 클로저 (n=5 캡처)</li>
+<li><code>map2</code>가 <code>add5</code>를 받아서 두 번 호출</li>
+<li>각 호출마다 캡처된 <code>n</code> 사용</li>
+</ul>
+<p>이것이 <strong>클로저 + 고차 함수 = 함수형 프로그래밍 핵심</strong> 조합이다.</p>
+<h2 id="자주-하는-실수-common-errors"><a class="header" href="#자주-하는-실수-common-errors">자주 하는 실수 (Common Errors)</a></h2>
+<h3 id="error-1-클로저를-첫-인자로-전달하지-않음"><a class="header" href="#error-1-클로저를-첫-인자로-전달하지-않음">Error 1: 클로저를 첫 인자로 전달하지 않음</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-mlir">// 잘못된 호출 - 환경 누락
+%result = llvm.call %fn_ptr(%arg) : (i32) -&gt; i32
+</code></pre>
+<p>Lifted function은 <strong>첫 번째 파라미터로 환경을 받는다</strong>:</p>
+<pre><code class="language-mlir">func.func @lifted(%env: !llvm.ptr, %arg: i32) -&gt; i32
+</code></pre>
+<p>환경 없이 호출하면 <strong>타입 미스매치</strong> 또는 <strong>segfault</strong>:</p>
+<pre><code>ERROR: Call argument count mismatch (expected 2, got 1)
+</code></pre>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 호출 - 클로저(환경)를 첫 인자로
+%result = llvm.call %fn_ptr(%closure, %arg) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>F# 헬퍼 사용:</strong></p>
+<pre><code class="language-fsharp">// 자동으로 클로저를 첫 인자로 전달
+builder.CallClosure(closure, [arg], resultType)
+</code></pre>
+<h3 id="error-2-클로저-본체를-직접-호출"><a class="header" href="#error-2-클로저-본체를-직접-호출">Error 2: 클로저 본체를 직접 호출</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-mlir">// 잘못된 호출 - lifted function을 직접 호출
+%result = func.call @lifted_func(%env, %arg) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p>Lifted function은 <strong>내부 함수</strong>이고, 직접 호출하면 <strong>환경이 잘못 전달</strong>될 수 있다.</p>
+<p><strong>올바른 방법:</strong></p>
+<ol>
+<li>클로저에서 함수 포인터 추출</li>
+<li>간접 호출 (<code>llvm.call</code>)</li>
+</ol>
+<pre><code class="language-mlir">// 올바른 호출 - 클로저를 통해 간접 호출
+%fn_ptr_addr = llvm.getelementptr %closure[0, 0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.load %fn_ptr_addr : !llvm.ptr -&gt; !llvm.ptr
+%result = llvm.call %fn_ptr(%closure, %arg) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>예외:</strong></p>
+<p>테스트 목적으로 직접 호출할 수는 있지만, 일반적인 패턴은 아니다.</p>
+<h3 id="error-3-스택에-반환-클로저의-환경-할당"><a class="header" href="#error-3-스택에-반환-클로저의-환경-할당">Error 3: 스택에 반환 클로저의 환경 할당</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-mlir">func.func @makeAdder_wrong(%n: i32) -&gt; !llvm.ptr {
+    // 잘못됨 - 스택 할당!
+    %c1 = arith.constant 1 : index
+    %env = memref.alloca(%c1) : memref&lt;?xi64&gt;
+    // ... store function pointer and n ...
+    %ptr = memref.extract_aligned_pointer_as_index %env : memref&lt;?xi64&gt; -&gt; !llvm.ptr
+    func.return %ptr : !llvm.ptr
+}   // 함수 종료 시 %env 소멸! Dangling pointer!
+</code></pre>
+<p>함수가 반환되면 <strong>스택 프레임이 소멸</strong>되므로, 환경 접근 시 undefined behavior.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">func.func @makeAdder_correct(%n: i32) -&gt; !llvm.ptr {
+    // 올바름 - 힙 할당
+    %env_size = arith.constant 16 : i64
+    %env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+    // ... store function pointer and n ...
+    func.return %env : !llvm.ptr
+}   // %env는 힙에 있으므로 안전
+</code></pre>
+<p><strong>원칙:</strong></p>
+<ul>
+<li><strong>반환되는 클로저</strong>: 항상 <code>GC_malloc</code> 사용</li>
+<li><strong>로컬 클로저</strong> (스코프 벗어나지 않음): 스택 가능 (Phase 7 최적화)</li>
+</ul>
+<h3 id="error-4-간접-호출-시-타입-미스매치"><a class="header" href="#error-4-간접-호출-시-타입-미스매치">Error 4: 간접 호출 시 타입 미스매치</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-mlir">// Lifted function: (%env: !llvm.ptr, %x: i32) -&gt; i32
+func.func @lifted(%env: !llvm.ptr, %x: i32) -&gt; i32
+
+// 잘못된 호출 - 타입 불일치
+%result = llvm.call %fn_ptr(%closure) : (!llvm.ptr) -&gt; i32   // 인자 누락
+</code></pre>
+<p>LLVM IR에서 타입 불일치는 <strong>검증 실패</strong> 또는 <strong>런타임 크래시</strong>:</p>
+<pre><code>ERROR: Function signature mismatch in indirect call
+</code></pre>
+<p><strong>해결:</strong></p>
+<p>간접 호출 시 <strong>정확한 시그니처</strong> 명시:</p>
+<pre><code class="language-mlir">// 올바른 호출 - 모든 인자와 정확한 타입
+%result = llvm.call %fn_ptr(%closure, %x) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p><strong>타입 시그니처 유지:</strong></p>
+<ul>
+<li>Lifted function 정의와 간접 호출 타입이 <strong>정확히 일치</strong>해야 함</li>
+<li>컴파일러가 자동으로 추론하도록 구현</li>
+</ul>
+<h3 id="error-5-클로저-동일성-혼동"><a class="header" href="#error-5-클로저-동일성-혼동">Error 5: 클로저 동일성 혼동</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-fsharp">let f = fun x -&gt; x + 1
+let g = fun x -&gt; x + 1
+// f와 g는 같은가?
+</code></pre>
+<p><strong>답: 아니다!</strong></p>
+<ul>
+<li><code>f</code>와 <code>g</code>는 <strong>서로 다른 클로저</strong>다</li>
+<li>각각 <strong>다른 환경 포인터</strong>를 가진다 (빈 환경이더라도)</li>
+<li><strong>포인터 비교</strong>: <code>f != g</code> (주소가 다름)</li>
+</ul>
+<p><strong>의미적 동등성 vs 포인터 동등성:</strong></p>
+<ul>
+<li><strong>의미적 동등성</strong>: 같은 동작 (extensional equality)</li>
+<li><strong>포인터 동등성</strong>: 같은 객체 (intensional equality)</li>
+</ul>
+<p>FunLang은 <strong>포인터 동등성</strong>만 지원한다 (대부분의 언어와 동일).</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-mlir">// 두 클로저 생성
+%closure1 = /* fun x -&gt; x + 1 */
+%closure2 = /* fun x -&gt; x + 1 */
+
+// 포인터 비교
+%same = llvm.icmp "eq" %closure1, %closure2 : !llvm.ptr
+// %same = false (주소가 다름)
+</code></pre>
+<p><strong>함수 메모이제이션:</strong></p>
+<p>의미적 동등성이 필요하면 <strong>명시적 비교 로직</strong> 구현 필요 (Phase 7).</p>
+<h2 id="phase-4-완료-요약"><a class="header" href="#phase-4-완료-요약">Phase 4 완료 요약</a></h2>
+<h3 id="무엇을-구현했는가"><a class="header" href="#무엇을-구현했는가">무엇을 구현했는가</a></h3>
+<p><strong>Phase 4 - Closures &amp; Higher-Order Functions:</strong></p>
+<ol>
+<li>
+<p><strong>Chapter 12 - Closures:</strong></p>
+<ul>
+<li>클로저 이론 (lexical scoping, free/bound variables)</li>
+<li>자유 변수 분석 알고리즘</li>
+<li>클로저 변환 (closure conversion)</li>
+<li>환경 구조체 (힙 할당)</li>
+<li>GC_malloc으로 클로저 생성</li>
+</ul>
+</li>
+<li>
+<p><strong>Chapter 13 - Higher-Order Functions:</strong></p>
+<ul>
+<li>함수를 일급 값으로 다루기</li>
+<li>간접 호출 패턴 (<code>llvm.call</code> with function pointer)</li>
+<li>Apply 함수 (함수를 인자로 받기)</li>
+<li>Compose 함수 (여러 함수 인자)</li>
+<li>함수를 반환하기 (makeAdder, upward funarg problem)</li>
+<li>커링 패턴 (다중 인자 → 중첩 람다)</li>
+<li>메모리 관리 (GC가 클로저 생명주기 관리)</li>
+<li>자주 하는 실수 5가지</li>
+</ul>
+</li>
+</ol>
+<p><strong>핵심 구현 항목:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>항목</th><th>설명</th><th>MLIR 패턴</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>클로저 표현</strong></td><td>(fn_ptr, env) 쌍</td><td><code>!llvm.ptr</code></td></tr>
+<tr><td><strong>환경 할당</strong></td><td>힙에 GC_malloc</td><td><code>llvm.call @GC_malloc</code></td></tr>
+<tr><td><strong>간접 호출</strong></td><td>함수 포인터 로드 후 호출</td><td><code>llvm.call %fn_ptr(...)</code></td></tr>
+<tr><td><strong>환경 접근</strong></td><td>GEP + load</td><td><code>llvm.getelementptr + llvm.load</code></td></tr>
+<tr><td><strong>클로저 생성</strong></td><td>환경 할당 + 변수 저장</td><td><code>GC_malloc + store</code></td></tr>
+<tr><td><strong>함수 반환</strong></td><td>클로저 반환 (escaping)</td><td><code>func.return %env</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>타입 시스템:</strong></p>
+<ul>
+<li>모든 함수/클로저: <code>!llvm.ptr</code> (opaque pointer)</li>
+<li>함수 타입 (개념적): <code>a -&gt; b</code> = <code>(!llvm.ptr, a) -&gt; b</code> (lifted)</li>
+</ul>
+<h3 id="phase-4가-가능하게-한-것"><a class="header" href="#phase-4가-가능하게-한-것">Phase 4가 가능하게 한 것</a></h3>
+<p><strong>이제 컴파일할 수 있는 것:</strong></p>
+<pre><code class="language-fsharp">// 1. 클로저 생성
+let makeAdder n = fun x -&gt; x + n
+
+// 2. 고차 함수
+let apply f x = f x
+let compose f g x = f (g x)
+
+// 3. 부분 적용
+let add5 = makeAdder 5
+let result = add5 10   // 15
+
+// 4. 함수 합성
+let inc x = x + 1
+let double x = x * 2
+let incThenDouble = compose double inc
+let result2 = incThenDouble 5   // 12
+
+// 5. 콜백 패턴
+let processWithCallback callback data =
+    let result = compute data
+    callback result
+
+// 6. 커링
+let add x y = x + y   // = fun x -&gt; fun y -&gt; x + y
+let add5 = add 5
+</code></pre>
+<p><strong>함수형 프로그래밍의 핵심:</strong></p>
+<ul>
+<li>✅ 클로저 (환경 캡처)</li>
+<li>✅ 고차 함수 (함수 인자/반환)</li>
+<li>✅ 부분 적용</li>
+<li>✅ 함수 합성</li>
+<li>⏸️ Map, filter, fold (Phase 6에서 리스트 추가 후)</li>
+</ul>
+<h3 id="다음-단계-phase-5---custom-mlir-dialect"><a class="header" href="#다음-단계-phase-5---custom-mlir-dialect">다음 단계: Phase 5 - Custom MLIR Dialect</a></h3>
+<p><strong>Phase 5 목표:</strong></p>
+<p>FunLang 전용 MLIR dialect 설계 및 구현:</p>
+<ol>
+<li>
+<p><strong>FunLang Dialect 정의:</strong></p>
+<ul>
+<li><code>funlang.closure</code> 연산 (클로저 생성 추상화)</li>
+<li><code>funlang.closure_call</code> 연산 (간접 호출 추상화)</li>
+<li><code>funlang.capture</code> 연산 (환경 저장 추상화)</li>
+</ul>
+</li>
+<li>
+<p><strong>Lowering passes:</strong></p>
+<ul>
+<li>FunLang dialect → Func/LLVM dialect</li>
+<li>고수준 의미론 → 저수준 MLIR</li>
+</ul>
+</li>
+<li>
+<p><strong>이점:</strong></p>
+<ul>
+<li>컴파일러 코드 단순화 (고수준 연산 사용)</li>
+<li>최적화 pass 추가 용이 (dialect-specific 변환)</li>
+<li>타입 안전성 향상 (dialect 타입 시스템)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Phase 4 vs Phase 5:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase 4</th><th>Phase 5</th></tr>
+</thead>
+<tbody>
+<tr><td>저수준 LLVM dialect 직접 생성</td><td>고수준 FunLang dialect 생성</td></tr>
+<tr><td>GEP, load, store 수동 관리</td><td>추상화된 연산 사용</td></tr>
+<tr><td>최적화 어려움</td><td>Dialect 최적화 pass</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Preview:</strong></p>
+<pre><code class="language-mlir">// Phase 4 (저수준)
+%env = llvm.call @GC_malloc(%c16) : (i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.mlir.addressof @func : !llvm.ptr
+%slot0 = llvm.getelementptr %env[0, 0] : (!llvm.ptr, i64) -&gt; !llvm.ptr
+llvm.store %fn_ptr, %slot0 : !llvm.ptr, !llvm.ptr
+// ... (환경 저장)
+
+// Phase 5 (고수준)
+%closure = funlang.closure @func, %captured_vars : (i32) -&gt; i32
+</code></pre>
+<p>Phase 5는 <strong>컴파일러 품질</strong>을 향상시킨다. Phase 4는 <strong>기능 완성</strong>이다.</p>
+<hr>
+<p><strong>Congratulations!</strong> Phase 4 완료. 이제 FunLang은 <strong>완전한 함수형 언어</strong>의 핵심 기능을 지원한다.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="12-closures.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="appendix-custom-dialect.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="12-closures.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="appendix-custom-dialect.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

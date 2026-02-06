@@ -1,0 +1,1486 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 12: 클로저 - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-d7fc48ce.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-94493ebb.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./12-closures.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-12-클로저-closures"><a class="header" href="#chapter-12-클로저-closures">Chapter 12: 클로저 (Closures)</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p>**클로저(closure)**는 함수형 프로그래밍의 핵심 기능이다. 클로저는 단순한 함수가 아니라, **함수 + 환경(environment)**의 조합이다.</p>
+<pre><code class="language-fsharp">// Phase 3 함수 - 외부 변수 사용 불가
+let add x y = x + y
+
+// Phase 4 클로저 - 외부 변수 캡처 가능
+let make_adder n =
+    fun x -&gt; x + n   // n을 캡처!
+</code></pre>
+<p><code>fun x -&gt; x + n</code>은 <strong>클로저</strong>다:</p>
+<ul>
+<li><code>x</code>는 <strong>파라미터</strong> (bound variable)</li>
+<li><code>n</code>은 <strong>캡처된 변수</strong> (free variable, captured from environment)</li>
+</ul>
+<p>클로저가 생성될 때, <code>n</code>의 값이 **환경(environment)**에 저장된다. 나중에 클로저가 호출되면, 저장된 <code>n</code> 값을 사용한다.</p>
+<p><strong>왜 클로저가 중요한가?</strong></p>
+<ol>
+<li><strong>고차 함수(Higher-order functions)의 기초</strong>: 함수를 반환하거나 인자로 전달하려면 클로저가 필요하다</li>
+<li><strong>상태 캡처</strong>: 함수 생성 시점의 환경을 저장할 수 있다</li>
+<li><strong>추상화</strong>: 공통 패턴을 클로저로 추상화할 수 있다 (map, filter, fold)</li>
+</ol>
+<p><strong>클로저 vs Phase 3 함수:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase 3 함수</th><th>Phase 4 클로저</th></tr>
+</thead>
+<tbody>
+<tr><td>이름이 있다 (named)</td><td>익명 가능 (anonymous)</td></tr>
+<tr><td>외부 변수 사용 불가</td><td>외부 변수 캡처 가능</td></tr>
+<tr><td><code>func.func</code> 연산</td><td>함수 포인터 + 환경</td></tr>
+<tr><td>정적 바인딩</td><td>환경 저장 필요</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Chapter 12의 범위:</strong></p>
+<p>이 장에서 다루는 것:</p>
+<ol>
+<li><strong>클로저 이론</strong>: 자유 변수(free variables), 바운드 변수(bound variables)</li>
+<li><strong>자유 변수 분석</strong>: 어떤 변수를 캡처해야 하는지 계산</li>
+<li><strong>클로저 변환(Closure conversion)</strong>: 암묵적 캡처를 명시적으로 만들기</li>
+<li><strong>환경 구조체</strong>: 캡처된 변수를 저장하는 힙 객체</li>
+<li><strong>클로저 생성 코드</strong>: GC_malloc으로 환경 할당하기</li>
+</ol>
+<p>이 장을 마치면:</p>
+<ul>
+<li>클로저가 무엇이고 왜 필요한지 이해한다</li>
+<li>자유 변수 분석 알고리즘을 구현할 수 있다</li>
+<li>클로저를 (함수 포인터, 환경 포인터) 쌍으로 표현할 수 있다</li>
+<li>환경을 힙에 할당하고 변수를 저장/로드할 수 있다</li>
+<li>GC_malloc을 사용해 환경을 생성할 수 있다</li>
+</ul>
+<blockquote>
+<p><strong>Preview:</strong> Chapter 13에서는 고차 함수 (map, filter)를 추가한다. Chapter 12는 클로저의 기초를 확립한다.</p>
+</blockquote>
+<h2 id="클로저-이론"><a class="header" href="#클로저-이론">클로저 이론</a></h2>
+<h3 id="lexical-scoping-vs-dynamic-scoping"><a class="header" href="#lexical-scoping-vs-dynamic-scoping">Lexical Scoping vs Dynamic Scoping</a></h3>
+<p>클로저를 이해하려면 먼저 <strong>스코핑(scoping)</strong> 개념을 알아야 한다. 변수의 값이 어떻게 결정되는가?</p>
+<p><strong>Lexical scoping (정적 스코핑):</strong></p>
+<p>변수는 <strong>코드 작성 시점의 위치</strong>로 결정된다.</p>
+<pre><code class="language-fsharp">let x = 10 in
+let f = fun y -&gt; x + y in
+let x = 20 in
+f 5   // 결과: 15 (x = 10 사용)
+</code></pre>
+<p><code>fun y -&gt; x + y</code>에서 <code>x</code>는 <strong>정의 시점의 <code>x</code></strong> (10)을 참조한다. 나중에 <code>x</code>를 20으로 재바인딩해도 영향 없다.</p>
+<p><strong>Dynamic scoping (동적 스코핑):</strong></p>
+<p>변수는 <strong>호출 시점의 환경</strong>에서 찾는다.</p>
+<pre><code class="language-fsharp">// 동적 스코핑 가상 예시 (FunLang은 지원 안 함)
+let x = 10 in
+let f = fun y -&gt; x + y in
+let x = 20 in
+f 5   // 결과: 25 (x = 20 사용)
+</code></pre>
+<p><code>f</code>를 호출할 때, <code>x</code>는 <strong>호출 시점의 환경</strong>에서 찾는다 (20).</p>
+<p><strong>FunLang은 lexical scoping을 사용한다.</strong> 대부분의 현대 언어가 그렇다 (F#, JavaScript, Python, Rust, etc.). Dynamic scoping은 혼란스럽고 디버깅이 어렵다.</p>
+<p><strong>Lexical scoping의 의미:</strong></p>
+<ul>
+<li>함수가 정의될 때, <strong>그 시점의 환경을 기억해야 한다</strong></li>
+<li>함수가 호출될 때, <strong>저장된 환경을 사용해야 한다</strong></li>
+<li>이것이 <strong>클로저</strong>다: function + environment</li>
+</ul>
+<h3 id="free-variables-vs-bound-variables"><a class="header" href="#free-variables-vs-bound-variables">Free Variables vs Bound Variables</a></h3>
+<p>변수는 두 가지로 분류된다:</p>
+<p><strong>Bound variable (바운드 변수):</strong></p>
+<p>함수의 파라미터이거나, let 바인딩으로 정의된 변수.</p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+//  ↑   ↑
+//  바인딩  사용
+</code></pre>
+<p><code>x</code>는 <strong>bound variable</strong>이다. <code>fun x</code>가 <code>x</code>를 바인딩한다.</p>
+<p><strong>Free variable (자유 변수):</strong></p>
+<p>함수 내부에서 사용되지만, 그 함수에서 바인딩되지 않은 변수.</p>
+<pre><code class="language-fsharp">fun x -&gt; x + y
+//           ↑
+//       자유 변수!
+</code></pre>
+<p><code>y</code>는 <strong>free variable</strong>이다. <code>fun x</code>는 <code>y</code>를 바인딩하지 않는다. <code>y</code>는 <strong>외부 환경에서 와야 한다</strong>.</p>
+<p><strong>예시 1: 자유 변수 없음</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+</code></pre>
+<ul>
+<li>Bound: {x}</li>
+<li>Free: {} (empty)</li>
+</ul>
+<p><strong>예시 2: 자유 변수 하나</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + y
+</code></pre>
+<ul>
+<li>Bound: {x}</li>
+<li>Free: {y}</li>
+</ul>
+<p><strong>예시 3: 중첩된 람다</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; fun y -&gt; x + y + z
+</code></pre>
+<p>내부 람다 <code>fun y -&gt; x + y + z</code>를 보면:</p>
+<ul>
+<li>Bound: {y}</li>
+<li>Free: {x, z}</li>
+</ul>
+<p>외부 람다 <code>fun x -&gt; ...</code>를 보면:</p>
+<ul>
+<li>Bound: {x}</li>
+<li>Free: {z}</li>
+</ul>
+<p><strong>전체 표현식의 자유 변수: {z}</strong></p>
+<p><strong>예시 4: Let 바인딩</strong></p>
+<pre><code class="language-fsharp">let a = 10 in
+fun x -&gt; a + x
+</code></pre>
+<p><code>fun x -&gt; a + x</code>:</p>
+<ul>
+<li>Bound: {x}</li>
+<li>Free: {a}</li>
+</ul>
+<p>하지만 전체 표현식은 <code>let a = 10</code>이 <code>a</code>를 바인딩하므로:</p>
+<ul>
+<li>전체 자유 변수: {} (empty)</li>
+</ul>
+<h3 id="환경-캡처-environment-capture"><a class="header" href="#환경-캡처-environment-capture">환경 캡처 (Environment Capture)</a></h3>
+<p>자유 변수가 있으면, 그 값을 어디선가 가져와야 한다. 클로저는 **환경(environment)**을 저장해서 해결한다.</p>
+<p><strong>환경이란?</strong></p>
+<p>환경은 <strong>변수 이름 → 값</strong>의 매핑이다.</p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+fun z -&gt; x + y + z
+</code></pre>
+<p><code>fun z -&gt; x + y + z</code>가 생성될 때:</p>
+<ul>
+<li>자유 변수: {x, y}</li>
+<li>환경에서 찾기: x = 10, y = 20</li>
+<li><strong>환경 캡처</strong>: {x: 10, y: 20}을 저장</li>
+</ul>
+<p>클로저는 <strong>(함수 포인터, 환경 포인터)</strong> 쌍이 된다:</p>
+<pre><code>Closure {
+    fn_ptr: @lambda_123,
+    env: { x: 10, y: 20 }
+}
+</code></pre>
+<p>나중에 클로저를 호출할 때:</p>
+<ol>
+<li>함수 포인터를 찾는다 (@lambda_123)</li>
+<li>환경을 함수에 전달한다 ({x: 10, y: 20})</li>
+<li>함수는 환경에서 x, y 값을 로드한다</li>
+<li>계산: 10 + 20 + z</li>
+</ol>
+<p><strong>Value capture vs Reference capture:</strong></p>
+<p>FunLang은 <strong>value capture</strong>를 사용한다. 변수의 <strong>현재 값</strong>을 복사해서 저장한다.</p>
+<pre><code class="language-fsharp">let x = 10 in
+let f = fun y -&gt; x + y in
+let x = 20 in   // x 재바인딩
+f 5   // 결과: 15 (캡처된 x = 10 사용)
+</code></pre>
+<p>클로저가 생성될 때 <code>x = 10</code>이 환경에 복사된다. 나중에 <code>x</code>가 재바인딩되어도 영향 없다.</p>
+<p>(참조 캡처는 C++의 <code>[&amp;x]</code> 같은 개념인데, FunLang은 순수 함수형이므로 지원 안 함)</p>
+<h3 id="클로저의-구조"><a class="header" href="#클로저의-구조">클로저의 구조</a></h3>
+<p>클로저는 <strong>두 개의 포인터</strong>로 표현된다:</p>
+<pre><code class="language-c">// C 스타일 표현
+struct Closure {
+    void* fn_ptr;      // 함수 코드 포인터
+    void* env_ptr;     // 환경 데이터 포인터
+};
+</code></pre>
+<p><strong>1. 함수 포인터 (fn_ptr):</strong></p>
+<p>실행할 코드의 주소. MLIR에서는 <code>@lambda_N</code> 심볼.</p>
+<p><strong>2. 환경 포인터 (env_ptr):</strong></p>
+<p>캡처된 변수들을 저장한 힙 객체. 구조체의 주소.</p>
+<p><strong>시각적 다이어그램:</strong></p>
+<pre><code>클로저 생성:
+  let x = 10 in
+  let y = 20 in
+  fun z -&gt; x + y + z
+
+메모리 레이아웃:
+┌─────────────────────┐
+│ Closure (스택/레지스터) │
+├─────────────────────┤
+│ fn_ptr: @lambda_0   │───┐
+│ env_ptr: 0x1a3b5c8  │───┼───────┐
+└─────────────────────┘   │       │
+                          │       │
+                          │       v
+                          │  ┌──────────────┐
+                          │  │ Environment  │
+                          │  │ (힙 할당)     │
+                          │  ├──────────────┤
+                          │  │ x: 10        │
+                          │  │ y: 20        │
+                          │  └──────────────┘
+                          │
+                          v
+                    @lambda_0 코드:
+                      ; env를 파라미터로 받음
+                      ; env[0]에서 x 로드
+                      ; env[1]에서 y 로드
+                      ; x + y + z 계산
+</code></pre>
+<p><strong>핵심:</strong></p>
+<ul>
+<li>클로저는 작은 객체 (포인터 2개)</li>
+<li>환경은 힙에 할당 (크기는 캡처된 변수 개수에 따라 다름)</li>
+<li>함수는 환경을 첫 번째 파라미터로 받음</li>
+</ul>
+<h2 id="자유-변수-분석-free-variable-analysis"><a class="header" href="#자유-변수-분석-free-variable-analysis">자유 변수 분석 (Free Variable Analysis)</a></h2>
+<p>클로저를 컴파일하려면, <strong>어떤 변수를 캡처해야 하는지</strong> 알아야 한다. 이것이 **자유 변수 분석(free variable analysis)**이다.</p>
+<h3 id="분석-알고리즘"><a class="header" href="#분석-알고리즘">분석 알고리즘</a></h3>
+<p>자유 변수를 찾는 알고리즘은 <strong>set-based traversal</strong>이다:</p>
+<ol>
+<li>AST를 재귀적으로 순회</li>
+<li>각 표현식에서 자유 변수 set을 계산</li>
+<li>바운드 변수는 자유 변수 set에서 제거</li>
+</ol>
+<p><strong>정의:</strong></p>
+<pre><code>FV(expr) = 표현식 expr의 자유 변수 집합
+BV(expr) = 표현식 expr에서 바인딩되는 변수 집합
+</code></pre>
+<p><strong>규칙:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression</th><th>Free Variables</th><th>Bound Variables</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Var(x)</code></td><td>{x}</td><td>{}</td></tr>
+<tr><td><code>Num(n)</code></td><td>{}</td><td>{}</td></tr>
+<tr><td><code>Add(e1, e2)</code></td><td>FV(e1) ∪ FV(e2)</td><td>{}</td></tr>
+<tr><td><code>Let(x, e1, e2)</code></td><td>FV(e1) ∪ (FV(e2) - {x})</td><td>{x}</td></tr>
+<tr><td><code>Lambda(x, body)</code></td><td>FV(body) - {x}</td><td>{x}</td></tr>
+<tr><td><code>App(f, arg)</code></td><td>FV(f) ∪ FV(arg)</td><td>{}</td></tr>
+<tr><td><code>If(cond, t, f)</code></td><td>FV(cond) ∪ FV(t) ∪ FV(f)</td><td>{}</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>핵심 규칙 설명:</strong></p>
+<p><strong>1. Var(x):</strong></p>
+<p>변수 사용은 자유 변수다 (아직 바인딩 확인 안 함).</p>
+<pre><code>FV(x) = {x}
+</code></pre>
+<p><strong>2. Lambda(x, body):</strong></p>
+<p>람다가 <code>x</code>를 바인딩하므로, body의 자유 변수에서 <code>x</code>를 제거.</p>
+<pre><code>FV(fun x -&gt; body) = FV(body) - {x}
+</code></pre>
+<p><strong>3. Let(x, e1, e2):</strong></p>
+<p><code>e1</code>의 자유 변수 + (<code>e2</code>의 자유 변수 - {x})</p>
+<pre><code>FV(let x = e1 in e2) = FV(e1) ∪ (FV(e2) - {x})
+</code></pre>
+<p><strong>4. 기타 연산:</strong></p>
+<p>자식 표현식들의 자유 변수를 합집합.</p>
+<pre><code>FV(e1 + e2) = FV(e1) ∪ FV(e2)
+</code></pre>
+<h3 id="f-구현"><a class="header" href="#f-구현">F# 구현</a></h3>
+<pre><code class="language-fsharp">// AST 정의 (간략화)
+type Expr =
+    | Var of string
+    | Num of int
+    | Add of Expr * Expr
+    | Sub of Expr * Expr
+    | Let of string * Expr * Expr
+    | Lambda of string * Expr
+    | App of Expr * Expr
+    | If of Expr * Expr * Expr
+
+// 자유 변수 분석
+let rec freeVars (expr: Expr) : Set&lt;string&gt; =
+    match expr with
+    | Var(x) -&gt;
+        // 변수 사용 = 자유 변수 후보
+        Set.singleton x
+
+    | Num(_) -&gt;
+        // 리터럴 = 자유 변수 없음
+        Set.empty
+
+    | Add(e1, e2)
+    | Sub(e1, e2) -&gt;
+        // 이항 연산 = 양쪽의 자유 변수 합
+        Set.union (freeVars e1) (freeVars e2)
+
+    | Let(x, e1, e2) -&gt;
+        // let x = e1 in e2
+        // e1의 자유 변수 + (e2의 자유 변수 - {x})
+        let fv1 = freeVars e1
+        let fv2 = freeVars e2
+        Set.union fv1 (Set.remove x fv2)
+
+    | Lambda(param, body) -&gt;
+        // fun param -&gt; body
+        // body의 자유 변수 - {param}
+        let fvBody = freeVars body
+        Set.remove param fvBody
+
+    | App(func, arg) -&gt;
+        // f arg
+        // f의 자유 변수 + arg의 자유 변수
+        Set.union (freeVars func) (freeVars arg)
+
+    | If(cond, thenExpr, elseExpr) -&gt;
+        // if cond then thenExpr else elseExpr
+        // 세 부분의 자유 변수 합
+        freeVars cond
+        |&gt; Set.union (freeVars thenExpr)
+        |&gt; Set.union (freeVars elseExpr)
+</code></pre>
+<h3 id="예시-분석"><a class="header" href="#예시-분석">예시 분석</a></h3>
+<p><strong>예시 1: 단순 람다</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+</code></pre>
+<p>분석:</p>
+<pre><code>FV(fun x -&gt; x + 1)
+= FV(x + 1) - {x}
+= (FV(x) ∪ FV(1)) - {x}
+= ({x} ∪ {}) - {x}
+= {} (empty)
+</code></pre>
+<p><strong>결과: 자유 변수 없음</strong></p>
+<p><strong>예시 2: 하나의 자유 변수</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + y
+</code></pre>
+<p>분석:</p>
+<pre><code>FV(fun x -&gt; x + y)
+= FV(x + y) - {x}
+= (FV(x) ∪ FV(y)) - {x}
+= ({x} ∪ {y}) - {x}
+= {y}
+</code></pre>
+<p><strong>결과: 자유 변수 = {y}</strong></p>
+<p><strong>예시 3: 중첩 람다</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; fun y -&gt; x + y + z
+</code></pre>
+<p>분석:</p>
+<pre><code>내부: FV(fun y -&gt; x + y + z)
+    = FV(x + y + z) - {y}
+    = ({x} ∪ {y} ∪ {z}) - {y}
+    = {x, z}
+
+외부: FV(fun x -&gt; (fun y -&gt; x + y + z))
+    = FV(fun y -&gt; ...) - {x}
+    = {x, z} - {x}
+    = {z}
+</code></pre>
+<p><strong>결과: 자유 변수 = {z}</strong></p>
+<p><strong>예시 4: Let 바인딩</strong></p>
+<pre><code class="language-fsharp">let a = 10 in
+let b = a + 5 in
+fun x -&gt; a + b + x
+</code></pre>
+<p>분석:</p>
+<pre><code>1. FV(fun x -&gt; a + b + x) = {a, b}
+
+2. FV(let b = a + 5 in (fun x -&gt; ...))
+   = FV(a + 5) ∪ (FV(fun x -&gt; ...) - {b})
+   = {a} ∪ ({a, b} - {b})
+   = {a} ∪ {a}
+   = {a}
+
+3. FV(let a = 10 in (let b = ...))
+   = FV(10) ∪ (FV(let b = ...) - {a})
+   = {} ∪ ({a} - {a})
+   = {} (empty)
+</code></pre>
+<p><strong>결과: 전체 표현식의 자유 변수 없음</strong> (모든 변수가 바인딩됨)</p>
+<p>하지만 <code>fun x -&gt; a + b + x</code> 자체는 {a, b}를 캡처해야 한다.</p>
+<h3 id="스코프와-섀도잉-shadowing"><a class="header" href="#스코프와-섀도잉-shadowing">스코프와 섀도잉 (Shadowing)</a></h3>
+<p>섀도잉은 같은 이름의 변수를 재바인딩하는 것이다.</p>
+<pre><code class="language-fsharp">let x = 10 in
+let f = fun y -&gt; x + y in
+let x = 20 in
+f 5
+</code></pre>
+<p>분석:</p>
+<pre><code>1. 내부 x: let x = 10 에서 바인딩
+2. fun y -&gt; x + y: x는 첫 번째 x (10) 참조
+3. 외부 x: let x = 20 에서 재바인딩 (다른 x)
+4. f 5: f는 x = 10을 캡처한 클로저
+</code></pre>
+<p><strong>중요:</strong> 자유 변수 분석은 <strong>lexical scope</strong>을 따른다. 변수는 <strong>가장 가까운 바인딩 지점</strong>을 참조한다.</p>
+<p>F# 구현에서 <code>Set.remove</code>가 이것을 처리한다:</p>
+<ul>
+<li><code>Let(x, e1, e2)</code>에서 <code>Set.remove x fv2</code></li>
+<li><code>Lambda(x, body)</code>에서 <code>Set.remove x fvBody</code></li>
+</ul>
+<p><strong>예시: 중첩된 섀도잉</strong></p>
+<pre><code class="language-fsharp">let x = 1 in
+let f = fun y -&gt;
+    let x = 2 in
+    fun z -&gt; x + y + z
+in
+f 10 100
+</code></pre>
+<p>내부 람다 <code>fun z -&gt; x + y + z</code>:</p>
+<ul>
+<li>x: let x = 2 참조 (가장 가까운 바인딩)</li>
+<li>y: fun y 참조</li>
+<li>자유 변수: {x (inner), y}</li>
+</ul>
+<p>외부 람다 <code>fun y -&gt; let x = 2 in ...</code>:</p>
+<ul>
+<li>자유 변수: {x (outer)}</li>
+</ul>
+<p><strong>핵심:</strong> 각 바인딩 지점이 새로운 스코프를 생성한다.</p>
+<h2 id="클로저-변환-closure-conversion"><a class="header" href="#클로저-변환-closure-conversion">클로저 변환 (Closure Conversion)</a></h2>
+<p>자유 변수를 분석했으면, 이제 **클로저 변환(closure conversion)**을 적용한다. 클로저 변환은 <strong>암묵적 환경 캡처를 명시적으로 만드는 변환</strong>이다.</p>
+<h3 id="변환-개념"><a class="header" href="#변환-개념">변환 개념</a></h3>
+<p><strong>변환 전 (source code):</strong></p>
+<pre><code class="language-fsharp">let x = 10 in
+fun y -&gt; x + y
+</code></pre>
+<p><code>x</code>가 암묵적으로 캡처된다.</p>
+<p><strong>변환 후 (closure-converted code):</strong></p>
+<pre><code class="language-fsharp">// 의사 코드
+let x = 10 in
+let env = { x: x } in
+let closure = { fn: lambda_0, env: env } in
+closure
+
+// lambda_0 정의:
+fun lambda_0 (env, y) =
+    let x = env.x in
+    x + y
+</code></pre>
+<p><strong>변화:</strong></p>
+<ol>
+<li><strong>환경 생성</strong>: <code>env = { x: 10 }</code></li>
+<li><strong>클로저 생성</strong>: <code>closure = { fn: lambda_0, env: env }</code></li>
+<li><strong>함수 수정</strong>: 환경을 첫 번째 파라미터로 받음</li>
+<li><strong>자유 변수 접근</strong>: 환경에서 로드 (<code>env.x</code>)</li>
+</ol>
+<h3 id="beforeafter-예시"><a class="header" href="#beforeafter-예시">Before/After 예시</a></h3>
+<p><strong>예시 1: 단순 클로저</strong></p>
+<p><strong>Before:</strong></p>
+<pre><code class="language-fsharp">let make_adder n =
+    fun x -&gt; x + n
+</code></pre>
+<p><strong>After:</strong></p>
+<pre><code class="language-mlir">// make_adder 함수
+func.func @make_adder(%n: i32) -&gt; !llvm.ptr {
+    // 1. 환경 할당 (1개 변수)
+    %env_size = arith.constant 16 : i64  // 8 (fn ptr) + 8 (n)
+    %env_ptr = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // 2. 함수 포인터 저장 (env[0])
+    %fn_addr = llvm.mlir.addressof @lambda_adder : !llvm.ptr
+    %fn_slot = llvm.getelementptr %env_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %fn_addr, %fn_slot : !llvm.ptr
+
+    // 3. 캡처된 변수 저장 (env[1])
+    %n_slot = llvm.getelementptr %env_ptr[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %n, %n_slot : i32, !llvm.ptr
+
+    // 4. 환경 포인터 반환 (클로저)
+    func.return %env_ptr : !llvm.ptr
+}
+
+// lambda_adder 함수 (환경 파라미터 추가)
+func.func @lambda_adder(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // 1. 환경에서 n 로드
+    %n_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %n = llvm.load %n_slot : !llvm.ptr -&gt; i32
+
+    // 2. x + n 계산
+    %result = arith.addi %x, %n : i32
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>핵심 변환:</strong></p>
+<ul>
+<li><code>fun x -&gt; x + n</code> → <code>func.func @lambda_adder(%env, %x)</code></li>
+<li><code>n</code> 접근 → <code>llvm.load from env[1]</code></li>
+<li>클로저 생성 → <code>GC_malloc</code> + store fn_ptr + store n</li>
+</ul>
+<p><strong>예시 2: 여러 변수 캡처</strong></p>
+<p><strong>Before:</strong></p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+let z = 30 in
+fun a -&gt; x + y + z + a
+</code></pre>
+<p><strong>After (환경 구조):</strong></p>
+<pre><code class="language-c">// 환경 레이아웃
+struct env {
+    void* fn_ptr;   // [0] 함수 포인터
+    i32 x;          // [1] 캡처된 x
+    i32 y;          // [2] 캡처된 y
+    i32 z;          // [3] 캡처된 z
+};
+
+// 환경 크기 = 8 + 4 + 4 + 4 = 20 바이트
+</code></pre>
+<pre><code class="language-mlir">func.func @lambda_xyz(%env: !llvm.ptr, %a: i32) -&gt; i32 {
+    // x 로드
+    %x_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %x = llvm.load %x_slot : !llvm.ptr -&gt; i32
+
+    // y 로드
+    %y_slot = llvm.getelementptr %env[2] : (!llvm.ptr) -&gt; !llvm.ptr
+    %y = llvm.load %y_slot : !llvm.ptr -&gt; i32
+
+    // z 로드
+    %z_slot = llvm.getelementptr %env[3] : (!llvm.ptr) -&gt; !llvm.ptr
+    %z = llvm.load %z_slot : !llvm.ptr -&gt; i32
+
+    // x + y + z + a
+    %t1 = arith.addi %x, %y : i32
+    %t2 = arith.addi %t1, %z : i32
+    %result = arith.addi %t2, %a : i32
+    func.return %result : i32
+}
+</code></pre>
+<h3 id="환경-파라미터"><a class="header" href="#환경-파라미터">환경 파라미터</a></h3>
+<p>클로저 변환 후, 모든 람다 함수는 <strong>환경을 첫 번째 파라미터로 받는다</strong>.</p>
+<p><strong>일반 함수 (Phase 3):</strong></p>
+<pre><code class="language-mlir">func.func @add(%x: i32, %y: i32) -&gt; i32 {
+    %result = arith.addi %x, %y : i32
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>클로저 함수 (Phase 4):</strong></p>
+<pre><code class="language-mlir">func.func @lambda_closure(%env: !llvm.ptr, %x: i32, %y: i32) -&gt; i32 {
+    // 환경에서 캡처된 변수 로드
+    // ...
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>차이:</strong></p>
+<ul>
+<li>일반 함수: 파라미터만</li>
+<li>클로저 함수: <code>%env: !llvm.ptr</code> + 파라미터</li>
+</ul>
+<p><strong>환경 타입:</strong></p>
+<p>환경은 <strong>opaque pointer</strong>로 표현된다: <code>!llvm.ptr</code></p>
+<p>LLVM은 포인터 타입이 단순화되어, 모든 포인터가 <code>!llvm.ptr</code>이다. 내부 구조는 <code>getelementptr</code>의 인덱스로 관리한다.</p>
+<h3 id="flat-environment-vs-linked-environment"><a class="header" href="#flat-environment-vs-linked-environment">Flat Environment vs Linked Environment</a></h3>
+<p>환경을 표현하는 방법은 두 가지다:</p>
+<p><strong>1. Flat environment (FunLang 선택):</strong></p>
+<p>모든 캡처된 변수를 하나의 배열에 저장.</p>
+<pre><code class="language-c">struct env {
+    void* fn_ptr;
+    int var1;
+    int var2;
+    int var3;
+};
+</code></pre>
+<p><strong>장점:</strong></p>
+<ul>
+<li>O(1) 접근: <code>env[index]</code>로 직접 접근</li>
+<li>메모리 효율: 하나의 할당</li>
+<li>간단한 구현</li>
+</ul>
+<p><strong>단점:</strong></p>
+<ul>
+<li>중첩 클로저가 부모 환경을 통째로 복사해야 함</li>
+</ul>
+<p><strong>2. Linked environment (일부 컴파일러):</strong></p>
+<p>환경을 체인으로 연결.</p>
+<pre><code class="language-c">struct env {
+    void* fn_ptr;
+    struct env* parent;  // 부모 환경 포인터
+    int var1;
+};
+</code></pre>
+<p><strong>장점:</strong></p>
+<ul>
+<li>중첩 클로저가 부모 환경을 공유할 수 있음</li>
+</ul>
+<p><strong>단점:</strong></p>
+<ul>
+<li>O(depth) 접근: 체인을 따라 탐색</li>
+<li>메모리 간접 참조 증가</li>
+</ul>
+<p><strong>FunLang 선택: Flat environment</strong></p>
+<p>이유:</p>
+<ol>
+<li><strong>단순성</strong>: 구현이 간단함</li>
+<li><strong>성능</strong>: O(1) 접근이 빠름</li>
+<li><strong>교육 목적</strong>: 개념을 명확히 이해할 수 있음</li>
+</ol>
+<p>중첩 클로저는 드물고, 복사 오버헤드가 크지 않다.</p>
+<h3 id="클로저-변환-요약"><a class="header" href="#클로저-변환-요약">클로저 변환 요약</a></h3>
+<p>클로저 변환은 다음 단계를 수행한다:</p>
+<ol>
+<li><strong>자유 변수 분석</strong>: <code>freeVars(lambda)</code> → <code>{x, y, z}</code></li>
+<li><strong>환경 크기 계산</strong>: <code>size = 8 (fn ptr) + 4*n (captured vars)</code></li>
+<li><strong>환경 할당</strong>: <code>GC_malloc(size)</code> → heap 객체</li>
+<li><strong>함수 포인터 저장</strong>: <code>env[0] = @lambda_N</code></li>
+<li><strong>변수 저장</strong>: <code>env[1] = x</code>, <code>env[2] = y</code>, …</li>
+<li><strong>함수 정의 수정</strong>: <code>lambda_N(env, params...)</code> 형태로 변환</li>
+<li><strong>변수 접근 수정</strong>: <code>x</code> → <code>load from env[1]</code></li>
+</ol>
+<p>결과: 암묵적 캡처가 명시적 환경 조작으로 변환된다.</p>
+<h2 id="ast-확장-lambda-표현식"><a class="header" href="#ast-확장-lambda-표현식">AST 확장: Lambda 표현식</a></h2>
+<p>클로저를 컴파일하려면, AST에 <strong>Lambda</strong> 케이스를 추가해야 한다.</p>
+<h3 id="expr-타입-확장"><a class="header" href="#expr-타입-확장">Expr 타입 확장</a></h3>
+<pre><code class="language-fsharp">// Phase 3 AST (Chapter 10-11)
+type Expr =
+    | Var of string
+    | Num of int
+    | Add of Expr * Expr
+    | Sub of Expr * Expr
+    | Mul of Expr * Expr
+    | Div of Expr * Expr
+    | Eq of Expr * Expr
+    | Lt of Expr * Expr
+    | Let of string * Expr * Expr
+    | If of Expr * Expr * Expr
+    | App of string * Expr list  // 함수 호출: f(arg1, arg2, ...)
+
+// Phase 4 AST (Chapter 12+)
+type Expr =
+    | Var of string
+    | Num of int
+    | Add of Expr * Expr
+    | Sub of Expr * Expr
+    | Mul of Expr * Expr
+    | Div of Expr * Expr
+    | Eq of Expr * Expr
+    | Lt of Expr * Expr
+    | Let of string * Expr * Expr
+    | If of Expr * Expr * Expr
+    | Lambda of string * Expr        // NEW: 람다 표현식
+    | App of Expr * Expr             // CHANGED: 일반 함수 적용
+</code></pre>
+<p><strong>변경사항:</strong></p>
+<ol>
+<li>
+<p><strong>Lambda 추가</strong>: <code>Lambda(param, body)</code></p>
+<ul>
+<li><code>param</code>: 파라미터 이름 (단일 파라미터, 다중 파라미터는 currying으로 표현)</li>
+<li><code>body</code>: 함수 본체</li>
+</ul>
+</li>
+<li>
+<p><strong>App 변경</strong>: <code>App(Expr, Expr)</code> (함수 표현식 + 인자 표현식)</p>
+<ul>
+<li>Phase 3: <code>App(string, Expr list)</code> - 이름으로 함수 호출</li>
+<li>Phase 4: <code>App(Expr, Expr)</code> - 표현식이 함수가 될 수 있음 (클로저 호출)</li>
+</ul>
+</li>
+</ol>
+<h3 id="lambda-예시"><a class="header" href="#lambda-예시">Lambda 예시</a></h3>
+<p><strong>예시 1: 단순 람다</strong></p>
+<pre><code class="language-fsharp">fun x -&gt; x + 1
+</code></pre>
+<p>AST:</p>
+<pre><code class="language-fsharp">Lambda("x", Add(Var "x", Num 1))
+</code></pre>
+<p><strong>예시 2: 클로저</strong></p>
+<pre><code class="language-fsharp">let y = 10 in
+fun x -&gt; x + y
+</code></pre>
+<p>AST:</p>
+<pre><code class="language-fsharp">Let("y", Num 10,
+    Lambda("x", Add(Var "x", Var "y")))
+</code></pre>
+<p><strong>예시 3: 고차 함수</strong></p>
+<pre><code class="language-fsharp">fun f -&gt; fun x -&gt; f x
+</code></pre>
+<p>AST:</p>
+<pre><code class="language-fsharp">Lambda("f",
+    Lambda("x",
+        App(Var "f", Var "x")))
+</code></pre>
+<h3 id="currying으로-다중-파라미터-표현"><a class="header" href="#currying으로-다중-파라미터-표현">Currying으로 다중 파라미터 표현</a></h3>
+<p>FunLang은 단일 파라미터 람다만 지원한다. 다중 파라미터는 <strong>currying</strong>으로 표현한다.</p>
+<pre><code class="language-fsharp">// 다중 파라미터 (syntax sugar)
+fun x y -&gt; x + y
+
+// Currying (desugared)
+fun x -&gt; fun y -&gt; x + y
+</code></pre>
+<p>AST:</p>
+<pre><code class="language-fsharp">Lambda("x",
+    Lambda("y",
+        Add(Var "x", Var "y")))
+</code></pre>
+<p>이것이 표준 함수형 언어 패턴이다 (Haskell, OCaml, F#).</p>
+<h3 id="parser-업데이트-개념"><a class="header" href="#parser-업데이트-개념">Parser 업데이트 (개념)</a></h3>
+<p>Lambda를 파싱하려면, <code>fun</code> 키워드를 추가해야 한다.</p>
+<pre><code class="language-fsharp">// LangTutorial의 parser.fsy에서
+// (독자는 LangTutorial을 참고하여 자신의 parser를 업데이트)
+
+Expr:
+    | FUN ID ARROW Expr    { Lambda($2, $4) }
+    | ...
+</code></pre>
+<p><strong>토큰:</strong></p>
+<ul>
+<li><code>FUN</code>: “fun” 키워드</li>
+<li><code>ID</code>: 식별자</li>
+<li><code>ARROW</code>: “-&gt;” 화살표</li>
+<li><code>Expr</code>: 본체 표현식</li>
+</ul>
+<p><strong>결합 순서:</strong></p>
+<ul>
+<li><code>fun x -&gt; fun y -&gt; x + y</code>: 오른쪽 결합</li>
+<li><code>f x y</code>: 왼쪽 결합 (App는 왼쪽 결합)</li>
+</ul>
+<h2 id="mlir-환경-구조체"><a class="header" href="#mlir-환경-구조체">MLIR 환경 구조체</a></h2>
+<p>클로저의 핵심은 <strong>환경(environment)</strong> 구조체다. 환경은 캡처된 변수들을 저장하는 힙 객체다.</p>
+<h3 id="환경-레이아웃"><a class="header" href="#환경-레이아웃">환경 레이아웃</a></h3>
+<p>환경은 **헤테로지니어스 배열(heterogeneous array)**이다:</p>
+<pre><code class="language-c">// C 스타일 표현
+struct closure_env {
+    void* fn_ptr;   // [0] 함수 포인터
+    int var1;       // [1] 첫 번째 캡처된 변수
+    int var2;       // [2] 두 번째 캡처된 변수
+    // ...
+};
+</code></pre>
+<p><strong>인덱스 규칙:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Index</th><th>Content</th><th>Type</th><th>Size</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td>함수 포인터</td><td><code>!llvm.ptr</code></td><td>8 bytes</td></tr>
+<tr><td>1</td><td>첫 번째 변수</td><td><code>i32</code></td><td>4 bytes</td></tr>
+<tr><td>2</td><td>두 번째 변수</td><td><code>i32</code></td><td>4 bytes</td></tr>
+<tr><td>…</td><td>…</td><td>…</td><td>…</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>상수 정의:</strong></p>
+<pre><code class="language-fsharp">// F# 컴파일러에서
+let ENV_FN_PTR = 0         // 함수 포인터 인덱스
+let ENV_FIRST_VAR = 1      // 첫 번째 변수 인덱스
+</code></pre>
+<h3 id="llvm-struct-type"><a class="header" href="#llvm-struct-type">LLVM Struct Type</a></h3>
+<p>MLIR에서 환경은 <code>!llvm.struct</code> 타입으로 표현할 수도 있지만, <strong>opaque pointer</strong> 방식이 더 간단하다.</p>
+<p><strong>Opaque pointer 방식 (FunLang 선택):</strong></p>
+<pre><code class="language-mlir">// 환경은 !llvm.ptr로 표현
+// 내부 구조는 getelementptr 인덱스로 관리
+
+%env_ptr = llvm.call @GC_malloc(%size) : (i64) -&gt; !llvm.ptr
+%slot = llvm.getelementptr %env_ptr[index] : (!llvm.ptr) -&gt; !llvm.ptr
+</code></pre>
+<p><strong>장점:</strong></p>
+<ul>
+<li>타입 시스템이 간단함</li>
+<li>동적 크기 환경 가능</li>
+<li>getelementptr가 바이트 오프셋 자동 계산</li>
+</ul>
+<p><strong>Struct type 방식 (대안):</strong></p>
+<pre><code class="language-mlir">// 환경 타입 정의
+!env_type = !llvm.struct&lt;(ptr, i32, i32)&gt;
+
+// 사용
+%env = llvm.alloca : !llvm.ptr
+%slot = llvm.getelementptr %env[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+</code></pre>
+<p><strong>단점:</strong></p>
+<ul>
+<li>각 클로저마다 다른 타입 필요</li>
+<li>타입 정의가 복잡함</li>
+</ul>
+<p><strong>FunLang 선택:</strong> Opaque pointer 방식</p>
+<h3 id="getelementptr로-슬롯-접근"><a class="header" href="#getelementptr로-슬롯-접근">getelementptr로 슬롯 접근</a></h3>
+<p><code>llvm.getelementptr</code>는 포인터 산술 연산이다. 배열 인덱스를 받아서 해당 위치의 포인터를 계산한다.</p>
+<p><strong>Syntax:</strong></p>
+<pre><code class="language-mlir">%slot_ptr = llvm.getelementptr %base_ptr[index] : (!llvm.ptr) -&gt; !llvm.ptr
+</code></pre>
+<p><strong>예시:</strong></p>
+<pre><code class="language-mlir">// 환경 포인터: %env
+// 인덱스 1번 슬롯 접근 (첫 번째 변수)
+
+%slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+%value = llvm.load %slot : !llvm.ptr -&gt; i32
+</code></pre>
+<p><strong>중요:</strong> getelementptr는 <strong>포인터만 계산</strong>한다. 실제 로드는 <code>llvm.load</code>로 수행한다.</p>
+<p><strong>메모리 레이아웃 예시:</strong></p>
+<pre><code>환경 메모리 (3개 변수 캡처):
+Address     Content
+0x1000      @lambda_N (fn ptr, 8 bytes)
+0x1008      10 (var1, 4 bytes)
+0x100C      20 (var2, 4 bytes)
+0x1010      30 (var3, 4 bytes)
+
+getelementptr %env[0]: 0x1000
+getelementptr %env[1]: 0x1008
+getelementptr %env[2]: 0x100C
+getelementptr %env[3]: 0x1010
+</code></pre>
+<p><strong>바이트 정렬:</strong> LLVM이 자동으로 적절한 정렬을 수행한다.</p>
+<h3 id="helper-함수-createclosureenv"><a class="header" href="#helper-함수-createclosureenv">Helper 함수: CreateClosureEnv</a></h3>
+<p>환경 생성을 간단하게 만드는 helper 함수:</p>
+<pre><code class="language-fsharp">// F# 컴파일러에서
+let createClosureEnv (builder: OpBuilder) (fnAddr: MlirValue) (capturedVars: MlirValue list) : MlirValue =
+    // 1. 환경 크기 계산
+    let fnPtrSize = 8L  // 포인터 크기
+    let varSize = 4L    // i32 크기
+    let totalSize = fnPtrSize + (int64 capturedVars.Length) * varSize
+    let sizeConst = builder.CreateI64Const(totalSize)
+
+    // 2. GC_malloc 호출
+    let envPtr = builder.CreateCall("GC_malloc", [sizeConst])
+
+    // 3. 함수 포인터 저장
+    let fnSlot = builder.CreateGEP(envPtr, 0)
+    builder.CreateStore(fnAddr, fnSlot)
+
+    // 4. 캡처된 변수들 저장
+    capturedVars |&gt; List.iteri (fun i var -&gt;
+        let slot = builder.CreateGEP(envPtr, i + 1)
+        builder.CreateStore(var, slot)
+    )
+
+    // 5. 환경 포인터 반환
+    envPtr
+</code></pre>
+<h3 id="helper-함수-getenvslot"><a class="header" href="#helper-함수-getenvslot">Helper 함수: GetEnvSlot</a></h3>
+<p>환경에서 변수 로드를 간단하게:</p>
+<pre><code class="language-fsharp">let getEnvSlot (builder: OpBuilder) (envPtr: MlirValue) (index: int) : MlirValue =
+    // getelementptr + load
+    let slot = builder.CreateGEP(envPtr, index)
+    builder.CreateLoad(slot, "i32")
+</code></pre>
+<p>사용 예시:</p>
+<pre><code class="language-fsharp">// 환경에서 첫 번째 변수 로드
+let var1 = getEnvSlot builder envPtr ENV_FIRST_VAR
+</code></pre>
+<h2 id="클로저-생성-코드-closure-creation"><a class="header" href="#클로저-생성-코드-closure-creation">클로저 생성 코드 (Closure Creation)</a></h2>
+<p>클로저 생성은 <strong>환경 할당 + 변수 저장 + 환경 포인터 반환</strong>이다.</p>
+<h3 id="compilelambda-함수"><a class="header" href="#compilelambda-함수">compileLambda 함수</a></h3>
+<pre><code class="language-fsharp">// Lambda 표현식 컴파일
+let compileLambda (builder: OpBuilder) (env: Environment) (param: string) (body: Expr) : MlirValue =
+    // 1. 자유 변수 분석
+    let freeVarSet = freeVars (Lambda(param, body))
+    let freeVarList = Set.toList freeVarSet
+
+    // 2. 캡처된 변수들의 SSA 값 가져오기
+    let capturedValues =
+        freeVarList |&gt; List.map (fun varName -&gt;
+            match env.TryFind(varName) with
+            | Some(value) -&gt; value
+            | None -&gt; failwithf "Undefined variable: %s" varName
+        )
+
+    // 3. 람다 함수 정의 생성
+    let lambdaName = generateLambdaName()  // @lambda_0, @lambda_1, ...
+    let lambdaFunc = createLambdaFunction builder lambdaName param body freeVarList env
+
+    // 4. 함수 포인터 얻기
+    let fnAddr = builder.CreateAddressOf(lambdaName)
+
+    // 5. 환경 생성 및 변수 저장
+    let envPtr = createClosureEnv builder fnAddr capturedValues
+
+    // 6. 환경 포인터 반환 (이것이 클로저)
+    envPtr
+</code></pre>
+<p><strong>핵심 단계:</strong></p>
+<ol>
+<li><strong>자유 변수 분석</strong>: <code>freeVars</code>로 캡처할 변수 찾기</li>
+<li><strong>값 가져오기</strong>: 환경에서 SSA 값 로드</li>
+<li><strong>람다 함수 정의</strong>: 별도 함수로 생성 (환경 파라미터 포함)</li>
+<li><strong>함수 포인터</strong>: <code>llvm.mlir.addressof</code>로 주소 얻기</li>
+<li><strong>환경 할당</strong>: <code>GC_malloc</code> + 변수 저장</li>
+<li><strong>반환</strong>: 환경 포인터 (클로저 값)</li>
+</ol>
+<h3 id="createlambdafunction"><a class="header" href="#createlambdafunction">createLambdaFunction</a></h3>
+<p>람다 함수를 별도 <code>func.func</code>로 정의:</p>
+<pre><code class="language-fsharp">let createLambdaFunction (builder: OpBuilder) (name: string) (param: string) (body: Expr) (freeVars: string list) (outerEnv: Environment) : unit =
+    // 1. 함수 시그니처: (%env: !llvm.ptr, %param: i32) -&gt; i32
+    let paramTypes = [builder.GetPtrType(); builder.GetI32Type()]
+    let returnType = builder.GetI32Type()
+
+    // 2. 함수 생성
+    let funcOp = builder.CreateFuncOp(name, paramTypes, returnType)
+    let entryBlock = builder.GetEntryBlock(funcOp)
+    builder.SetInsertionPoint(entryBlock)
+
+    // 3. Block arguments 얻기
+    let envArg = builder.GetBlockArg(entryBlock, 0)   // %env
+    let paramArg = builder.GetBlockArg(entryBlock, 1)  // %param
+
+    // 4. 환경 구축: 파라미터 + 캡처된 변수들
+    let mutable lambdaEnv = Map.empty
+    lambdaEnv &lt;- lambdaEnv.Add(param, paramArg)
+
+    // 캡처된 변수들을 환경에서 로드
+    freeVars |&gt; List.iteri (fun i varName -&gt;
+        let value = getEnvSlot builder envArg (ENV_FIRST_VAR + i)
+        lambdaEnv &lt;- lambdaEnv.Add(varName, value)
+    )
+
+    // 5. 본체 컴파일
+    let bodyValue = compileExpr builder lambdaEnv body
+
+    // 6. 반환
+    builder.CreateFuncReturn(bodyValue)
+</code></pre>
+<p><strong>핵심:</strong></p>
+<ul>
+<li>환경 파라미터 <code>%env: !llvm.ptr</code>가 첫 번째</li>
+<li>실제 파라미터 <code>%param: i32</code>가 두 번째</li>
+<li>캡처된 변수들을 환경에서 로드하여 lambda 환경에 추가</li>
+<li>본체 컴파일은 일반 표현식과 동일</li>
+</ul>
+<h3 id="전체-예시-make_adder-컴파일"><a class="header" href="#전체-예시-make_adder-컴파일">전체 예시: make_adder 컴파일</a></h3>
+<p><strong>Source code:</strong></p>
+<pre><code class="language-fsharp">let make_adder n =
+    fun x -&gt; x + n
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("make_adder",
+    Lambda("n",
+        Lambda("x", Add(Var "x", Var "n"))),
+    ...)
+</code></pre>
+<p><strong>Generated MLIR IR:</strong></p>
+<pre><code class="language-mlir">// make_adder 함수
+func.func @make_adder(%n: i32) -&gt; !llvm.ptr {
+    // 내부 람다: fun x -&gt; x + n
+    // 자유 변수: {n}
+
+    // 1. 환경 크기 계산: 8 (fn ptr) + 4 (n) = 12 bytes
+    %env_size = arith.constant 12 : i64
+
+    // 2. GC_malloc 호출
+    %env_ptr = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // 3. 함수 포인터 저장
+    %fn_addr = llvm.mlir.addressof @lambda_adder : !llvm.ptr
+    %fn_slot = llvm.getelementptr %env_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %fn_addr, %fn_slot : !llvm.ptr, !llvm.ptr
+
+    // 4. 캡처된 변수 n 저장
+    %n_slot = llvm.getelementptr %env_ptr[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %n, %n_slot : i32, !llvm.ptr
+
+    // 5. 환경 포인터 반환 (클로저)
+    func.return %env_ptr : !llvm.ptr
+}
+
+// lambda_adder 함수
+func.func @lambda_adder(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // 1. 환경에서 n 로드
+    %n_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %n = llvm.load %n_slot : !llvm.ptr -&gt; i32
+
+    // 2. x + n 계산
+    %result = arith.addi %x, %n : i32
+
+    // 3. 반환
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>코드 흐름:</strong></p>
+<ol>
+<li><code>make_adder</code> 호출: <code>make_adder(5)</code></li>
+<li>환경 할당: <code>env = GC_malloc(12)</code></li>
+<li>함수 포인터 저장: <code>env[0] = @lambda_adder</code></li>
+<li><code>n</code> 저장: <code>env[1] = 5</code></li>
+<li>클로저 반환: <code>env</code> (포인터)</li>
+<li>나중에 클로저 호출: <code>closure(10)</code></li>
+<li><code>lambda_adder</code> 호출: <code>@lambda_adder(env, 10)</code></li>
+<li><code>n</code> 로드: <code>env[1]</code> → <code>5</code></li>
+<li>계산: <code>10 + 5</code> → <code>15</code></li>
+</ol>
+<h2 id="클로저-본체-컴파일-closure-body"><a class="header" href="#클로저-본체-컴파일-closure-body">클로저 본체 컴파일 (Closure Body)</a></h2>
+<p>클로저 본체는 <strong>lifted function</strong>으로 컴파일된다. Lifted function은 최상위 함수로 추출된 람다 함수다.</p>
+<h3 id="lifting-개념"><a class="header" href="#lifting-개념">Lifting 개념</a></h3>
+<p><strong>Before lifting (nested lambda):</strong></p>
+<pre><code class="language-fsharp">let make_adder n =
+    fun x -&gt; x + n
+</code></pre>
+<p><strong>After lifting (top-level functions):</strong></p>
+<pre><code class="language-fsharp">// Lifted lambda
+let lambda_adder (env, x) =
+    let n = env[1] in
+    x + n
+
+// make_adder는 클로저 생성기
+let make_adder n =
+    let env = allocate_env(@lambda_adder, n) in
+    env
+</code></pre>
+<p>모든 람다 함수가 최상위로 <strong>lift</strong>된다. 중첩된 함수가 flat structure로 변환된다.</p>
+<h3 id="환경-파라미터-타입"><a class="header" href="#환경-파라미터-타입">환경 파라미터 타입</a></h3>
+<p>Lifted function의 시그니처:</p>
+<pre><code class="language-mlir">func.func @lambda_N(%env: !llvm.ptr, %param1: i32, %param2: i32, ...) -&gt; i32
+</code></pre>
+<p><strong>첫 번째 파라미터:</strong></p>
+<ul>
+<li>이름: <code>%env</code></li>
+<li>타입: <code>!llvm.ptr</code> (opaque pointer)</li>
+<li>목적: 캡처된 변수 접근</li>
+</ul>
+<p><strong>나머지 파라미터:</strong></p>
+<ul>
+<li>람다의 실제 파라미터들</li>
+</ul>
+<h3 id="환경에서-변수-로드"><a class="header" href="#환경에서-변수-로드">환경에서 변수 로드</a></h3>
+<p>캡처된 변수를 사용하려면, 환경에서 로드해야 한다:</p>
+<pre><code class="language-mlir">// 첫 번째 캡처된 변수 로드
+%var1_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+%var1 = llvm.load %var1_slot : !llvm.ptr -&gt; i32
+
+// 두 번째 캡처된 변수 로드
+%var2_slot = llvm.getelementptr %env[2] : (!llvm.ptr) -&gt; !llvm.ptr
+%var2 = llvm.load %var2_slot : !llvm.ptr -&gt; i32
+</code></pre>
+<p><strong>패턴:</strong></p>
+<ol>
+<li><code>getelementptr</code>로 슬롯 포인터 계산</li>
+<li><code>llvm.load</code>로 값 로드</li>
+<li>SSA 값으로 사용</li>
+</ol>
+<h3 id="전체-예시-중첩-클로저"><a class="header" href="#전체-예시-중첩-클로저">전체 예시: 중첩 클로저</a></h3>
+<p><strong>Source code:</strong></p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+fun z -&gt; x + y + z
+</code></pre>
+<p><strong>Lifted function:</strong></p>
+<pre><code class="language-mlir">func.func @lambda_xyz(%env: !llvm.ptr, %z: i32) -&gt; i32 {
+    // 1. x 로드 (env[1])
+    %x_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %x = llvm.load %x_slot : !llvm.ptr -&gt; i32
+
+    // 2. y 로드 (env[2])
+    %y_slot = llvm.getelementptr %env[2] : (!llvm.ptr) -&gt; !llvm.ptr
+    %y = llvm.load %y_slot : !llvm.ptr -&gt; i32
+
+    // 3. x + y 계산
+    %t1 = arith.addi %x, %y : i32
+
+    // 4. t1 + z 계산
+    %result = arith.addi %t1, %z : i32
+
+    // 5. 반환
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>클로저 생성 부분:</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+    // 1. x, y 정의
+    %x = arith.constant 10 : i32
+    %y = arith.constant 20 : i32
+
+    // 2. 환경 크기: 8 (fn ptr) + 4 (x) + 4 (y) = 16 bytes
+    %env_size = arith.constant 16 : i64
+
+    // 3. 환경 할당
+    %env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // 4. 함수 포인터 저장
+    %fn = llvm.mlir.addressof @lambda_xyz : !llvm.ptr
+    %fn_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %fn, %fn_slot : !llvm.ptr, !llvm.ptr
+
+    // 5. x 저장
+    %x_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %x, %x_slot : i32, !llvm.ptr
+
+    // 6. y 저장
+    %y_slot = llvm.getelementptr %env[2] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %y, %y_slot : i32, !llvm.ptr
+
+    // 7. 클로저 호출 (나중에 Chapter 13에서)
+    // %result = call_closure %env (%z)
+
+    func.return %0 : i32
+}
+</code></pre>
+<h3 id="함수-명명-규칙"><a class="header" href="#함수-명명-규칙">함수 명명 규칙</a></h3>
+<p>Lifted function의 이름은 자동 생성된다:</p>
+<pre><code class="language-fsharp">let mutable lambdaCounter = 0
+
+let generateLambdaName() =
+    let name = sprintf "lambda_%d" lambdaCounter
+    lambdaCounter &lt;- lambdaCounter + 1
+    name
+</code></pre>
+<p><strong>예시:</strong></p>
+<ul>
+<li>첫 번째 람다: <code>@lambda_0</code></li>
+<li>두 번째 람다: <code>@lambda_1</code></li>
+<li>…</li>
+</ul>
+<p><strong>중요:</strong> 이름은 unique해야 한다. 같은 이름의 함수가 여러 개 있으면 링커 오류가 발생한다.</p>
+<h2 id="공통-오류-common-errors"><a class="header" href="#공통-오류-common-errors">공통 오류 (Common Errors)</a></h2>
+<p>클로저 컴파일에서 자주 발생하는 오류들:</p>
+<h3 id="error-1-환경-인덱스-off-by-one"><a class="header" href="#error-1-환경-인덱스-off-by-one">Error 1: 환경 인덱스 off-by-one</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-mlir">// 잘못된 코드 - 함수 포인터를 변수로 로드
+%var1_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+%var1 = llvm.load %var1_slot : !llvm.ptr -&gt; i32  // ERROR: 타입 불일치!
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>환경 레이아웃을 잊음:</p>
+<ul>
+<li><code>env[0]</code>: 함수 포인터 (<code>!llvm.ptr</code>)</li>
+<li><code>env[1]</code>: 첫 번째 변수 (<code>i32</code>)</li>
+<li><code>env[2]</code>: 두 번째 변수 (<code>i32</code>)</li>
+</ul>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 코드 - 첫 번째 변수는 env[1]
+%var1_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+%var1 = llvm.load %var1_slot : !llvm.ptr -&gt; i32  // OK
+</code></pre>
+<p><strong>팁:</strong> <code>ENV_FN_PTR = 0</code>, <code>ENV_FIRST_VAR = 1</code> 상수 사용하기.</p>
+<h3 id="error-2-환경-파라미터-누락"><a class="header" href="#error-2-환경-파라미터-누락">Error 2: 환경 파라미터 누락</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-mlir">// 잘못된 코드 - 환경 파라미터 없음
+func.func @lambda_adder(%x: i32) -&gt; i32 {
+    %n = ??? // n을 어디서 가져오나?
+}
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>Lifted function에 환경 파라미터를 추가하지 않음.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 코드 - 환경 파라미터 추가
+func.func @lambda_adder(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    %n_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %n = llvm.load %n_slot : !llvm.ptr -&gt; i32
+    // ...
+}
+</code></pre>
+<p><strong>팁:</strong> 모든 람다 함수는 첫 번째 파라미터로 <code>%env: !llvm.ptr</code>를 받는다.</p>
+<h3 id="error-3-스택-vs-힙-할당"><a class="header" href="#error-3-스택-vs-힙-할당">Error 3: 스택 vs 힙 할당</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-mlir">// 잘못된 코드 - 스택 할당
+%env = llvm.alloca 16, i8 : (i32, i8) -&gt; !llvm.ptr
+// ...
+func.return %env : !llvm.ptr  // ERROR: 스택 메모리를 반환!
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>환경을 스택에 할당했는데, 함수 반환 후 사라진다.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 코드 - 힙 할당
+%env_size = arith.constant 16 : i64
+%env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+func.return %env : !llvm.ptr  // OK: 힙 메모리는 살아있음
+</code></pre>
+<p><strong>원칙:</strong></p>
+<ul>
+<li><strong>스택 할당 (<code>llvm.alloca</code>)</strong>: 함수 로컬 변수 (현재 스택 프레임에서만 유효)</li>
+<li><strong>힙 할당 (<code>GC_malloc</code>)</strong>: 탈출하는 값 (함수 반환 후에도 유효)</li>
+</ul>
+<p>클로저는 항상 <strong>힙 할당</strong>해야 한다. 클로저가 생성된 함수가 반환된 후에도 사용되기 때문이다.</p>
+<h3 id="error-4-타입-불일치"><a class="header" href="#error-4-타입-불일치">Error 4: 타입 불일치</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-mlir">// 잘못된 코드
+%fn_addr = llvm.mlir.addressof @lambda_0 : !llvm.ptr
+%fn_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %fn_addr, %fn_slot : i32, !llvm.ptr  // ERROR: 타입 불일치!
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>함수 포인터 타입을 <code>i32</code>로 잘못 지정.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-mlir">// 올바른 코드
+%fn_addr = llvm.mlir.addressof @lambda_0 : !llvm.ptr
+%fn_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %fn_addr, %fn_slot : !llvm.ptr, !llvm.ptr  // OK
+</code></pre>
+<p><strong>타입 체크:</strong></p>
+<ul>
+<li>함수 포인터: <code>!llvm.ptr</code></li>
+<li>i32 변수: <code>i32</code></li>
+<li><code>llvm.store</code> 시그니처: <code>llvm.store %value, %ptr : value_type, !llvm.ptr</code></li>
+</ul>
+<h2 id="요약"><a class="header" href="#요약">요약</a></h2>
+<p><strong>이 장에서 배운 것:</strong></p>
+<ol>
+<li>
+<p><strong>클로저 이론</strong></p>
+<ul>
+<li>Lexical scoping: 정의 시점의 환경을 기억</li>
+<li>Free variables: 람다에서 바인딩되지 않은 변수</li>
+<li>Bound variables: 람다 파라미터로 바인딩된 변수</li>
+<li>환경 캡처: 자유 변수의 값을 저장</li>
+</ul>
+</li>
+<li>
+<p><strong>자유 변수 분석</strong></p>
+<ul>
+<li>Set-based traversal 알고리즘</li>
+<li><code>FV(Lambda(x, body)) = FV(body) - {x}</code></li>
+<li>F# 구현: <code>freeVars</code> 재귀 함수</li>
+</ul>
+</li>
+<li>
+<p><strong>클로저 변환</strong></p>
+<ul>
+<li>암묵적 캡처 → 명시적 환경 조작</li>
+<li>Flat environment: 모든 변수를 배열에 저장</li>
+<li>Lifted functions: 람다를 최상위 함수로 추출</li>
+</ul>
+</li>
+<li>
+<p><strong>환경 구조체</strong></p>
+<ul>
+<li>레이아웃: <code>[fn_ptr, var1, var2, ...]</code></li>
+<li><code>env[0]</code>: 함수 포인터</li>
+<li><code>env[1+]</code>: 캡처된 변수들</li>
+<li><code>getelementptr</code>로 슬롯 접근</li>
+</ul>
+</li>
+<li>
+<p><strong>클로저 생성 코드</strong></p>
+<ul>
+<li><code>GC_malloc</code>로 환경 힙 할당</li>
+<li>함수 포인터 저장 (<code>llvm.mlir.addressof</code>)</li>
+<li>캡처된 변수들 저장 (<code>llvm.store</code>)</li>
+<li>환경 포인터 반환 (클로저 값)</li>
+</ul>
+</li>
+<li>
+<p><strong>클로저 본체 컴파일</strong></p>
+<ul>
+<li>Lifted function: <code>@lambda_N(%env, %params...)</code></li>
+<li>환경 파라미터를 첫 번째로 받음</li>
+<li><code>getelementptr</code> + <code>llvm.load</code>로 변수 접근</li>
+</ul>
+</li>
+</ol>
+<p><strong>다음 장 (Chapter 13):</strong></p>
+<ul>
+<li><strong>고차 함수 (Higher-order functions)</strong>: 함수를 인자로 받거나 반환</li>
+<li><strong>클로저 호출</strong>: 환경 포인터에서 함수 포인터 추출 + 간접 호출</li>
+<li><strong>Map/Filter/Fold</strong>: 표준 고차 함수 구현</li>
+<li><strong>Function 타입</strong>: 함수를 first-class value로 취급</li>
+</ul>
+<p>클로저는 함수형 프로그래밍의 핵심이다. 이 장에서 확립한 환경 캡처 메커니즘이 고차 함수의 기초가 된다.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="11-recursion.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="13-higher-order-functions.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="11-recursion.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="13-higher-order-functions.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
