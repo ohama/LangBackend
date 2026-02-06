@@ -14,6 +14,8 @@
 - [Chapter 07: Let 바인딩](07-let-bindings.md)
 - [Chapter 08: 제어 흐름](08-control-flow.md)
 - [Chapter 09: 메모리 관리](09-memory-management.md)
+- [Chapter 10: 함수](10-functions.md)
+- [Chapter 11: 재귀](11-recursion.md)
 
 # 부록
 

@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Interop** - MLIR build setup, F# bindings, and architecture validation
 - [x] **Phase 2: Core Language Basics** - Arithmetic, let bindings, control flow, and memory strategy
-- [ ] **Phase 3: Functions & Recursion** - Function definitions, calls, and recursive patterns
+- [x] **Phase 3: Functions & Recursion** - Function definitions, calls, and recursive patterns
 - [ ] **Phase 4: Closures & Higher-Order Functions** - Environment capture and closure compilation
 - [ ] **Phase 5: Custom MLIR Dialect** - FunLang dialect design and progressive lowering
 - [ ] **Phase 6: Pattern Matching & Data Structures** - Lists, tuples, and decision tree compilation
@@ -72,8 +72,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Chapter 10: Functions (definitions, calls, func dialect, calling conventions)
-- [ ] 03-02-PLAN.md — Chapter 11: Recursion (factorial, fibonacci, mutual recursion, stack frames, tail calls)
+- [x] 03-01-PLAN.md — Chapter 10: Functions (definitions, calls, func dialect, calling conventions)
+- [x] 03-02-PLAN.md — Chapter 11: Recursion (factorial, fibonacci, mutual recursion, stack frames, tail calls)
 
 ### Phase 4: Closures & Higher-Order Functions
 **Goal**: Reader can compile closures with captured variables and higher-order functions
@@ -146,7 +146,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 1. Foundation & Interop | 3/3 | Complete | 2026-02-06 |
 | 2. Core Language Basics | 4/4 | Complete | 2026-02-06 |
-| 3. Functions & Recursion | 0/TBD | Not started | - |
+| 3. Functions & Recursion | 2/2 | Complete | 2026-02-06 |
 | 4. Closures & Higher-Order Functions | 0/TBD | Not started | - |
 | 5. Custom MLIR Dialect | 0/TBD | Not started | - |
 | 6. Pattern Matching & Data Structures | 0/TBD | Not started | - |

@@ -36,11 +36,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Functions
 
-- [ ] **FUNC-01**: Reader can compile simple function definitions
-- [ ] **FUNC-02**: Reader can compile function calls with arguments and return values
-- [ ] **FUNC-03**: Reader can compile recursive functions (e.g., factorial)
-- [ ] **FUNC-04**: Reader can compile mutually recursive functions
-- [ ] **FUNC-05**: Tutorial explains calling conventions and stack frames in MLIR/LLVM
+- [x] **FUNC-01**: Reader can compile simple function definitions
+- [x] **FUNC-02**: Reader can compile function calls with arguments and return values
+- [x] **FUNC-03**: Reader can compile recursive functions (e.g., factorial)
+- [x] **FUNC-04**: Reader can compile mutually recursive functions
+- [x] **FUNC-05**: Tutorial explains calling conventions and stack frames in MLIR/LLVM
 
 ### Closures & Higher-Order Functions
 
@@ -142,11 +142,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTRL-01 | Phase 2 | Pending |
 | CTRL-02 | Phase 2 | Pending |
 | CTRL-03 | Phase 2 | Pending |
-| FUNC-01 | Phase 3 | Pending |
-| FUNC-02 | Phase 3 | Pending |
-| FUNC-03 | Phase 3 | Pending |
-| FUNC-04 | Phase 3 | Pending |
-| FUNC-05 | Phase 3 | Pending |
+| FUNC-01 | Phase 3 | Complete |
+| FUNC-02 | Phase 3 | Complete |
+| FUNC-03 | Phase 3 | Complete |
+| FUNC-04 | Phase 3 | Complete |
+| FUNC-05 | Phase 3 | Complete |
 | CLOS-01 | Phase 4 | Pending |
 | CLOS-02 | Phase 4 | Pending |
 | CLOS-03 | Phase 4 | Pending |
