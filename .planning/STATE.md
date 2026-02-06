@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 ## Current Position
 
-Phase: 2 of 7 (Core Language Basics)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 — Completed 02-04-PLAN.md (Memory Management and Boehm GC integration)
+Phase: 3 of 7 (Functions & Recursion)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-06 — Completed 03-01-PLAN.md (Functions and func Dialect)
 
-Progress: [███████░░░] 70% (7/10 estimated total plans)
+Progress: [████████░░] 80% (8/10 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 5 min
-- Total execution time: 0.53 hours
+- Total execution time: 0.67 hours
 
 **By Phase:**
 
@@ -29,14 +29,15 @@ Progress: [███████░░░] 70% (7/10 estimated total plans)
 |-------|-------|-------|----------|
 | 1 - Foundation & Interop | 3/3 | 16 min | 5 min |
 | 2 - Core Language Basics | 4/4 | 19 min | 5 min |
+| 3 - Functions & Recursion | 1/2 | 8 min | 8 min |
 
 **Recent Trend:**
-- Last plan: 02-04 (6 min)
+- Last plan: 03-01 (8 min)
+- Previous: 02-04 (6 min)
 - Previous: 02-03 (5 min)
 - Previous: 02-02 (4 min)
 - Previous: 02-01 (4 min)
-- Previous: 01-03 (6 min)
-- Trend: Consistent 4-6 minute execution for Phase 2
+- Trend: Chapter length correlates with duration (2590 lines = 8 min)
 
 *Updated after each plan completion*
 
@@ -95,6 +96,11 @@ Recent decisions affecting current work:
 - [02-04]: memref dialect for future heap allocation (alloca, alloc, load, store)
 - [Project]: Tutorial 본문은 한글로 작성 (코드, API명, 기술 용어는 원문 유지)
 - [Project]: Plain Korean style (~이다/~한다) not polite style (~입니다/~합니다) for tutorial text
+- [03-01]: Function parameters as block arguments (not variables or let bindings, SSA values from entry block)
+- [03-01]: Flat namespace for module-level functions (no forward declarations needed, enables mutual recursion)
+- [03-01]: C calling convention (System V ABI) handled automatically by LLVM
+- [03-01]: Phase 3 scope: Top-level named functions only (no closures/lambdas until Phase 4)
+- [03-01]: funlang_main entry point called by runtime.c main
 
 ### Pending Todos
 
@@ -107,11 +113,14 @@ None yet.
 
 **Phase 2 - Core Language Basics:**
 - PHASE COMPLETE! All 4 plans finished (arithmetic, let bindings, control flow, memory management)
-- Ready for Phase 3: Functions and First-Class Closures
+
+**Phase 3 - Functions & Recursion:**
+- Plan 03-01 complete: Function definitions, calls, func dialect, calling conventions
+- Next: Plan 03-02 (Recursion and tail call optimization)
 
 ## Session Continuity
 
-Last session: 2026-02-06T00:46:59Z
-Stopped at: Completed 02-04-PLAN.md (Memory Management)
+Last session: 2026-02-06T01:28:18Z
+Stopped at: Completed 03-01-PLAN.md (Functions and func Dialect)
 Resume file: None
-Next: Phase 3 - Functions and First-Class Closures (to be planned)
+Next: Plan 03-02 (Recursion and Tail Call Optimization)
