@@ -1,0 +1,1568 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 08: 제어 흐름 - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-7fb77367.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-5209fc6b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./08-control-flow.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-08-제어-흐름과-block-arguments"><a class="header" href="#chapter-08-제어-흐름과-block-arguments">Chapter 08: 제어 흐름과 Block Arguments</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p>프로그래밍에서 조건부 실행은 필수다. 조건에 따라 다른 코드 경로를 실행하는 능력은 모든 실용적인 프로그램의 핵심이다.</p>
+<p>함수형 언어에서 **if/then/else는 표현식(expression)**이다. 명령형 언어의 문(statement)이 아니라, 값을 생성하는 표현식이다:</p>
+<pre><code class="language-fsharp">// 함수형 스타일 - if는 값을 반환한다
+let result = if condition then 42 else 0
+
+// 명령형 스타일과 대비
+int result;
+if (condition) {
+    result = 42;
+} else {
+    result = 0;
+}
+</code></pre>
+<p>함수형 스타일에서 if 표현식은 <strong>값을 생성</strong>한다. 두 분기(then/else) 중 하나가 실행되고, 그 결과가 if 표현식의 값이 된다.</p>
+<p><strong>컴파일 도전과제:</strong> SSA 형태에서 두 분기가 어떻게 하나의 값으로 합쳐지는가?</p>
+<pre><code class="language-fsharp">let x = if condition then 10 else 20 in
+x + x
+</code></pre>
+<p>조건이 true면 <code>x = 10</code>, false면 <code>x = 20</code>이다. 하지만 SSA 형태에서 <code>x</code>는 단일 SSA value여야 한다. 두 분기의 값을 어떻게 합칠까?</p>
+<p><strong>MLIR의 우아한 해답:</strong> <strong>Block Arguments</strong></p>
+<p>전통적인 SSA는 PHI 노드를 사용하지만, MLIR은 더 깔끔한 방식을 제공한다. 이 장에서 MLIR의 block arguments와 <code>scf.if</code> 연산을 배운다.</p>
+<p>이 장을 마치면:</p>
+<ul>
+<li>if/then/else 표현식을 네이티브 바이너리로 컴파일할 수 있다</li>
+<li>Block arguments와 PHI 노드의 차이를 이해한다</li>
+<li>MLIR의 <code>scf.if</code> 연산과 <code>scf.yield</code> 종결자를 사용할 수 있다</li>
+<li>제어 흐름 합류 지점에서 SSA 값이 어떻게 병합되는지 안다</li>
+</ul>
+<blockquote>
+<p><strong>중요:</strong> Block arguments는 MLIR의 핵심 혁신이다. PHI 노드의 복잡성을 제거하고 SSA 형태를 더 명확하게 만든다.</p>
+</blockquote>
+<h2 id="phi-노드-문제"><a class="header" href="#phi-노드-문제">PHI 노드 문제</a></h2>
+<h3 id="전통적인-ssa-phi-노드"><a class="header" href="#전통적인-ssa-phi-노드">전통적인 SSA: PHI 노드</a></h3>
+<p>LLVM IR과 전통적인 SSA 형태는 <strong>PHI 노드</strong>를 사용하여 제어 흐름 합류 지점에서 값을 병합한다.</p>
+<p><strong>LLVM IR 예시:</strong></p>
+<pre><code class="language-llvm">define i32 @example(i1 %cond) {
+entry:
+  br i1 %cond, label %then, label %else
+
+then:
+  %a = add i32 10, 1
+  br label %merge
+
+else:
+  %b = add i32 20, 1
+  br label %merge
+
+merge:
+  %result = phi i32 [ %a, %then ], [ %b, %else ]
+  ret i32 %result
+}
+</code></pre>
+<p><strong>동작 설명:</strong></p>
+<ol>
+<li><code>entry</code> 블록에서 조건 분기 (<code>br i1 %cond</code>)</li>
+<li><code>then</code> 블록: <code>%a = 11</code> 계산 후 <code>merge</code>로 이동</li>
+<li><code>else</code> 블록: <code>%b = 21</code> 계산 후 <code>merge</code>로 이동</li>
+<li><code>merge</code> 블록: <strong>PHI 노드</strong>가 선택
+<ul>
+<li><code>%then</code> 블록에서 왔으면 <code>%a</code> 사용</li>
+<li><code>%else</code> 블록에서 왔으면 <code>%b</code> 사용</li>
+</ul>
+</li>
+</ol>
+<p>PHI 노드는 “어느 블록에서 왔는가“에 따라 값을 선택한다. 표기법: <code>phi type [ value1, pred1 ], [ value2, pred2 ]</code></p>
+<h3 id="phi-노드의-문제점"><a class="header" href="#phi-노드의-문제점">PHI 노드의 문제점</a></h3>
+<h4 id="1-블록-시작-위치-제약"><a class="header" href="#1-블록-시작-위치-제약">1. 블록 시작 위치 제약</a></h4>
+<p>PHI 노드는 <strong>반드시 블록의 시작</strong>에 있어야 한다:</p>
+<pre><code class="language-llvm">merge:
+  %result = phi i32 [ %a, %then ], [ %b, %else ]  ; PHI는 여기!
+  %x = add i32 %result, 1                          ; 일반 연산은 PHI 뒤
+  ; PHI를 여기에 추가할 수 없다 - 순서 규칙 위반
+</code></pre>
+<p>이 제약은 코드 생성을 복잡하게 만든다. PHI 노드를 먼저 모으고, 일반 연산을 뒤에 배치해야 한다.</p>
+<h4 id="2-lost-copy-problem"><a class="header" href="#2-lost-copy-problem">2. Lost Copy Problem</a></h4>
+<p>PHI 노드의 의미는 “블록 진입 시” 값을 선택하는 것이다. 하지만 실제 구현에서는 <strong>선행 블록의 끝</strong>에서 값을 복사한다:</p>
+<pre><code class="language-llvm">then:
+  %a = add i32 10, 1
+  ; 실제로는 여기서 %a를 %result로 복사
+  br label %merge
+
+merge:
+  %result = phi i32 [ %a, %then ], [ %b, %else ]
+  ; %result는 이미 복사된 값을 가진다
+</code></pre>
+<p>이것이 <strong>lost copy problem</strong>이다:</p>
+<ul>
+<li>PHI 노드는 “merge 블록 진입 시” 선택하는 것처럼 보인다</li>
+<li>실제 구현은 “선행 블록 종료 시” 복사한다</li>
+<li>의미론과 구현의 불일치</li>
+</ul>
+<h4 id="3-dominance-frontier-계산"><a class="header" href="#3-dominance-frontier-계산">3. Dominance Frontier 계산</a></h4>
+<p>PHI 노드를 올바르게 배치하려면 <strong>dominance frontier</strong> 알고리즘이 필요하다:</p>
+<pre><code>// 어디에 PHI 노드를 삽입해야 할까?
+// 복잡한 제어 흐름에서는 자명하지 않다
+if (cond1) {
+  x = 10;
+} else if (cond2) {
+  x = 20;
+} else {
+  x = 30;
+}
+// 여기서 x에 PHI 노드가 필요하다
+// 하지만 몇 개의 선행 블록이 있는가?
+</code></pre>
+<p>Dominance frontier는 “변수가 재정의되는 모든 블록의 지배 경계“를 계산한다. 알고리즘이 복잡하고 구현이 어렵다.</p>
+<h4 id="4-가독성-문제"><a class="header" href="#4-가독성-문제">4. 가독성 문제</a></h4>
+<p>PHI 노드는 직관적이지 않다:</p>
+<pre><code class="language-llvm">%result = phi i32 [ %a, %then ], [ %b, %else ]
+; 이것이 무엇을 의미하는가?
+; "then에서 왔으면 %a, else에서 왔으면 %b"
+; 함수 호출처럼 보이지만 실제로는 특별한 의미를 가진다
+</code></pre>
+<p>초보자가 PHI 노드를 이해하기 어렵다. 특별한 규칙(블록 시작, 순서 지정, edge 의미론)을 배워야 한다.</p>
+<h3 id="phi-노드-요약"><a class="header" href="#phi-노드-요약">PHI 노드 요약</a></h3>
+<p><strong>PHI 노드의 특징:</strong></p>
+<ul>
+<li>제어 흐름 합류 지점에서 값을 병합한다</li>
+<li>블록 시작에 위치해야 한다 (특별한 위치 규칙)</li>
+<li>Lost copy problem - 의미론과 구현의 불일치</li>
+<li>Dominance frontier 계산 필요</li>
+<li>가독성이 낮다</li>
+</ul>
+<p><strong>MLIR의 해답:</strong> Block Arguments - PHI 노드를 대체하는 더 깔끔한 방식</p>
+<h2 id="block-arguments-in-mlir"><a class="header" href="#block-arguments-in-mlir">Block Arguments in MLIR</a></h2>
+<p>MLIR은 PHI 노드 대신 <strong>block arguments</strong>를 사용한다.</p>
+<h3 id="block-arguments-개념"><a class="header" href="#block-arguments-개념">Block Arguments 개념</a></h3>
+<p><strong>핵심 아이디어:</strong> 기본 블록(basic block)도 함수처럼 파라미터를 받을 수 있다.</p>
+<p>함수는 인자를 받는다:</p>
+<pre><code class="language-fsharp">let add(x: int, y: int) = x + y
+</code></pre>
+<p><strong>MLIR에서는 블록도 인자를 받는다:</strong></p>
+<pre><code class="language-mlir">^myblock(%arg0: i32, %arg1: i32):
+  %sum = arith.addi %arg0, %arg1 : i32
+  ...
+</code></pre>
+<p><code>^myblock</code>은 두 개의 i32 인자를 받는다. 블록으로 분기할 때 값을 전달한다:</p>
+<pre><code class="language-mlir">cf.br ^myblock(%value1, %value2 : i32, i32)
+</code></pre>
+<p>이것은 함수 호출과 유사하다: <code>myblock(value1, value2)</code></p>
+<h3 id="block-arguments-vs-phi-nodes"><a class="header" href="#block-arguments-vs-phi-nodes">Block Arguments vs PHI Nodes</a></h3>
+<p>같은 예시를 block arguments로 작성하면:</p>
+<p><strong>MLIR with Block Arguments:</strong></p>
+<pre><code class="language-mlir">func.func @example(%cond: i1) -&gt; i32 {
+  cf.cond_br %cond, ^then, ^else
+
+^then:
+  %a = arith.constant 11 : i32
+  cf.br ^merge(%a : i32)
+
+^else:
+  %b = arith.constant 21 : i32
+  cf.br ^merge(%b : i32)
+
+^merge(%result: i32):
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>차이점 분석:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>측면</th><th>PHI 노드 (LLVM)</th><th>Block Arguments (MLIR)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>값 전달</strong></td><td><code>phi i32 [ %a, %then ], [ %b, %else ]</code></td><td><code>cf.br ^merge(%a : i32)</code></td></tr>
+<tr><td><strong>의미론</strong></td><td>“어느 블록에서 왔는가”</td><td>“블록 호출 시 인자 전달”</td></tr>
+<tr><td><strong>위치 제약</strong></td><td>블록 시작에만 가능</td><td>블록 인자로 선언 (일반 파라미터)</td></tr>
+<tr><td><strong>가독성</strong></td><td>특별한 문법, edge 리스트</td><td>함수 호출과 유사</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>핵심 통찰력:</strong></p>
+<ul>
+<li><strong>PHI 노드:</strong> “merge 블록이 선행 블록을 검사하여 값을 선택”</li>
+<li><strong>Block Arguments:</strong> “선행 블록이 merge 블록에 값을 전달” (함수 호출처럼)</li>
+</ul>
+<p>Block arguments는 제어의 역전(inversion of control)이다:</p>
+<ul>
+<li>PHI: pull 방식 (merge 블록이 값을 가져온다)</li>
+<li>Block Arguments: push 방식 (선행 블록이 값을 전달한다)</li>
+</ul>
+<h3 id="block-arguments의-장점"><a class="header" href="#block-arguments의-장점">Block Arguments의 장점</a></h3>
+<h4 id="1-통일된-의미론"><a class="header" href="#1-통일된-의미론">1. 통일된 의미론</a></h4>
+<p>함수 인자와 블록 인자가 같은 개념이다:</p>
+<pre><code class="language-mlir">// 함수 인자
+func.func @foo(%arg: i32) -&gt; i32 {
+  ...
+}
+
+// 블록 인자 (동일한 문법!)
+^myblock(%arg: i32):
+  ...
+</code></pre>
+<p>배울 것이 하나다. 함수를 이해하면 블록도 이해한다.</p>
+<h4 id="2-lost-copy-problem-해결"><a class="header" href="#2-lost-copy-problem-해결">2. Lost Copy Problem 해결</a></h4>
+<p>Block arguments는 의미론과 구현이 일치한다:</p>
+<pre><code class="language-mlir">^then:
+  %a = arith.constant 11 : i32
+  cf.br ^merge(%a : i32)  ; 명시적으로 %a 전달
+</code></pre>
+<p>“분기할 때 값을 전달한다“는 의미가 명확하다. Lost copy problem이 없다.</p>
+<h4 id="3-위치-제약-없음"><a class="header" href="#3-위치-제약-없음">3. 위치 제약 없음</a></h4>
+<p>Block arguments는 블록 파라미터다. 블록 내 어디서든 일반 value처럼 사용할 수 있다:</p>
+<pre><code class="language-mlir">^merge(%result: i32):
+  %x = arith.constant 1 : i32
+  %y = arith.addi %result, %x : i32  ; %result 사용
+  func.return %y : i32
+</code></pre>
+<p>특별한 위치 규칙이 없다. 블록 파라미터는 블록 내 모든 곳에서 유효하다.</p>
+<h4 id="4-가독성"><a class="header" href="#4-가독성">4. 가독성</a></h4>
+<p>코드가 더 명확하다:</p>
+<pre><code class="language-mlir">cf.br ^merge(%a : i32)  ; "merge 블록을 %a와 함께 호출"
+^merge(%result: i32):   ; "merge 블록은 %result 파라미터를 받는다"
+</code></pre>
+<p>함수 호출 비유가 자연스럽다. 초보자가 쉽게 이해한다.</p>
+<h3 id="block-arguments-예시"><a class="header" href="#block-arguments-예시">Block Arguments 예시</a></h3>
+<p><strong>복잡한 제어 흐름:</strong></p>
+<pre><code class="language-mlir">func.func @complex(%x: i32) -&gt; i32 {
+  %c0 = arith.constant 0 : i32
+  %c10 = arith.constant 10 : i32
+
+  %cond1 = arith.cmpi slt, %x, %c0 : i32
+  cf.cond_br %cond1, ^negative, ^nonnegative
+
+^negative:
+  %neg = arith.constant -1 : i32
+  cf.br ^merge(%neg : i32)
+
+^nonnegative:
+  %cond2 = arith.cmpi sgt, %x, %c10 : i32
+  cf.cond_br %cond2, ^large, ^small
+
+^large:
+  %l = arith.constant 1 : i32
+  cf.br ^merge(%l : i32)
+
+^small:
+  cf.br ^merge(%c0 : i32)
+
+^merge(%result: i32):
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>동작:</strong></p>
+<ul>
+<li><code>x &lt; 0</code>: ^negative → ^merge(-1)</li>
+<li><code>x &gt; 10</code>: ^nonnegative → ^large → ^merge(1)</li>
+<li><code>0 ≤ x ≤ 10</code>: ^nonnegative → ^small → ^merge(0)</li>
+</ul>
+<p><code>^merge</code> 블록은 세 곳에서 호출된다. 각 선행 블록이 값을 전달한다. Block argument <code>%result</code>가 전달된 값을 받는다.</p>
+<p><strong>PHI 노드로 작성했다면:</strong></p>
+<pre><code class="language-llvm">merge:
+  %result = phi i32 [ %neg, %negative ], [ %l, %large ], [ %c0, %small ]
+</code></pre>
+<p>어느 쪽이 더 명확한가? Block arguments가 push 방식으로 값을 전달하므로 추적하기 쉽다.</p>
+<h3 id="block-arguments-요약"><a class="header" href="#block-arguments-요약">Block Arguments 요약</a></h3>
+<p><strong>Block Arguments:</strong></p>
+<ul>
+<li>기본 블록이 함수처럼 파라미터를 받는다</li>
+<li>분기 시 값을 전달: <code>cf.br ^block(%value : type)</code></li>
+<li>블록 선언에서 파라미터 정의: <code>^block(%arg: type):</code></li>
+</ul>
+<p><strong>장점:</strong></p>
+<ul>
+<li>함수 인자와 통일된 의미론</li>
+<li>Lost copy problem 해결</li>
+<li>위치 제약 없음</li>
+<li>가독성 향상</li>
+</ul>
+<p><strong>PHI 노드 대비:</strong></p>
+<ul>
+<li>PHI는 pull (merge가 선택), Block Arguments는 push (선행이 전달)</li>
+<li>PHI는 특별한 규칙, Block Arguments는 일반 파라미터</li>
+</ul>
+<blockquote>
+<p><strong>다음 섹션:</strong> MLIR의 고수준 제어 흐름인 <code>scf.if</code> 연산을 배운다!</p>
+</blockquote>
+<h2 id="scfif-고수준-제어-흐름"><a class="header" href="#scfif-고수준-제어-흐름">scf.if: 고수준 제어 흐름</a></h2>
+<p>Block arguments를 직접 사용하는 것은 저수준(low-level) 방식이다. MLIR은 **구조화된 제어 흐름(Structured Control Flow)**을 위한 <code>scf</code> dialect를 제공한다.</p>
+<h3 id="scf-dialect-소개"><a class="header" href="#scf-dialect-소개">scf Dialect 소개</a></h3>
+<p><strong>scf (Structured Control Flow) dialect:</strong></p>
+<ul>
+<li>고수준 제어 흐름 연산 제공</li>
+<li><code>scf.if</code>, <code>scf.for</code>, <code>scf.while</code> 등</li>
+<li>구조화된 방식으로 제어 흐름 표현</li>
+<li>나중에 저수준 <code>cf</code> dialect로 lowering된다</li>
+</ul>
+<p><strong>Progressive Lowering 철학:</strong></p>
+<pre><code>scf.if (high-level)
+  ↓ lowering pass
+cf.cond_br (low-level branches)
+  ↓ lowering pass
+llvm.cond_br (LLVM IR)
+</code></pre>
+<p>사용자는 고수준 <code>scf.if</code>를 사용한다. 컴파일러가 자동으로 저수준 분기로 변환한다.</p>
+<h3 id="scfif-문법"><a class="header" href="#scfif-문법">scf.if 문법</a></h3>
+<p><strong>기본 형태:</strong></p>
+<pre><code class="language-mlir">%result = scf.if %condition -&gt; (result_type) {
+  // then region
+  scf.yield %then_value : result_type
+} else {
+  // else region
+  scf.yield %else_value : result_type
+}
+</code></pre>
+<p><strong>구성 요소:</strong></p>
+<ol>
+<li><strong>%condition</strong>: i1 타입의 boolean 값</li>
+<li><strong>-&gt; (result_type)</strong>: 반환할 타입 선언</li>
+<li><strong>then region</strong>: 조건이 true일 때 실행</li>
+<li><strong>else region</strong>: 조건이 false일 때 실행</li>
+<li><strong>scf.yield</strong>: 각 region의 종결자, 값을 반환</li>
+</ol>
+<p><strong>중요:</strong> 양쪽 region이 <strong>같은 타입</strong>을 yield해야 한다!</p>
+<h3 id="scfif-예시"><a class="header" href="#scfif-예시">scf.if 예시</a></h3>
+<p><strong>간단한 예시:</strong></p>
+<pre><code class="language-mlir">func.func @example(%cond: i1) -&gt; i32 {
+  %result = scf.if %cond -&gt; (i32) {
+    %c42 = arith.constant 42 : i32
+    scf.yield %c42 : i32
+  } else {
+    %c0 = arith.constant 0 : i32
+    scf.yield %c0 : i32
+  }
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>동작:</strong></p>
+<ul>
+<li><code>%cond</code>가 true: then region 실행 → <code>%c42</code> yield → <code>%result = 42</code></li>
+<li><code>%cond</code>가 false: else region 실행 → <code>%c0</code> yield → <code>%result = 0</code></li>
+</ul>
+<p><strong>핵심:</strong> <code>scf.if</code>는 <strong>표현식</strong>이다. 값을 반환한다 (<code>%result</code>). if/then/else의 함수형 의미론!</p>
+<h3 id="scfyield-종결자"><a class="header" href="#scfyield-종결자">scf.yield 종결자</a></h3>
+<p><strong>scf.yield의 역할:</strong></p>
+<pre><code class="language-mlir">scf.yield %value : type
+</code></pre>
+<ul>
+<li>Region의 **종결자(terminator)**다</li>
+<li>Region을 종료하고 값을 반환한다</li>
+<li>함수의 <code>return</code>과 유사하지만, region에서 사용한다</li>
+</ul>
+<p><strong>중요 규칙:</strong></p>
+<ol>
+<li>
+<p><strong>모든 region은 종결자가 필요하다</strong></p>
+<pre><code class="language-mlir">scf.if %cond -&gt; (i32) {
+  %c42 = arith.constant 42 : i32
+  // 에러! scf.yield 누락
+}
+</code></pre>
+</li>
+<li>
+<p><strong>yield 타입이 일치해야 한다</strong></p>
+<pre><code class="language-mlir">// 에러! then은 i32, else는 i1
+scf.if %cond -&gt; (i32) {
+  %c42 = arith.constant 42 : i32
+  scf.yield %c42 : i32
+} else {
+  %true = arith.constant 1 : i1
+  scf.yield %true : i1  // 타입 불일치!
+}
+</code></pre>
+</li>
+<li>
+<p><strong>선언된 결과 타입과 일치해야 한다</strong></p>
+<pre><code class="language-mlir">// 에러! -&gt; (i32) 선언했지만 i64 yield
+%result = scf.if %cond -&gt; (i32) {
+  %c42 = arith.constant 42 : i64
+  scf.yield %c42 : i64  // 타입 불일치!
+}
+</code></pre>
+</li>
+</ol>
+<h3 id="scfif의-장점"><a class="header" href="#scfif의-장점">scf.if의 장점</a></h3>
+<h4 id="1-타입-안전성"><a class="header" href="#1-타입-안전성">1. 타입 안전성</a></h4>
+<p>결과 타입을 미리 선언한다 (<code>-&gt; (i32)</code>). 컴파일러가 양쪽 region을 검증한다.</p>
+<pre><code class="language-mlir">%result = scf.if %cond -&gt; (i32) {
+  scf.yield %then_val : i32
+} else {
+  scf.yield %else_val : i32
+}
+// 컴파일러: "양쪽 모두 i32를 yield하는가?" ✓
+</code></pre>
+<h4 id="2-구조화된-형태"><a class="header" href="#2-구조화된-형태">2. 구조화된 형태</a></h4>
+<p><code>scf.if</code>는 블록 구조가 명확하다:</p>
+<ul>
+<li>then region</li>
+<li>else region</li>
+<li>둘 다 명확한 시작과 끝</li>
+</ul>
+<p>저수준 분기(<code>cf.cond_br</code>)는 임의의 블록으로 점프할 수 있다 (덜 구조화됨).</p>
+<h4 id="3-변환-용이성"><a class="header" href="#3-변환-용이성">3. 변환 용이성</a></h4>
+<p>고수준 구조는 최적화와 분석이 쉽다:</p>
+<ul>
+<li>Dead branch elimination</li>
+<li>Condition hoisting</li>
+<li>Pattern matching</li>
+</ul>
+<p>저수준 분기는 제어 흐름 그래프(CFG) 분석이 필요하다.</p>
+<h3 id="scfif에서-cfcond_br로-lowering"><a class="header" href="#scfif에서-cfcond_br로-lowering">scf.if에서 cf.cond_br로 Lowering</a></h3>
+<p><code>scf.if</code>는 나중에 <code>cf.cond_br</code>와 block arguments로 변환된다.</p>
+<p><strong>High-level (scf.if):</strong></p>
+<pre><code class="language-mlir">%result = scf.if %cond -&gt; (i32) {
+  %c42 = arith.constant 42 : i32
+  scf.yield %c42 : i32
+} else {
+  %c0 = arith.constant 0 : i32
+  scf.yield %c0 : i32
+}
+func.return %result : i32
+</code></pre>
+<p><strong>Lowering 후 (cf.cond_br + block arguments):</strong></p>
+<pre><code class="language-mlir">cf.cond_br %cond, ^then, ^else
+
+^then:
+  %c42 = arith.constant 42 : i32
+  cf.br ^merge(%c42 : i32)
+
+^else:
+  %c0 = arith.constant 0 : i32
+  cf.br ^merge(%c0 : i32)
+
+^merge(%result: i32):
+  func.return %result : i32
+</code></pre>
+<p><strong>변환 과정:</strong></p>
+<ol>
+<li><code>scf.if</code>의 then region → <code>^then</code> 블록</li>
+<li><code>scf.if</code>의 else region → <code>^else</code> 블록</li>
+<li><code>scf.yield</code> → <code>cf.br ^merge(value)</code></li>
+<li><code>scf.if</code>의 결과 → <code>^merge</code> 블록의 block argument</li>
+</ol>
+<p><strong>자동 변환:</strong> <code>--convert-scf-to-cf</code> pass가 이 변환을 수행한다. 사용자는 신경 쓰지 않아도 된다!</p>
+<h3 id="multiple-results"><a class="header" href="#multiple-results">Multiple Results</a></h3>
+<p><code>scf.if</code>는 여러 값을 반환할 수 있다:</p>
+<pre><code class="language-mlir">%x, %y = scf.if %cond -&gt; (i32, i32) {
+  %a = arith.constant 10 : i32
+  %b = arith.constant 20 : i32
+  scf.yield %a, %b : i32, i32
+} else {
+  %c = arith.constant 30 : i32
+  %d = arith.constant 40 : i32
+  scf.yield %c, %d : i32, i32
+}
+// %x, %y는 (10, 20) 또는 (30, 40)
+</code></pre>
+<p><strong>Lowering 후:</strong></p>
+<pre><code class="language-mlir">^merge(%x: i32, %y: i32):
+  // %x, %y는 block arguments
+</code></pre>
+<p>Block arguments도 여러 개 가질 수 있다. <code>scf.if</code>의 유연성이 그대로 lowering된다.</p>
+<h3 id="scfif-요약"><a class="header" href="#scfif-요약">scf.if 요약</a></h3>
+<p><strong>scf.if 연산:</strong></p>
+<ul>
+<li>고수준 구조화된 제어 흐름</li>
+<li>결과 타입 선언: <code>-&gt; (type)</code></li>
+<li>양쪽 region이 같은 타입 yield</li>
+<li><code>scf.yield</code> 종결자로 값 반환</li>
+</ul>
+<p><strong>장점:</strong></p>
+<ul>
+<li>타입 안전성</li>
+<li>구조화된 형태</li>
+<li>최적화 용이성</li>
+<li>Progressive lowering: scf → cf → llvm</li>
+</ul>
+<p><strong>다음:</strong> F# P/Invoke 바인딩을 추가하여 <code>scf.if</code>와 <code>scf.yield</code>를 생성한다!</p>
+<h2 id="pinvoke-바인딩-scf-dialect"><a class="header" href="#pinvoke-바인딩-scf-dialect">P/Invoke 바인딩: SCF Dialect</a></h2>
+<p>이제 F#에서 SCF dialect 연산을 사용할 수 있도록 P/Invoke 바인딩을 추가한다.</p>
+<h3 id="mlir-c-api-for-scf"><a class="header" href="#mlir-c-api-for-scf">MLIR C API for SCF</a></h3>
+<p>MLIR C API는 <code>mlir-c/Dialect/SCF.h</code> 헤더에서 SCF dialect 지원을 제공한다.</p>
+<p><strong>주요 함수:</strong></p>
+<pre><code class="language-c">// mlir-c/Dialect/SCF.h
+
+// scf.if operation 생성
+MlirOperation mlirSCFIfCreate(
+    MlirLocation location,
+    MlirValue condition,
+    bool hasElse
+);
+
+// scf.yield operation 생성
+MlirOperation mlirSCFYieldCreate(
+    MlirLocation location,
+    intptr_t nResults,
+    MlirValue const *results
+);
+
+// scf.if의 then/else region 접근
+MlirRegion mlirSCFIfGetThenRegion(MlirOperation ifOp);
+MlirRegion mlirSCFIfGetElseRegion(MlirOperation ifOp);
+</code></pre>
+<p><strong>Note:</strong> 실제 MLIR C API에서 SCF dialect 지원은 제한적일 수 있다. 필요한 함수가 없으면 C++ shim을 작성한다 (Appendix 참조).</p>
+<h3 id="f-pinvoke-바인딩"><a class="header" href="#f-pinvoke-바인딩">F# P/Invoke 바인딩</a></h3>
+<p><strong>MlirBindings.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">namespace MlirBindings
+
+open System
+open System.Runtime.InteropServices
+
+module MlirNative =
+    // ... 기존 바인딩 ...
+
+    // ===== SCF Dialect Operations =====
+
+    /// scf.if operation 생성
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirSCFIfCreate(
+        MlirLocation location,
+        MlirValue condition,
+        bool hasElse
+    )
+
+    /// scf.yield operation 생성
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirSCFYieldCreate(
+        MlirLocation location,
+        nativeint nResults,
+        MlirValue[] results
+    )
+
+    /// scf.if의 then region 가져오기
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirSCFIfGetThenRegion(MlirOperation ifOp)
+
+    /// scf.if의 else region 가져오기
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirSCFIfGetElseRegion(MlirOperation ifOp)
+
+    /// operation의 결과 개수 설정 (scf.if 결과 타입용)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationSetResultTypes(
+        MlirOperation operation,
+        nativeint nTypes,
+        MlirType[] types
+    )
+</code></pre>
+<p><strong>바인딩 설명:</strong></p>
+<ol>
+<li>
+<p><strong>mlirSCFIfCreate</strong>: <code>scf.if</code> operation 생성</p>
+<ul>
+<li><code>location</code>: operation 위치</li>
+<li><code>condition</code>: i1 타입 boolean 값</li>
+<li><code>hasElse</code>: else region 포함 여부 (true면 then/else, false면 then만)</li>
+</ul>
+</li>
+<li>
+<p><strong>mlirSCFYieldCreate</strong>: <code>scf.yield</code> operation 생성</p>
+<ul>
+<li><code>nResults</code>: yield할 값 개수</li>
+<li><code>results</code>: yield할 값 배열</li>
+</ul>
+</li>
+<li>
+<p><strong>mlirSCFIfGetThenRegion/ElseRegion</strong>: region 접근</p>
+<ul>
+<li><code>scf.if</code>는 내부에 then/else region을 가진다</li>
+<li>Region에 블록을 추가하고 연산을 작성한다</li>
+</ul>
+</li>
+</ol>
+<h3 id="c-api-제약과-대안"><a class="header" href="#c-api-제약과-대안">C API 제약과 대안</a></h3>
+<p>MLIR C API의 SCF dialect 지원은 완전하지 않을 수 있다. 특히:</p>
+<ul>
+<li><code>scf.if</code> 결과 타입 설정 API가 명확하지 않을 수 있다</li>
+<li>Region builder API가 제한적일 수 있다</li>
+</ul>
+<p><strong>대안 1: Operation State Builder 사용</strong></p>
+<p>MLIR C API의 일반 operation builder를 사용:</p>
+<pre><code class="language-fsharp">let createScfIf (builder: OpBuilder) (condition: MlirValue) (resultTypes: MlirType[]) (location: MlirLocation) =
+    let opName = MlirHelpers.fromString("scf.if")
+    let state = MlirNative.mlirOperationStateGet(opName, location)
+
+    // operand 추가 (condition)
+    MlirNative.mlirOperationStateAddOperands(state, 1n, [| condition |])
+
+    // 결과 타입 추가
+    MlirNative.mlirOperationStateAddResults(state, nativeint resultTypes.Length, resultTypes)
+
+    // region 추가 (then, else)
+    MlirNative.mlirOperationStateAddOwnedRegions(state, 2n, [| thenRegion; elseRegion |])
+
+    // operation 생성
+    MlirNative.mlirOperationCreate(state)
+</code></pre>
+<p><strong>대안 2: C++ Shim 작성</strong></p>
+<p>Appendix (Chapter 01-03에서 다룬 C++ dialect wrapper 패턴)에 따라 C++ shim을 작성:</p>
+<pre><code class="language-cpp">// mlir_scf_wrapper.cpp
+extern "C" {
+
+MlirOperation mlirCreateSCFIf(
+    MlirLocation location,
+    MlirValue condition,
+    MlirType* resultTypes,
+    intptr_t numResults,
+    bool hasElse
+) {
+    // C++ MLIR API 사용
+    mlir::OpBuilder builder(...);
+    auto ifOp = builder.create&lt;mlir::scf::IfOp&gt;(
+        unwrap(location),
+        llvm::ArrayRef&lt;mlir::Type&gt;(...),
+        unwrap(condition),
+        hasElse
+    );
+    return wrap(ifOp.getOperation());
+}
+
+} // extern "C"
+</code></pre>
+<p>이 shim을 컴파일하여 F#에서 호출한다.</p>
+<p><strong>권장 방안:</strong> 먼저 C API를 시도하고, 부족하면 C++ shim을 작성한다. Chapter 01 Appendix가 이미 패턴을 확립했다.</p>
+<h3 id="opbuilder-헬퍼-메서드"><a class="header" href="#opbuilder-헬퍼-메서드">OpBuilder 헬퍼 메서드</a></h3>
+<p>고수준 래퍼를 <code>OpBuilder</code> 클래스에 추가한다:</p>
+<p><strong>MlirWrapper.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">type OpBuilder(context: Context) =
+    // ... 기존 메서드 ...
+
+    /// scf.if operation 생성
+    member this.CreateScfIf(condition: MlirValue, resultTypes: MlirType[], location: MlirLocation) : MlirOperation =
+        let ifOp = MlirNative.mlirSCFIfCreate(location, condition, true)
+
+        // 결과 타입 설정 (C API 함수 사용)
+        MlirNative.mlirOperationSetResultTypes(ifOp, nativeint resultTypes.Length, resultTypes)
+
+        ifOp
+
+    /// scf.if의 then region에 블록 추가
+    member this.GetThenBlock(ifOp: MlirOperation) : MlirBlock =
+        let thenRegion = MlirNative.mlirSCFIfGetThenRegion(ifOp)
+        let block = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
+        MlirNative.mlirRegionAppendOwnedBlock(thenRegion, block)
+        block
+
+    /// scf.if의 else region에 블록 추가
+    member this.GetElseBlock(ifOp: MlirOperation) : MlirBlock =
+        let elseRegion = MlirNative.mlirSCFIfGetElseRegion(ifOp)
+        let block = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
+        MlirNative.mlirRegionAppendOwnedBlock(elseRegion, block)
+        block
+
+    /// scf.yield operation 생성
+    member this.CreateScfYield(results: MlirValue[], location: MlirLocation) : MlirOperation =
+        MlirNative.mlirSCFYieldCreate(location, nativeint results.Length, results)
+</code></pre>
+<p><strong>사용 예시:</strong></p>
+<pre><code class="language-fsharp">// scf.if operation 생성
+let i32Type = builder.I32Type()
+let ifOp = builder.CreateScfIf(condition, [| i32Type |], location)
+
+// then region 작성
+let thenBlock = builder.GetThenBlock(ifOp)
+// ... thenBlock에 연산 추가 ...
+let thenYield = builder.CreateScfYield([| thenValue |], location)
+MlirNative.mlirBlockAppendOwnedOperation(thenBlock, thenYield)
+
+// else region 작성
+let elseBlock = builder.GetElseBlock(ifOp)
+// ... elseBlock에 연산 추가 ...
+let elseYield = builder.CreateScfYield([| elseValue |], location)
+MlirNative.mlirBlockAppendOwnedOperation(elseBlock, elseYield)
+</code></pre>
+<h3 id="dialect-로딩"><a class="header" href="#dialect-로딩">Dialect 로딩</a></h3>
+<p>SCF dialect를 사용하려면 context에 로드해야 한다:</p>
+<pre><code class="language-fsharp">let ctx = new Context()
+ctx.LoadDialect("arith")
+ctx.LoadDialect("func")
+ctx.LoadDialect("scf")  // SCF dialect 로드!
+</code></pre>
+<p>이것으로 <code>scf.if</code>와 <code>scf.yield</code> 연산을 사용할 준비가 완료되었다!</p>
+<h3 id="pinvoke-바인딩-요약"><a class="header" href="#pinvoke-바인딩-요약">P/Invoke 바인딩 요약</a></h3>
+<p><strong>추가한 바인딩:</strong></p>
+<ul>
+<li><code>mlirSCFIfCreate</code>: scf.if operation 생성</li>
+<li><code>mlirSCFYieldCreate</code>: scf.yield operation 생성</li>
+<li><code>mlirSCFIfGetThenRegion/ElseRegion</code>: region 접근</li>
+</ul>
+<p><strong>OpBuilder 헬퍼:</strong></p>
+<ul>
+<li><code>CreateScfIf</code>: scf.if 생성 + 결과 타입 설정</li>
+<li><code>GetThenBlock/GetElseBlock</code>: region에 블록 추가</li>
+<li><code>CreateScfYield</code>: scf.yield 생성</li>
+</ul>
+<p><strong>C API 제약:</strong></p>
+<ul>
+<li>C API가 불완전하면 C++ shim 작성 (Appendix 패턴 따름)</li>
+<li>Operation State Builder를 일반 대안으로 사용</li>
+</ul>
+<p><strong>다음 섹션:</strong> AST에 If 케이스를 추가하고, 코드 생성을 구현한다!</p>
+<h2 id="ast-확장-if-표현식과-boolean-리터럴"><a class="header" href="#ast-확장-if-표현식과-boolean-리터럴">AST 확장: If 표현식과 Boolean 리터럴</a></h2>
+<p>이제 AST에 if 표현식과 boolean 리터럴을 추가한다.</p>
+<h3 id="expr-타입-확장"><a class="header" href="#expr-타입-확장">Expr 타입 확장</a></h3>
+<p><strong>Ast.fs 수정:</strong></p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+/// 이진 연산자 (Chapter 06)
+type Operator =
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+
+/// 비교 연산자 (Chapter 06)
+type CompareOp =
+    | LessThan
+    | GreaterThan
+    | LessEqual
+    | GreaterEqual
+    | Equal
+    | NotEqual
+
+/// 단항 연산자 (Chapter 06)
+type UnaryOp =
+    | Negate
+
+/// FunLang 표현식 AST
+type Expr =
+    | IntLiteral of int
+    | BinaryOp of Operator * Expr * Expr
+    | UnaryOp of UnaryOp * Expr
+    | Comparison of CompareOp * Expr * Expr
+    | Let of name: string * binding: Expr * body: Expr
+    | Var of name: string
+    // NEW: If 표현식과 Boolean 리터럴
+    | If of condition: Expr * thenBranch: Expr * elseBranch: Expr
+    | Bool of bool
+
+/// 최상위 프로그램
+type Program =
+    { expr: Expr }
+</code></pre>
+<p><strong>새로운 케이스 설명:</strong></p>
+<h3 id="if-of-condition--thenbranch--elsebranch"><a class="header" href="#if-of-condition--thenbranch--elsebranch">If of condition * thenBranch * elseBranch</a></h3>
+<pre><code class="language-fsharp">| If of condition: Expr * thenBranch: Expr * elseBranch: Expr
+</code></pre>
+<p><strong>의미:</strong> <code>if {condition} then {thenBranch} else {elseBranch}</code></p>
+<p><strong>필드:</strong></p>
+<ul>
+<li><code>condition</code>: 조건 표현식 (i1 boolean 값을 생성해야 함)</li>
+<li><code>thenBranch</code>: 조건이 true일 때 실행하는 표현식</li>
+<li><code>elseBranch</code>: 조건이 false일 때 실행하는 표현식</li>
+</ul>
+<p><strong>타입 제약:</strong></p>
+<ul>
+<li><code>condition</code>은 i1 타입을 생성해야 한다</li>
+<li><code>thenBranch</code>와 <code>elseBranch</code>는 <strong>같은 타입</strong>을 생성해야 한다</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// FunLang: if 5 &lt; 10 then 42 else 0
+If(
+  Comparison(LessThan, IntLiteral 5, IntLiteral 10),
+  IntLiteral 42,
+  IntLiteral 0
+)
+</code></pre>
+<h3 id="bool-of-bool"><a class="header" href="#bool-of-bool">Bool of bool</a></h3>
+<pre><code class="language-fsharp">| Bool of bool
+</code></pre>
+<p><strong>의미:</strong> Boolean 리터럴 - <code>true</code> 또는 <code>false</code></p>
+<p><strong>필드:</strong></p>
+<ul>
+<li><code>bool</code>: F# boolean 값 (true 또는 false)</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// FunLang: if true then 1 else 0
+If(
+  Bool true,
+  IntLiteral 1,
+  IntLiteral 0
+)
+</code></pre>
+<p><strong>MLIR로 컴파일:</strong> <code>Bool true</code> → <code>arith.constant 1 : i1</code>, <code>Bool false</code> → <code>arith.constant 0 : i1</code></p>
+<h3 id="ast-예시"><a class="header" href="#ast-예시">AST 예시</a></h3>
+<p><strong>간단한 if:</strong></p>
+<pre><code class="language-fsharp">// FunLang: if true then 42 else 0
+If(Bool true, IntLiteral 42, IntLiteral 0)
+</code></pre>
+<p><strong>비교 조건:</strong></p>
+<pre><code class="language-fsharp">// FunLang: if 5 &lt; 10 then 1 else 0
+If(
+  Comparison(LessThan, IntLiteral 5, IntLiteral 10),
+  IntLiteral 1,
+  IntLiteral 0
+)
+</code></pre>
+<p><strong>let 바인딩과 결합:</strong></p>
+<pre><code class="language-fsharp">// FunLang: let x = 5 in if x &gt; 0 then x * 2 else 0
+Let("x",
+  IntLiteral 5,
+  If(
+    Comparison(GreaterThan, Var "x", IntLiteral 0),
+    BinaryOp(Multiply, Var "x", IntLiteral 2),
+    IntLiteral 0
+  )
+)
+</code></pre>
+<h2 id="boolean-표현식"><a class="header" href="#boolean-표현식">Boolean 표현식</a></h2>
+<p>Boolean 값은 MLIR에서 <strong>i1 타입</strong> (1-bit integer)으로 표현된다.</p>
+<h3 id="boolean-타입-i1"><a class="header" href="#boolean-타입-i1">Boolean 타입: i1</a></h3>
+<p>MLIR은 boolean을 위한 전용 타입이 없다. 대신 1-bit integer (<code>i1</code>)를 사용한다:</p>
+<pre><code class="language-mlir">%true = arith.constant 1 : i1    // Boolean true
+%false = arith.constant 0 : i1   // Boolean false
+</code></pre>
+<p><strong>i1의 값:</strong></p>
+<ul>
+<li><code>1</code>: true</li>
+<li><code>0</code>: false</li>
+</ul>
+<h3 id="boolean-리터럴-컴파일"><a class="header" href="#boolean-리터럴-컴파일">Boolean 리터럴 컴파일</a></h3>
+<p><code>Bool</code> 케이스를 i1 상수로 컴파일한다:</p>
+<pre><code class="language-fsharp">| Bool(value) -&gt;
+    let i1Type = builder.Context.GetIntegerType(1)  // 1-bit integer
+    let intValue = if value then 1L else 0L
+    let attr = builder.Context.GetIntegerAttr(i1Type, intValue)
+    let constOp = builder.CreateConstant(attr, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, constOp)
+    builder.GetResult(constOp, 0)
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">// Bool true
+%true = arith.constant 1 : i1
+
+// Bool false
+%false = arith.constant 0 : i1
+</code></pre>
+<h3 id="비교-연산은-이미-i1을-반환한다"><a class="header" href="#비교-연산은-이미-i1을-반환한다">비교 연산은 이미 i1을 반환한다</a></h3>
+<p>Chapter 06에서 구현한 비교 연산 (<code>arith.cmpi</code>)은 i1을 반환한다:</p>
+<pre><code class="language-mlir">%c5 = arith.constant 5 : i32
+%c10 = arith.constant 10 : i32
+%cond = arith.cmpi slt, %c5, %c10 : i32  // 결과는 i1
+</code></pre>
+<p><strong>중요:</strong> if 조건으로 비교 연산을 사용할 때, i1 → i32 확장(<code>arith.extui</code>)을 제거해야 한다!</p>
+<p>Chapter 06에서는 main 함수 반환을 위해 i1을 i32로 확장했다:</p>
+<pre><code class="language-fsharp">// Chapter 06 코드 (비교 결과를 i32로 확장)
+| Comparison(compareOp, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+    let cmpVal = builder.GetResult(cmpOp, 0)  // i1 값
+    // i1 -&gt; i32 확장
+    let i32Type = builder.I32Type()
+    let extOp = builder.CreateArithExtUI(cmpVal, i32Type, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, extOp)
+    builder.GetResult(extOp, 0)  // i32 반환
+</code></pre>
+<p><strong>문제:</strong> if 조건은 i1이 필요한데, 위 코드는 i32를 반환한다!</p>
+<p><strong>해결 방안:</strong> 컨텍스트에 따라 확장 여부를 결정한다:</p>
+<ul>
+<li>if 조건: i1 그대로 사용</li>
+<li>main 함수 반환: i32로 확장</li>
+</ul>
+<p><strong>간단한 접근:</strong> Comparison 케이스가 i1을 반환하도록 하고, main 함수에서만 확장한다.</p>
+<p><strong>수정된 Comparison 케이스:</strong></p>
+<pre><code class="language-fsharp">| Comparison(compareOp, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+    builder.GetResult(cmpOp, 0)  // i1 반환 (확장 안 함)
+</code></pre>
+<p><strong>main 함수에서 확장:</strong></p>
+<pre><code class="language-fsharp">let resultValue = compileExpr builder entryBlock loc program.expr env
+
+// 결과가 i1이면 i32로 확장 (main 함수 반환용)
+let resultType = MlirNative.mlirValueGetType(resultValue)
+let finalResult =
+    if MlirNative.mlirTypeIsI1(resultType) then
+        let i32Type = builder.I32Type()
+        let extOp = builder.CreateArithExtUI(resultValue, i32Type, loc)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, extOp)
+        builder.GetResult(extOp, 0)
+    else
+        resultValue
+</code></pre>
+<h3 id="boolean-연산-선택-사항"><a class="header" href="#boolean-연산-선택-사항">Boolean 연산 (선택 사항)</a></h3>
+<p>Boolean 값에 논리 연산을 적용할 수 있다:</p>
+<p><strong>AND:</strong></p>
+<pre><code class="language-mlir">%a = arith.constant 1 : i1
+%b = arith.constant 0 : i1
+%result = arith.andi %a, %b : i1  // 결과: 0 (false)
+</code></pre>
+<p><strong>OR:</strong></p>
+<pre><code class="language-mlir">%result = arith.ori %a, %b : i1  // 결과: 1 (true)
+</code></pre>
+<p><strong>NOT (XOR with 1):</strong></p>
+<pre><code class="language-mlir">%c1 = arith.constant 1 : i1
+%result = arith.xori %a, %c1 : i1  // a의 반대
+</code></pre>
+<p><strong>AST 추가 (나중에):</strong></p>
+<p>Phase 2에서는 boolean 연산을 추가하지 않는다. if/then/else만으로 충분하다. 필요하면 나중에 추가한다.</p>
+<h2 id="ifthenelse-코드-생성"><a class="header" href="#ifthenelse-코드-생성">If/Then/Else 코드 생성</a></h2>
+<p>이제 If 케이스를 scf.if로 컴파일한다.</p>
+<h3 id="if-케이스-구현"><a class="header" href="#if-케이스-구현">If 케이스 구현</a></h3>
+<p><strong>CodeGen.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">| If(condition, thenExpr, elseExpr) -&gt;
+    // 1. 조건 표현식 컴파일 (i1 타입 필요)
+    let condVal = compileExpr builder block location condition env
+
+    // 2. 결과 타입 결정 (thenBranch의 타입을 사용)
+    // 실제로는 타입 추론이 필요하지만, 지금은 i32로 가정
+    let i32Type = builder.I32Type()
+    let resultTypes = [| i32Type |]
+
+    // 3. scf.if operation 생성
+    let ifOp = builder.CreateScfIf(condVal, resultTypes, location)
+
+    // 4. Then region 작성
+    let thenBlock = builder.GetThenBlock(ifOp)
+    let thenVal = compileExpr builder thenBlock location thenExpr env
+    let thenYield = builder.CreateScfYield([| thenVal |], location)
+    MlirNative.mlirBlockAppendOwnedOperation(thenBlock, thenYield)
+
+    // 5. Else region 작성
+    let elseBlock = builder.GetElseBlock(ifOp)
+    let elseVal = compileExpr builder elseBlock location elseExpr env
+    let elseYield = builder.CreateScfYield([| elseVal |], location)
+    MlirNative.mlirBlockAppendOwnedOperation(elseBlock, elseYield)
+
+    // 6. scf.if를 블록에 추가
+    MlirNative.mlirBlockAppendOwnedOperation(block, ifOp)
+
+    // 7. scf.if의 결과 반환
+    builder.GetResult(ifOp, 0)
+</code></pre>
+<p><strong>동작 설명:</strong></p>
+<ol>
+<li><strong>조건 컴파일:</strong> <code>condition</code> 표현식을 컴파일하여 i1 값을 얻는다</li>
+<li><strong>결과 타입:</strong> if 표현식의 결과 타입 (여기서는 i32로 가정)</li>
+<li><strong>scf.if 생성:</strong> <code>CreateScfIf</code>로 operation 생성</li>
+<li><strong>Then region:</strong> thenBranch 컴파일 → scf.yield로 값 반환</li>
+<li><strong>Else region:</strong> elseBranch 컴파일 → scf.yield로 값 반환</li>
+<li><strong>Operation 추가:</strong> scf.if를 부모 블록에 추가</li>
+<li><strong>결과 사용:</strong> scf.if의 결과 (SSA value)를 반환</li>
+</ol>
+<p><strong>핵심:</strong> 각 region에서 <code>compileExpr</code>를 호출할 때 <strong>해당 region의 블록</strong>을 전달한다. 이렇게 하면 연산이 올바른 region에 추가된다.</p>
+<h3 id="예시-if-true-then-42-else-0"><a class="header" href="#예시-if-true-then-42-else-0">예시: if true then 42 else 0</a></h3>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">If(Bool true, IntLiteral 42, IntLiteral 0)
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li><code>Bool true</code> 컴파일: <code>%true = arith.constant 1 : i1</code></li>
+<li><code>scf.if</code> 생성</li>
+<li>Then region:
+<ul>
+<li><code>IntLiteral 42</code> 컴파일: <code>%c42 = arith.constant 42 : i32</code></li>
+<li><code>scf.yield %c42</code></li>
+</ul>
+</li>
+<li>Else region:
+<ul>
+<li><code>IntLiteral 0</code> 컴파일: <code>%c0 = arith.constant 0 : i32</code></li>
+<li><code>scf.yield %c0</code></li>
+</ul>
+</li>
+<li>scf.if 결과: <code>%result</code></li>
+</ol>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %true = arith.constant 1 : i1
+    %result = scf.if %true -&gt; (i32) {
+      %c42 = arith.constant 42 : i32
+      scf.yield %c42 : i32
+    } else {
+      %c0 = arith.constant 0 : i32
+      scf.yield %c0 : i32
+    }
+    func.return %result : i32
+  }
+}
+</code></pre>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+42
+</code></pre>
+<p>조건이 true이므로 42를 반환한다!</p>
+<h3 id="예시-if-5--10-then-1-else-0"><a class="header" href="#예시-if-5--10-then-1-else-0">예시: if 5 &lt; 10 then 1 else 0</a></h3>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">If(
+  Comparison(LessThan, IntLiteral 5, IntLiteral 10),
+  IntLiteral 1,
+  IntLiteral 0
+)
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c5 = arith.constant 5 : i32
+    %c10 = arith.constant 10 : i32
+    %cond = arith.cmpi slt, %c5, %c10 : i32  // i1 결과
+    %result = scf.if %cond -&gt; (i32) {
+      %c1 = arith.constant 1 : i32
+      scf.yield %c1 : i32
+    } else {
+      %c0 = arith.constant 0 : i32
+      scf.yield %c0 : i32
+    }
+    func.return %result : i32
+  }
+}
+</code></pre>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+1
+</code></pre>
+<p>5 &lt; 10이 true이므로 1을 반환한다!</p>
+<h2 id="lowering-pass-업데이트"><a class="header" href="#lowering-pass-업데이트">Lowering Pass 업데이트</a></h2>
+<p>SCF dialect를 사용하므로 lowering pass에 <code>--convert-scf-to-cf</code>를 추가해야 한다.</p>
+<h3 id="pass-manager-순서"><a class="header" href="#pass-manager-순서">Pass Manager 순서</a></h3>
+<p><strong>Lowering.fs 수정:</strong></p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+module Lowering =
+
+    /// MLIR module을 LLVM dialect로 lowering
+    let lowerToLLVMDialect (mlirMod: Module) =
+        let ctx = mlirMod.Context
+        let pm = MlirNative.mlirPassManagerCreate(ctx.Handle)
+
+        // 1. SCF -&gt; CF 변환 (구조화된 제어 흐름 -&gt; 분기)
+        let scfToCfPass = MlirNative.mlirCreateConversionConvertSCFToCFPass()
+        MlirNative.mlirPassManagerAddOwnedPass(pm, scfToCfPass)
+
+        // 2. Arith -&gt; LLVM 변환
+        let arithToLLVMPass = MlirNative.mlirCreateConversionConvertArithToLLVMPass()
+        MlirNative.mlirPassManagerAddOwnedPass(pm, arithToLLVMPass)
+
+        // 3. Func -&gt; LLVM 변환
+        let funcToLLVMPass = MlirNative.mlirCreateConversionConvertFuncToLLVMPass()
+        MlirNative.mlirPassManagerAddOwnedPass(pm, funcToLLVMPass)
+
+        // 4. Unrealized casts 정리
+        let reconcilePass = MlirNative.mlirCreateConversionReconcileUnrealizedCastsPass()
+        MlirNative.mlirPassManagerAddOwnedPass(pm, reconcilePass)
+
+        // Pass 실행
+        let result = MlirNative.mlirPassManagerRun(pm, mlirMod.Handle)
+        if not (MlirNative.mlirLogicalResultIsSuccess(result)) then
+            failwith "Failed to run lowering passes"
+
+        MlirNative.mlirPassManagerDestroy(pm)
+
+    /// MLIR module을 LLVM IR로 변환
+    let translateToLLVMIR (mlirMod: Module) : string =
+        let llvmIR = MlirNative.mlirTranslateModuleToLLVMIR(mlirMod.Handle)
+        MlirHelpers.toString llvmIR
+</code></pre>
+<p><strong>Pass 순서 설명:</strong></p>
+<ol>
+<li><strong>SCF → CF:</strong> <code>scf.if</code> → <code>cf.cond_br</code> + block arguments</li>
+<li><strong>Arith → LLVM:</strong> <code>arith.constant</code>, <code>arith.addi</code> 등 → <code>llvm.mlir.constant</code>, <code>llvm.add</code> 등</li>
+<li><strong>Func → LLVM:</strong> <code>func.func</code>, <code>func.return</code> → <code>llvm.func</code>, <code>llvm.return</code></li>
+<li><strong>Reconcile:</strong> 중간 cast 연산 정리</li>
+</ol>
+<h3 id="mlirbindingsfs에-pass-추가"><a class="header" href="#mlirbindingsfs에-pass-추가">MlirBindings.fs에 Pass 추가</a></h3>
+<p><strong>MlirBindings.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">/// SCF to CF 변환 pass 생성
+[&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirPass mlirCreateConversionConvertSCFToCFPass()
+</code></pre>
+<p><strong>Note:</strong> 함수 이름은 MLIR C API 버전에 따라 다를 수 있다. <code>mlir-c/Conversion/Passes.h</code> 헤더를 확인한다.</p>
+<h3 id="lowering-후-mlir-ir"><a class="header" href="#lowering-후-mlir-ir">Lowering 후 MLIR IR</a></h3>
+<p><strong>scf.if lowering 전:</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %c5 = arith.constant 5 : i32
+  %c10 = arith.constant 10 : i32
+  %cond = arith.cmpi slt, %c5, %c10 : i32
+  %result = scf.if %cond -&gt; (i32) {
+    %c1 = arith.constant 1 : i32
+    scf.yield %c1 : i32
+  } else {
+    %c0 = arith.constant 0 : i32
+    scf.yield %c0 : i32
+  }
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>scf.if lowering 후 (cf dialect):</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %c5 = arith.constant 5 : i32
+  %c10 = arith.constant 10 : i32
+  %cond = arith.cmpi slt, %c5, %c10 : i32
+  cf.cond_br %cond, ^then, ^else
+
+^then:
+  %c1 = arith.constant 1 : i32
+  cf.br ^merge(%c1 : i32)
+
+^else:
+  %c0 = arith.constant 0 : i32
+  cf.br ^merge(%c0 : i32)
+
+^merge(%result: i32):
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>핵심:</strong></p>
+<ul>
+<li><code>scf.if</code> → <code>cf.cond_br</code> + 블록</li>
+<li><code>scf.yield</code> → <code>cf.br ^merge(value)</code></li>
+<li>Block argument <code>%result</code>가 PHI 역할</li>
+</ul>
+<h2 id="let-바인딩과-if-결합"><a class="header" href="#let-바인딩과-if-결합">Let 바인딩과 If 결합</a></h2>
+<p>Let 바인딩과 if 표현식을 결합한 예시를 보자.</p>
+<p><strong>FunLang 소스:</strong></p>
+<pre><code class="language-fsharp">let x = 5 in
+if x &gt; 0 then x * 2 else 0
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("x",
+  IntLiteral 5,
+  If(
+    Comparison(GreaterThan, Var "x", IntLiteral 0),
+    BinaryOp(Multiply, Var "x", IntLiteral 2),
+    IntLiteral 0
+  )
+)
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li>
+<p><code>Let("x", IntLiteral 5, ...)</code></p>
+<ul>
+<li><code>IntLiteral 5</code> 컴파일: <code>%c5 = arith.constant 5 : i32</code></li>
+<li><code>env' = env.Add("x", %c5)</code></li>
+<li>Body 컴파일 (env’ 사용)</li>
+</ul>
+</li>
+<li>
+<p><code>If(...)</code> (env’에서)</p>
+<ul>
+<li>Condition: <code>Comparison(GreaterThan, Var "x", IntLiteral 0)</code>
+<ul>
+<li><code>Var "x"</code>: env’에서 조회 → %c5</li>
+<li><code>IntLiteral 0</code>: <code>%c0 = arith.constant 0 : i32</code></li>
+<li><code>%cond = arith.cmpi sgt, %c5, %c0 : i32</code></li>
+</ul>
+</li>
+<li>Then: <code>BinaryOp(Multiply, Var "x", IntLiteral 2)</code>
+<ul>
+<li><code>Var "x"</code>: env’에서 조회 → %c5</li>
+<li><code>IntLiteral 2</code>: <code>%c2 = arith.constant 2 : i32</code></li>
+<li><code>%then_val = arith.muli %c5, %c2 : i32</code></li>
+</ul>
+</li>
+<li>Else: <code>IntLiteral 0</code>
+<ul>
+<li><code>%else_val = arith.constant 0 : i32</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c5 = arith.constant 5 : i32          // let x = 5
+    %c0 = arith.constant 0 : i32
+    %cond = arith.cmpi sgt, %c5, %c0 : i32  // x &gt; 0
+    %result = scf.if %cond -&gt; (i32) {
+      %c2 = arith.constant 2 : i32
+      %then_val = arith.muli %c5, %c2 : i32  // x * 2
+      scf.yield %then_val : i32
+    } else {
+      %else_val = arith.constant 0 : i32
+      scf.yield %else_val : i32
+    }
+    func.return %result : i32
+  }
+}
+</code></pre>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+10
+</code></pre>
+<p>x = 5, x &gt; 0이 true, x * 2 = 10!</p>
+<h3 id="중첩된-if"><a class="header" href="#중첩된-if">중첩된 If</a></h3>
+<p>if 안에 if를 넣을 수도 있다:</p>
+<pre><code class="language-fsharp">// FunLang: if x &gt; 0 then (if x &lt; 10 then 1 else 2) else 0
+If(
+  Comparison(GreaterThan, Var "x", IntLiteral 0),
+  If(
+    Comparison(LessThan, Var "x", IntLiteral 10),
+    IntLiteral 1,
+    IntLiteral 2
+  ),
+  IntLiteral 0
+)
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">%outer_cond = arith.cmpi sgt, %x, %c0 : i32
+%result = scf.if %outer_cond -&gt; (i32) {
+  %inner_cond = arith.cmpi slt, %x, %c10 : i32
+  %inner_result = scf.if %inner_cond -&gt; (i32) {
+    %c1 = arith.constant 1 : i32
+    scf.yield %c1 : i32
+  } else {
+    %c2 = arith.constant 2 : i32
+    scf.yield %c2 : i32
+  }
+  scf.yield %inner_result : i32
+} else {
+  %c0 = arith.constant 0 : i32
+  scf.yield %c0 : i32
+}
+</code></pre>
+<p>중첩된 scf.if가 올바르게 생성된다!</p>
+<h2 id="공통-에러"><a class="header" href="#공통-에러">공통 에러</a></h2>
+<h3 id="에러-1-조건이-i32인데-i1이-필요"><a class="header" href="#에러-1-조건이-i32인데-i1이-필요">에러 1: 조건이 i32인데 i1이 필요</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>MLIR verification failed:
+'scf.if' op operand #0 must be 1-bit signless integer, but got 'i32'
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>if 조건에 i32 값을 전달했다.</p>
+<p><strong>해결:</strong></p>
+<p>조건은 반드시 i1 타입이어야 한다:</p>
+<ul>
+<li>Boolean 리터럴: <code>Bool true</code> → <code>arith.constant 1 : i1</code></li>
+<li>비교 연산: <code>arith.cmpi</code> → i1 결과</li>
+<li>i32를 i1로 변환하지 말고, 비교 연산을 사용한다</li>
+</ul>
+<pre><code class="language-fsharp">// WRONG: i32를 조건으로 사용
+let x = IntLiteral 5
+If(x, ..., ...)  // 에러! x는 i32
+
+// CORRECT: 비교 연산 사용
+If(Comparison(GreaterThan, x, IntLiteral 0), ..., ...)
+</code></pre>
+<h3 id="에러-2-scfyield-타입-불일치"><a class="header" href="#에러-2-scfyield-타입-불일치">에러 2: scf.yield 타입 불일치</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>MLIR verification failed:
+'scf.yield' op types mismatch between then and else regions
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>then region과 else region이 다른 타입을 yield했다.</p>
+<p><strong>해결:</strong></p>
+<p>양쪽 region이 같은 타입을 yield해야 한다:</p>
+<pre><code class="language-fsharp">// WRONG: then은 i32, else는 i1
+If(cond,
+  IntLiteral 42,        // i32
+  Bool true)            // i1 - 타입 불일치!
+
+// CORRECT: 둘 다 i32
+If(cond,
+  IntLiteral 42,        // i32
+  IntLiteral 0)         // i32
+</code></pre>
+<h3 id="에러-3-scfyield-누락"><a class="header" href="#에러-3-scfyield-누락">에러 3: scf.yield 누락</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>MLIR verification failed:
+Region does not have a terminator
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>then 또는 else region에 scf.yield를 추가하지 않았다.</p>
+<p><strong>해결:</strong></p>
+<p>모든 region은 종결자가 필요하다. 코드 생성 시 항상 scf.yield를 추가한다:</p>
+<pre><code class="language-fsharp">// 올바른 코드 생성 패턴
+let thenBlock = builder.GetThenBlock(ifOp)
+let thenVal = compileExpr builder thenBlock location thenExpr env
+let thenYield = builder.CreateScfYield([| thenVal |], location)
+MlirNative.mlirBlockAppendOwnedOperation(thenBlock, thenYield)  // 필수!
+</code></pre>
+<h3 id="에러-4-convert-scf-to-cf-pass-누락"><a class="header" href="#에러-4-convert-scf-to-cf-pass-누락">에러 4: –convert-scf-to-cf pass 누락</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Failed to translate MLIR to LLVM IR:
+Unhandled operation: scf.if
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>Lowering pass에서 SCF → CF 변환을 실행하지 않았다.</p>
+<p><strong>해결:</strong></p>
+<p>Pass manager에 <code>--convert-scf-to-cf</code>를 추가한다:</p>
+<pre><code class="language-fsharp">let scfToCfPass = MlirNative.mlirCreateConversionConvertSCFToCFPass()
+MlirNative.mlirPassManagerAddOwnedPass(pm, scfToCfPass)
+</code></pre>
+<p>Pass 순서: SCF → CF → Arith → Func → Reconcile</p>
+<h2 id="장-요약"><a class="header" href="#장-요약">장 요약</a></h2>
+<p>이 장에서 다음을 성취했다:</p>
+<ol>
+<li><strong>PHI 노드 문제 이해</strong>: 위치 제약, lost copy problem, dominance frontier 계산</li>
+<li><strong>Block Arguments 학습</strong>: MLIR의 우아한 대안, 함수 인자와 통일된 의미론</li>
+<li><strong>scf.if 연산 사용</strong>: 고수준 구조화된 제어 흐름, scf.yield 종결자</li>
+<li><strong>P/Invoke 바인딩 추가</strong>: SCF dialect 지원 (mlirSCFIfCreate, mlirSCFYieldCreate)</li>
+<li><strong>AST 확장</strong>: If 표현식과 Bool 리터럴 추가</li>
+<li><strong>Boolean 타입</strong>: i1 (1-bit integer), true = 1, false = 0</li>
+<li><strong>코드 생성 구현</strong>: If 케이스를 scf.if로 컴파일</li>
+<li><strong>Lowering pass 업데이트</strong>: SCF → CF 변환 추가</li>
+<li><strong>완전한 예제</strong>: if/then/else와 let 바인딩 결합</li>
+</ol>
+<p><strong>독자가 할 수 있는 것:</strong></p>
+<ul>
+<li><code>if true then 42 else 0</code> 컴파일 → 네이티브 바이너리 → 결과: 42 ✓</li>
+<li><code>if 5 &lt; 10 then 1 else 0</code> 컴파일 → 결과: 1 ✓</li>
+<li><code>let x = 5 in if x &gt; 0 then x * 2 else 0</code> 컴파일 → 결과: 10 ✓</li>
+<li>Block arguments vs PHI 노드 차이 이해 ✓</li>
+<li>scf.if lowering 과정 이해 ✓</li>
+<li>Boolean 타입 (i1) 사용 ✓</li>
+<li>타입 불일치 에러 디버깅 ✓</li>
+</ul>
+<p><strong>핵심 개념:</strong></p>
+<ul>
+<li><strong>Block Arguments &gt; PHI 노드</strong>: 깔끔한 의미론, push vs pull</li>
+<li><strong>scf.if = 표현식</strong>: 값을 반환, 함수형 의미론</li>
+<li><strong>scf.yield = 종결자</strong>: Region에서 값 반환, return과 유사</li>
+<li><strong>i1 타입 = Boolean</strong>: 1 = true, 0 = false</li>
+<li><strong>Progressive Lowering</strong>: scf → cf → llvm</li>
+</ul>
+<p><strong>다음 장 미리보기:</strong></p>
+<p>Chapter 09에서는 <strong>메모리 관리</strong>를 다룬다:</p>
+<ul>
+<li>Stack vs Heap 할당</li>
+<li><code>memref.alloca</code> (stack allocation)</li>
+<li><code>memref.alloc</code> (heap allocation)</li>
+<li><strong>Boehm GC 통합</strong> (garbage collection)</li>
+</ul>
+<p>Phase 2의 마지막 장이다. Phase 3에서는 함수와 클로저를 구현할 것이다!</p>
+<hr>
+<p><strong>이제 독자는 if/then/else 제어 흐름을 컴파일하고, block arguments와 scf.if를 이해한다!</strong></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="07-let-bindings.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="09-memory-management.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="07-let-bindings.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="09-memory-management.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

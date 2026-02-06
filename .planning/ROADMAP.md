@@ -13,7 +13,7 @@ LangBackend is a 10-15 chapter tutorial series teaching MLIR-based compiler back
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Interop** - MLIR build setup, F# bindings, and architecture validation
-- [ ] **Phase 2: Core Language Basics** - Arithmetic, let bindings, control flow, and memory strategy
+- [x] **Phase 2: Core Language Basics** - Arithmetic, let bindings, control flow, and memory strategy
 - [ ] **Phase 3: Functions & Recursion** - Function definitions, calls, and recursive patterns
 - [ ] **Phase 4: Closures & Higher-Order Functions** - Environment capture and closure compilation
 - [ ] **Phase 5: Custom MLIR Dialect** - FunLang dialect design and progressive lowering
@@ -54,10 +54,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Chapter 06: Arithmetic expressions (binary ops, comparisons, negation, print)
-- [ ] 02-02-PLAN.md — Chapter 07: Let bindings (SSA form, environment passing, scoping)
-- [ ] 02-03-PLAN.md — Chapter 08: Control flow (scf.if, block arguments, boolean expressions)
-- [ ] 02-04-PLAN.md — Chapter 09: Memory management (stack vs heap, Boehm GC integration)
+- [x] 02-01-PLAN.md — Chapter 06: Arithmetic expressions (binary ops, comparisons, negation, print)
+- [x] 02-02-PLAN.md — Chapter 07: Let bindings (SSA form, environment passing, scoping)
+- [x] 02-03-PLAN.md — Chapter 08: Control flow (scf.if, block arguments, boolean expressions)
+- [x] 02-04-PLAN.md — Chapter 09: Memory management (stack vs heap, Boehm GC integration)
 
 ### Phase 3: Functions & Recursion
 **Goal**: Reader can compile function definitions, calls, and recursive functions including mutual recursion
@@ -144,7 +144,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Interop | 3/3 | Complete | 2026-02-06 |
-| 2. Core Language Basics | 0/4 | Planned | - |
+| 2. Core Language Basics | 4/4 | Complete | 2026-02-06 |
 | 3. Functions & Recursion | 0/TBD | Not started | - |
 | 4. Closures & Higher-Order Functions | 0/TBD | Not started | - |
 | 5. Custom MLIR Dialect | 0/TBD | Not started | - |

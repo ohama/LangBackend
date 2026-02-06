@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7f7591e6.js";
+            window.path_to_searchindex_js = "searchindex-7fb77367.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-31a61626.js"></script>
+        <script src="toc-5209fc6b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -3549,8 +3549,4694 @@ echo $?
 <hr>
 <p><strong>Phase 1의 정점에 도달했다. 실제 컴파일러를 구축했다!</strong></p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="appendix-커스텀-mlir-dialect-등록"><a class="header" href="#appendix-커스텀-mlir-dialect-등록">Appendix: 커스텀 MLIR Dialect 등록</a></h1>
+<h1 id="chapter-06-산술-표현식---연산자와-비교"><a class="header" href="#chapter-06-산술-표현식---연산자와-비교">Chapter 06: 산술 표현식 - 연산자와 비교</a></h1>
 <h2 id="소개-6"><a class="header" href="#소개-6">소개</a></h2>
+<p>Chapter 05에서 정수 리터럴 하나만 컴파일하는 최소한의 컴파일러를 구축했다. <code>42</code>를 입력으로 받아 네이티브 바이너리로 출력하는 전체 파이프라인이 작동한다. 하지만 실제 프로그램을 작성하려면 산술 연산자가 필요하다.</p>
+<p>이 장에서는 다음을 추가한다:</p>
+<ul>
+<li><strong>이진 연산자</strong>: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code> (정수 산술)</li>
+<li><strong>비교 연산자</strong>: <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>=</code>, <code>&lt;&gt;</code> (i1 boolean 반환)</li>
+<li><strong>단항 연산자</strong>: <code>-</code> (부정)</li>
+<li><strong>출력 기능</strong>: <code>print</code> 함수로 결과를 stdout에 출력</li>
+</ul>
+<p>이 장을 마치면 <code>10 + 3 * 4</code>와 같은 표현식을 컴파일하고, 비교를 수행하고, 결과를 화면에 출력하는 완전한 계산기 컴파일러를 갖게 된다.</p>
+<blockquote>
+<p><strong>중요:</strong> 산술 연산은 MLIR의 <code>arith</code> dialect를 사용한다 (Chapter 01의 primer에서 배웠다). 이 dialect는 SSA 형태의 연산을 제공하며 LLVM dialect로 깔끔하게 낮춰진다.</p>
+</blockquote>
+<h2 id="확장된-ast-정의"><a class="header" href="#확장된-ast-정의">확장된 AST 정의</a></h2>
+<p>Chapter 05의 AST는 <code>IntLiteral</code> 하나만 가졌다. 이제 표현식을 확장한다:</p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+/// 이진 연산자
+type Operator =
+    | Add       // +
+    | Subtract  // -
+    | Multiply  // *
+    | Divide    // /
+
+/// 비교 연산자
+type CompareOp =
+    | LessThan       // &lt;
+    | GreaterThan    // &gt;
+    | LessEqual      // &lt;=
+    | GreaterEqual   // &gt;=
+    | Equal          // =
+    | NotEqual       // &lt;&gt;
+
+/// 단항 연산자
+type UnaryOp =
+    | Negate  // -
+
+/// FunLang 표현식 AST
+type Expr =
+    | IntLiteral of int
+    | BinaryOp of Operator * Expr * Expr       // 예: Add(IntLiteral 10, IntLiteral 20)
+    | UnaryOp of UnaryOp * Expr                // 예: Negate(IntLiteral 42)
+    | Comparison of CompareOp * Expr * Expr    // 예: LessThan(IntLiteral 5, IntLiteral 10)
+
+/// 최상위 프로그램
+type Program =
+    { expr: Expr }
+</code></pre>
+<p><strong>설계 결정:</strong></p>
+<ul>
+<li><strong>Operator와 CompareOp 분리</strong>: 산술 연산은 i32를 반환하지만, 비교는 i1 (boolean)을 반환한다. 타입 시스템이 다르므로 별도의 타입으로 구분한다.</li>
+<li><strong>UnaryOp은 확장 가능</strong>: 지금은 Negate만 있지만 나중에 논리 부정 (<code>not</code>) 등을 추가할 수 있다.</li>
+</ul>
+<p><strong>AST 예시:</strong></p>
+<pre><code class="language-fsharp">// Source: 10 + 3 * 4
+BinaryOp(Add,
+  IntLiteral 10,
+  BinaryOp(Multiply,
+    IntLiteral 3,
+    IntLiteral 4))
+
+// Source: -(5 + 10)
+UnaryOp(Negate,
+  BinaryOp(Add,
+    IntLiteral 5,
+    IntLiteral 10))
+
+// Source: 5 &lt; 10
+Comparison(LessThan,
+  IntLiteral 5,
+  IntLiteral 10)
+</code></pre>
+<blockquote>
+<p><strong>파서 노트:</strong> 실제 파서는 연산자 우선순위를 처리해야 한다 (<code>*</code>가 <code>+</code>보다 높음). 이 장에서는 코드 생성에 집중하므로 파서 구현은 생략한다. LangTutorial의 파서를 재사용하거나 간단한 재귀 하강 파서를 작성하면 된다.</p>
+</blockquote>
+<h2 id="arith-dialect를-위한-pinvoke-바인딩"><a class="header" href="#arith-dialect를-위한-pinvoke-바인딩">arith Dialect를 위한 P/Invoke 바인딩</a></h2>
+<p>Chapter 03에서 기본 MLIR C API 바인딩을 구축했다. 이제 <code>arith</code> dialect 연산을 위한 바인딩을 추가한다.</p>
+<p><strong>MlirBindings.fs</strong>에 다음을 추가한다:</p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+open System
+open System.Runtime.InteropServices
+
+module MlirBindings =
+
+    // ... (기존 바인딩 코드)
+
+    // ===== arith dialect operations =====
+
+    /// arith.addi: 정수 덧셈 (SSA)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirArithAddiCreate(
+        MlirContext context,
+        MlirLocation location,
+        MlirValue lhs,
+        MlirValue rhs)
+
+    /// arith.subi: 정수 뺄셈 (SSA)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirArithSubiCreate(
+        MlirContext context,
+        MlirLocation location,
+        MlirValue lhs,
+        MlirValue rhs)
+
+    /// arith.muli: 정수 곱셈 (SSA)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirArithMuliCreate(
+        MlirContext context,
+        MlirLocation location,
+        MlirValue lhs,
+        MlirValue rhs)
+
+    /// arith.divsi: 부호 있는 정수 나눗셈 (SSA)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirArithDivSICreate(
+        MlirContext context,
+        MlirLocation location,
+        MlirValue lhs,
+        MlirValue rhs)
+
+    /// arith.cmpi: 정수 비교 (predicate 지정)
+    /// predicate 값:
+    ///   0 = eq (equal)
+    ///   1 = ne (not equal)
+    ///   2 = slt (signed less than)
+    ///   3 = sle (signed less or equal)
+    ///   4 = sgt (signed greater than)
+    ///   5 = sge (signed greater or equal)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirArithCmpiCreate(
+        MlirContext context,
+        MlirLocation location,
+        int predicate,
+        MlirValue lhs,
+        MlirValue rhs)
+
+    /// arith.constant: 상수 정수/boolean
+    /// (이미 Chapter 03에서 mlirArithConstantCreate가 있다고 가정.
+    /// 없다면 여기에 추가)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirArithConstantCreate(
+        MlirContext context,
+        MlirLocation location,
+        MlirAttribute value)
+</code></pre>
+<p><strong>연산자 매핑 표:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>FunLang Operator</th><th>MLIR Operation</th><th>타입 시그니처</th></tr>
+</thead>
+<tbody>
+<tr><td><code>+</code></td><td><code>arith.addi</code></td><td><code>(i32, i32) -&gt; i32</code></td></tr>
+<tr><td><code>-</code></td><td><code>arith.subi</code></td><td><code>(i32, i32) -&gt; i32</code></td></tr>
+<tr><td><code>*</code></td><td><code>arith.muli</code></td><td><code>(i32, i32) -&gt; i32</code></td></tr>
+<tr><td><code>/</code></td><td><code>arith.divsi</code></td><td><code>(i32, i32) -&gt; i32</code> (부호 있는 나눗셈)</td></tr>
+<tr><td><code>&lt;</code></td><td><code>arith.cmpi slt</code></td><td><code>(i32, i32) -&gt; i1</code></td></tr>
+<tr><td><code>&gt;</code></td><td><code>arith.cmpi sgt</code></td><td><code>(i32, i32) -&gt; i1</code></td></tr>
+<tr><td><code>&lt;=</code></td><td><code>arith.cmpi sle</code></td><td><code>(i32, i32) -&gt; i1</code></td></tr>
+<tr><td><code>&gt;=</code></td><td><code>arith.cmpi sge</code></td><td><code>(i32, i32) -&gt; i1</code></td></tr>
+<tr><td><code>=</code></td><td><code>arith.cmpi eq</code></td><td><code>(i32, i32) -&gt; i1</code></td></tr>
+<tr><td><code>&lt;&gt;</code></td><td><code>arith.cmpi ne</code></td><td><code>(i32, i32) -&gt; i1</code></td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><strong>C API 노트:</strong> MLIR C API는 <code>mlir-c/Dialect/Arith.h</code>에서 arith dialect 연산을 노출한다. 실제 함수 이름은 위와 다를 수 있다 (예: <code>mlirArithAddiOpCreate</code> vs <code>mlirArithAddiCreate</code>). MLIR 설치의 헤더 파일을 확인하여 정확한 시그니처를 사용한다.</p>
+</blockquote>
+<p><strong>arith.cmpi predicate 값:</strong></p>
+<pre><code class="language-fsharp">/// arith.cmpi predicate enum
+module ArithCmpIPredicate =
+    let eq = 0    // equal
+    let ne = 1    // not equal
+    let slt = 2   // signed less than
+    let sle = 3   // signed less or equal
+    let sgt = 4   // signed greater than
+    let sge = 5   // signed greater or equal
+    let ult = 6   // unsigned less than (나중에 사용)
+    let ule = 7   // unsigned less or equal
+    let ugt = 8   // unsigned greater than
+    let uge = 9   // unsigned greater or equal
+</code></pre>
+<h2 id="f-래퍼-확장"><a class="header" href="#f-래퍼-확장">F# 래퍼 확장</a></h2>
+<p>이제 Chapter 04의 <code>OpBuilder</code> 래퍼를 확장하여 산술 연산을 쉽게 생성하도록 한다.</p>
+<p><strong>MlirWrapper.fs</strong>에 <code>OpBuilder</code> 타입 확장:</p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+open MlirBindings
+
+/// OpBuilder 확장: 산술 연산 생성
+type OpBuilder with
+
+    /// arith.addi 생성 (정수 덧셈)
+    member this.CreateArithAddi(lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
+        let loc = location.Handle
+        MlirNative.mlirArithAddiCreate(this.Context.Handle, loc, lhs, rhs)
+
+    /// arith.subi 생성 (정수 뺄셈)
+    member this.CreateArithSubi(lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
+        let loc = location.Handle
+        MlirNative.mlirArithSubiCreate(this.Context.Handle, loc, lhs, rhs)
+
+    /// arith.muli 생성 (정수 곱셈)
+    member this.CreateArithMuli(lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
+        let loc = location.Handle
+        MlirNative.mlirArithMuliCreate(this.Context.Handle, loc, lhs, rhs)
+
+    /// arith.divsi 생성 (부호 있는 정수 나눗셈)
+    member this.CreateArithDivSI(lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
+        let loc = location.Handle
+        MlirNative.mlirArithDivSICreate(this.Context.Handle, loc, lhs, rhs)
+
+    /// arith.cmpi 생성 (정수 비교)
+    member this.CreateArithCmpi(predicate: int, lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
+        let loc = location.Handle
+        MlirNative.mlirArithCmpiCreate(this.Context.Handle, loc, predicate, lhs, rhs)
+
+    /// 이진 연산 헬퍼: Operator -&gt; arith operation
+    member this.CreateArithBinaryOp(op: Operator, lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
+        match op with
+        | Add -&gt; this.CreateArithAddi(lhs, rhs, location)
+        | Subtract -&gt; this.CreateArithSubi(lhs, rhs, location)
+        | Multiply -&gt; this.CreateArithMuli(lhs, rhs, location)
+        | Divide -&gt; this.CreateArithDivSI(lhs, rhs, location)
+
+    /// 비교 헬퍼: CompareOp -&gt; arith.cmpi with predicate
+    member this.CreateArithCompare(compareOp: CompareOp, lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
+        let predicate =
+            match compareOp with
+            | LessThan -&gt; ArithCmpIPredicate.slt
+            | GreaterThan -&gt; ArithCmpIPredicate.sgt
+            | LessEqual -&gt; ArithCmpIPredicate.sle
+            | GreaterEqual -&gt; ArithCmpIPredicate.sge
+            | Equal -&gt; ArithCmpIPredicate.eq
+            | NotEqual -&gt; ArithCmpIPredicate.ne
+        this.CreateArithCmpi(predicate, lhs, rhs, location)
+
+    /// 단항 부정 헬퍼: -expr = 0 - expr
+    member this.CreateArithNegate(value: MlirValue, location: Location) : MlirOperation =
+        // 상수 0 생성
+        let i32Type = this.I32Type()
+        let zeroAttr = this.Context.GetIntegerAttr(i32Type, 0L)
+        let zeroOp = this.CreateConstant(zeroAttr, location)
+        let zeroVal = this.GetResult(zeroOp, 0)
+
+        // 0 - value
+        this.CreateArithSubi(zeroVal, value, location)
+</code></pre>
+<p><strong>설계 결정:</strong></p>
+<ul>
+<li><strong>헬퍼 메서드</strong>: <code>CreateArithBinaryOp</code>은 Operator를 받아 적절한 arith 연산으로 매핑한다. 코드 생성 로직이 단순해진다.</li>
+<li><strong>부정 구현</strong>: <code>-expr</code>은 <code>0 - expr</code>로 변환한다. 별도의 arith.negate 연산이 없으므로 이것이 표준 방법이다.</li>
+<li><strong>타입 안전성</strong>: CompareOp -&gt; predicate 매핑은 타입 세이프하다. 잘못된 predicate 값을 생성할 수 없다.</li>
+</ul>
+<h2 id="공통-에러-1부"><a class="header" href="#공통-에러-1부">공통 에러 (1부)</a></h2>
+<h3 id="에러-1-잘못된-정수-타입-사용-i64-vs-i32"><a class="header" href="#에러-1-잘못된-정수-타입-사용-i64-vs-i32">에러 1: 잘못된 정수 타입 사용 (i64 vs i32)</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>MLIR verification failed:
+  Type mismatch: expected i32, got i64
+</code></pre>
+<p><strong>원인:</strong>
+MLIR은 타입이 엄격하다. 상수를 i64로 생성했지만 함수 시그니처는 i32를 요구하는 경우.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-fsharp">// WRONG: i64 타입 사용
+let i64Type = builder.Context.GetIntegerType(64)
+let attr = builder.Context.GetIntegerAttr(i64Type, 42L)
+
+// CORRECT: i32 타입 사용
+let i32Type = builder.Context.GetIntegerType(32)
+let attr = builder.Context.GetIntegerAttr(i32Type, 42L)
+</code></pre>
+<p><strong>규칙:</strong> 모든 FunLang 정수는 i32로 컴파일한다. 타입을 일관되게 유지한다.</p>
+<h3 id="에러-2-연산자-우선순위를-파서에서-처리하지-않음"><a class="header" href="#에러-2-연산자-우선순위를-파서에서-처리하지-않음">에러 2: 연산자 우선순위를 파서에서 처리하지 않음</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Source: 10 + 3 * 4
+Expected: 22
+Actual: 52  (잘못된 결과)
+</code></pre>
+<p><strong>원인:</strong>
+파서가 우선순위를 무시하고 왼쪽에서 오른쪽으로 파싱하여 <code>(10 + 3) * 4 = 52</code>가 됨.</p>
+<p><strong>해결:</strong>
+파서에서 연산자 우선순위를 구현한다:</p>
+<ul>
+<li>곱셈/나눗셈 (<code>*</code>, <code>/</code>)이 덧셈/뺄셈 (<code>+</code>, <code>-</code>)보다 우선순위가 높다.</li>
+<li>비교 연산자는 산술 연산보다 우선순위가 낮다.</li>
+</ul>
+<p><strong>재귀 하강 파서 예시:</strong></p>
+<pre><code class="language-fsharp">// Precedence climbing algorithm
+// additive := multiplicative (('+' | '-') multiplicative)*
+// multiplicative := primary (('*' | '/') primary)*
+// primary := number | '(' additive ')'
+</code></pre>
+<blockquote>
+<p><strong>파서 구현은 이 장의 범위를 벗어난다.</strong> LangTutorial의 기존 파서를 사용하거나 FParsec 같은 파서 라이브러리를 사용한다.</p>
+</blockquote>
+<h2 id="산술-표현식을-위한-코드-생성"><a class="header" href="#산술-표현식을-위한-코드-생성">산술 표현식을 위한 코드 생성</a></h2>
+<p>이제 Chapter 05의 <code>compileExpr</code>을 확장하여 모든 산술 표현식을 처리한다.</p>
+<p><strong>CodeGen.fs</strong> 수정:</p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+open System
+open MlirWrapper
+open MlirBindings
+
+module CodeGen =
+
+    /// 표현식을 MLIR value로 컴파일 (재귀적)
+    let rec compileExpr
+        (builder: OpBuilder)
+        (block: MlirBlock)
+        (location: Location)
+        (expr: Expr)
+        : MlirValue =
+
+        match expr with
+        | IntLiteral value -&gt;
+            // arith.constant operation 생성
+            let i32Type = builder.I32Type()
+            let attr = builder.Context.GetIntegerAttr(i32Type, int64 value)
+            let constOp = builder.CreateConstant(attr, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, constOp)
+            builder.GetResult(constOp, 0)
+
+        | BinaryOp(op, lhs, rhs) -&gt;
+            // 왼쪽 피연산자 컴파일 (재귀)
+            let lhsVal = compileExpr builder block location lhs
+
+            // 오른쪽 피연산자 컴파일 (재귀)
+            let rhsVal = compileExpr builder block location rhs
+
+            // 이진 연산 생성
+            let binOp = builder.CreateArithBinaryOp(op, lhsVal, rhsVal, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, binOp)
+            builder.GetResult(binOp, 0)
+
+        | UnaryOp(Negate, expr) -&gt;
+            // 피연산자 컴파일
+            let val = compileExpr builder block location expr
+
+            // 부정 연산 생성 (0 - val)
+            let negOp = builder.CreateArithNegate(val, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, negOp)
+            builder.GetResult(negOp, 0)
+
+        | Comparison(compareOp, lhs, rhs) -&gt;
+            // 피연산자 컴파일
+            let lhsVal = compileExpr builder block location lhs
+            let rhsVal = compileExpr builder block location rhs
+
+            // 비교 연산 생성 (i1 반환)
+            let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+            builder.GetResult(cmpOp, 0)
+
+    /// 프로그램을 MLIR module로 컴파일
+    let translateToMlir (program: Program) : Module =
+        let ctx = new Context()
+        ctx.LoadDialect("arith")
+        ctx.LoadDialect("func")
+
+        let loc = Location.Unknown(ctx)
+        let mlirMod = new Module(ctx, loc)
+
+        let builder = OpBuilder(ctx)
+        let i32Type = builder.I32Type()
+
+        // main 함수 생성: () -&gt; i32
+        let funcType = builder.FunctionType([||], [| i32Type |])
+        let funcOp = builder.CreateFunction("main", funcType, loc)
+
+        // 함수 body에 entry block 생성
+        let bodyRegion = MlirNative.mlirOperationGetRegion(funcOp, 0n)
+        let entryBlock = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
+        MlirNative.mlirRegionAppendOwnedBlock(bodyRegion, entryBlock)
+
+        // 표현식 컴파일 (재귀적으로 모든 연산 처리)
+        let resultValue = compileExpr builder entryBlock loc program.expr
+
+        // return operation 생성
+        let returnOp = builder.CreateReturn([| resultValue |], loc)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, returnOp)
+
+        // 함수를 module에 추가
+        MlirNative.mlirBlockAppendOwnedOperation(mlirMod.Body, funcOp)
+
+        mlirMod
+
+    /// MLIR module을 검증
+    let verify (mlirMod: Module) =
+        if not (mlirMod.Verify()) then
+            eprintfn "MLIR verification failed:"
+            eprintfn "%s" (mlirMod.Print())
+            failwith "MLIR IR is invalid"
+</code></pre>
+<p><strong>SSA 형태 유지:</strong></p>
+<p>재귀 호출이 SSA 형태를 자연스럽게 유지한다는 것을 주목한다:</p>
+<ul>
+<li>각 <code>compileExpr</code> 호출은 새로운 SSA value를 반환한다.</li>
+<li>중복 계산이 없다 (각 표현식은 정확히 한 번만 평가된다).</li>
+<li>지배 관계가 자동으로 유지된다 (하위 표현식이 먼저 평가된다).</li>
+</ul>
+<p><strong>예시: 복잡한 표현식 컴파일</strong></p>
+<pre><code class="language-fsharp">// Source: 10 + 3 * 4
+let ast = BinaryOp(Add,
+            IntLiteral 10,
+            BinaryOp(Multiply,
+              IntLiteral 3,
+              IntLiteral 4))
+
+let mlirMod = CodeGen.translateToMlir { expr = ast }
+printfn "%s" (mlirMod.Print())
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c10 = arith.constant 10 : i32
+    %c3 = arith.constant 3 : i32
+    %c4 = arith.constant 4 : i32
+    %0 = arith.muli %c3, %c4 : i32     // 3 * 4 = 12
+    %1 = arith.addi %c10, %0 : i32     // 10 + 12 = 22
+    func.return %1 : i32
+  }
+}
+</code></pre>
+<p><strong>동작 분석:</strong></p>
+<ol>
+<li>상수 10, 3, 4가 생성된다 (<code>arith.constant</code>)</li>
+<li>먼저 곱셈 계산: <code>%0 = 3 * 4</code> (하위 표현식이 먼저)</li>
+<li>그 다음 덧셈: <code>%1 = 10 + %0</code></li>
+<li>결과 반환: <code>return %1</code></li>
+</ol>
+<blockquote>
+<p><strong>중요:</strong> 연산 순서는 AST 구조가 결정한다. 파서가 올바른 우선순위로 AST를 구축하면 코드 생성이 자동으로 올바른 평가 순서를 생성한다.</p>
+</blockquote>
+<p><strong>비교 예시:</strong></p>
+<pre><code class="language-fsharp">// Source: 5 &lt; 10
+let ast = Comparison(LessThan, IntLiteral 5, IntLiteral 10)
+
+let mlirMod = CodeGen.translateToMlir { expr = ast }
+printfn "%s" (mlirMod.Print())
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c5 = arith.constant 5 : i32
+    %c10 = arith.constant 10 : i32
+    %0 = arith.cmpi slt, %c5, %c10 : i32  // returns i1
+    // 문제: %0은 i1이지만 함수는 i32를 반환해야 함!
+    func.return %0 : i32  // TYPE ERROR!
+  }
+}
+</code></pre>
+<p><strong>타입 불일치 문제:</strong> 비교는 i1 (boolean)을 반환하지만 main 함수는 i32를 기대한다. 이를 해결하려면 boolean을 정수로 확장해야 한다:</p>
+<pre><code class="language-fsharp">// compileExpr 수정 (Comparison 케이스)
+| Comparison(compareOp, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs
+    let rhsVal = compileExpr builder block location rhs
+
+    // 비교 연산 (i1 반환)
+    let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+    let cmpVal = builder.GetResult(cmpOp, 0)
+
+    // i1 -&gt; i32 확장 (zero extend)
+    let i32Type = builder.I32Type()
+    let extOp = builder.CreateArithExtUI(cmpVal, i32Type, location)  // unsigned extend
+    MlirNative.mlirBlockAppendOwnedOperation(block, extOp)
+    builder.GetResult(extOp, 0)
+</code></pre>
+<p><strong>생성된 MLIR IR (수정 후):</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c5 = arith.constant 5 : i32
+    %c10 = arith.constant 10 : i32
+    %0 = arith.cmpi slt, %c5, %c10 : i32   // returns i1
+    %1 = arith.extui %0 : i1 to i32        // i1 -&gt; i32 (0 or 1)
+    func.return %1 : i32
+  }
+}
+</code></pre>
+<p>이제 비교 결과가 정수로 반환된다 (true = 1, false = 0).</p>
+<p><strong>단항 부정 예시:</strong></p>
+<pre><code class="language-fsharp">// Source: -(10 + 5)
+let ast = UnaryOp(Negate, BinaryOp(Add, IntLiteral 10, IntLiteral 5))
+
+let mlirMod = CodeGen.translateToMlir { expr = ast }
+printfn "%s" (mlirMod.Print())
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c10 = arith.constant 10 : i32
+    %c5 = arith.constant 5 : i32
+    %0 = arith.addi %c10, %c5 : i32     // 10 + 5 = 15
+    %c0 = arith.constant 0 : i32
+    %1 = arith.subi %c0, %0 : i32       // 0 - 15 = -15
+    func.return %1 : i32
+  }
+}
+</code></pre>
+<h2 id="출력-기능-추가-printf로-결과-출력"><a class="header" href="#출력-기능-추가-printf로-결과-출력">출력 기능 추가: printf로 결과 출력</a></h2>
+<p>지금까지 프로그램은 결과를 종료 코드로만 반환했다. 이제 <code>printf</code>를 사용하여 stdout에 출력하는 기능을 추가한다.</p>
+<h3 id="llvmcall-연산을-위한-pinvoke-바인딩"><a class="header" href="#llvmcall-연산을-위한-pinvoke-바인딩">llvm.call 연산을 위한 P/Invoke 바인딩</a></h3>
+<p>LLVM dialect는 외부 함수를 호출하는 <code>llvm.call</code> 연산을 제공한다.</p>
+<p><strong>MlirBindings.fs</strong>에 추가:</p>
+<pre><code class="language-fsharp">    // ===== LLVM dialect operations =====
+
+    /// llvm.call: 외부 함수 호출
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirLLVMCallCreate(
+        MlirContext context,
+        MlirLocation location,
+        MlirValue callee,
+        MlirValue[] args,
+        int numArgs)
+
+    /// llvm.mlir.global: 전역 문자열 상수
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirLLVMGlobalCreate(
+        MlirContext context,
+        MlirLocation location,
+        MlirType type,
+        MlirAttribute initializer,
+        MlirStringRef name)
+
+    /// llvm.mlir.addressof: 전역 변수의 주소 가져오기
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirLLVMAddressOfCreate(
+        MlirContext context,
+        MlirLocation location,
+        MlirStringRef globalName)
+</code></pre>
+<blockquote>
+<p><strong>C API 경고:</strong> 실제 MLIR C API는 LLVM dialect에 대한 직접 지원이 제한적일 수 있다. 필요한 경우 Chapter 05의 Appendix 패턴 (C++ wrapper)을 사용한다.</p>
+</blockquote>
+<h3 id="printf-함수-선언-생성"><a class="header" href="#printf-함수-선언-생성">printf 함수 선언 생성</a></h3>
+<p>printf를 호출하려면 먼저 함수 선언과 전역 포맷 문자열이 필요하다.</p>
+<p><strong>CodeGen.fs</strong>에 헬퍼 함수 추가:</p>
+<pre><code class="language-fsharp">    /// printf 함수 선언 생성 (module 레벨)
+    let createPrintfDeclaration (builder: OpBuilder) (mlirMod: Module) (location: Location) =
+        // printf 시그니처: (i8*, ...) -&gt; i32
+        let i8Type = builder.Context.GetIntegerType(8)
+        let i8PtrType = builder.Context.GetPointerType(i8Type)
+        let i32Type = builder.I32Type()
+
+        // func.func @printf(%fmt: !llvm.ptr&lt;i8&gt;, ...) -&gt; i32 attributes { sym_visibility = "private" }
+        let printfType = builder.FunctionType([| i8PtrType |], [| i32Type |])
+        let printfOp = builder.CreateFunction("printf", printfType, location)
+
+        // 가변 인자 속성 추가 (실제 구현에서는 속성 API 필요)
+        // 여기서는 단순화를 위해 생략
+
+        MlirNative.mlirBlockAppendOwnedOperation(mlirMod.Body, printfOp)
+
+    /// 전역 포맷 문자열 생성: "%d\n\0"
+    let createFormatString (builder: OpBuilder) (mlirMod: Module) (location: Location) : string =
+        let formatStrName = ".str.fmt"
+        let formatStrValue = "%d\n\0"
+
+        // LLVM global 생성
+        let i8Type = builder.Context.GetIntegerType(8)
+        let arrayType = builder.Context.GetArrayType(i8Type, formatStrValue.Length)
+        let strAttr = builder.Context.GetStringAttr(formatStrValue)
+
+        let globalOp = builder.CreateLLVMGlobal(arrayType, strAttr, formatStrName, location)
+        MlirNative.mlirBlockAppendOwnedOperation(mlirMod.Body, globalOp)
+
+        formatStrName
+
+    /// print_int 헬퍼 함수 생성: 정수를 출력
+    let createPrintIntHelper
+        (builder: OpBuilder)
+        (mlirMod: Module)
+        (location: Location)
+        (formatStrName: string)
+        =
+
+        // func.func @print_int(%arg: i32) -&gt; i32
+        let i32Type = builder.I32Type()
+        let funcType = builder.FunctionType([| i32Type |], [| i32Type |])
+        let funcOp = builder.CreateFunction("print_int", funcType, location)
+
+        // 함수 body
+        let bodyRegion = MlirNative.mlirOperationGetRegion(funcOp, 0n)
+        let entryBlock = MlirNative.mlirBlockCreate(1n, &amp;i32Type, nativeint 0)  // 1 argument
+        MlirNative.mlirRegionAppendOwnedBlock(bodyRegion, entryBlock)
+
+        // 인자 가져오기
+        let arg = MlirNative.mlirBlockGetArgument(entryBlock, 0n)
+
+        // 포맷 문자열 주소 가져오기
+        let formatStrOp = builder.CreateLLVMAddressOf(formatStrName, location)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, formatStrOp)
+        let formatStrPtr = builder.GetResult(formatStrOp, 0)
+
+        // printf 호출
+        let printfCallOp = builder.CreateLLVMCall("printf", [| formatStrPtr; arg |], location)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, printfCallOp)
+
+        // 인자를 그대로 반환 (print는 부수 효과)
+        let returnOp = builder.CreateReturn([| arg |], location)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, returnOp)
+
+        MlirNative.mlirBlockAppendOwnedOperation(mlirMod.Body, funcOp)
+</code></pre>
+<h3 id="main-함수에서-print_int-호출"><a class="header" href="#main-함수에서-print_int-호출">main 함수에서 print_int 호출</a></h3>
+<p>이제 main 함수를 수정하여 결과를 출력하도록 한다:</p>
+<pre><code class="language-fsharp">    /// 프로그램을 MLIR module로 컴파일 (print 지원)
+    let translateToMlirWithPrint (program: Program) : Module =
+        let ctx = new Context()
+        ctx.LoadDialect("arith")
+        ctx.LoadDialect("func")
+        ctx.LoadDialect("llvm")
+
+        let loc = Location.Unknown(ctx)
+        let mlirMod = new Module(ctx, loc)
+
+        let builder = OpBuilder(ctx)
+        let i32Type = builder.I32Type()
+
+        // printf 선언과 print_int 헬퍼 생성
+        createPrintfDeclaration builder mlirMod loc
+        let formatStrName = createFormatString builder mlirMod loc
+        createPrintIntHelper builder mlirMod loc formatStrName
+
+        // main 함수 생성
+        let funcType = builder.FunctionType([||], [| i32Type |])
+        let funcOp = builder.CreateFunction("main", funcType, loc)
+
+        let bodyRegion = MlirNative.mlirOperationGetRegion(funcOp, 0n)
+        let entryBlock = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
+        MlirNative.mlirRegionAppendOwnedBlock(bodyRegion, entryBlock)
+
+        // 표현식 컴파일
+        let resultValue = compileExpr builder entryBlock loc program.expr
+
+        // print_int 호출
+        let printOp = builder.CreateFunctionCall("print_int", [| resultValue |], loc)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, printOp)
+        let printedVal = builder.GetResult(printOp, 0)
+
+        // 결과 반환
+        let returnOp = builder.CreateReturn([| printedVal |], loc)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, returnOp)
+
+        MlirNative.mlirBlockAppendOwnedOperation(mlirMod.Body, funcOp)
+
+        mlirMod
+</code></pre>
+<p><strong>생성된 MLIR IR (전체):</strong></p>
+<pre><code class="language-mlir">module {
+  // printf 선언
+  func.func private @printf(!llvm.ptr&lt;i8&gt;, ...) -&gt; i32
+
+  // 포맷 문자열
+  llvm.mlir.global private constant @.str.fmt("%d\n\00")
+
+  // print_int 헬퍼
+  func.func @print_int(%arg0: i32) -&gt; i32 {
+    %fmt = llvm.mlir.addressof @.str.fmt : !llvm.ptr&lt;array&lt;4 x i8&gt;&gt;
+    %fmt_ptr = llvm.bitcast %fmt : !llvm.ptr&lt;array&lt;4 x i8&gt;&gt; to !llvm.ptr&lt;i8&gt;
+    %result = llvm.call @printf(%fmt_ptr, %arg0) : (!llvm.ptr&lt;i8&gt;, i32) -&gt; i32
+    func.return %arg0 : i32
+  }
+
+  // main 함수
+  func.func @main() -&gt; i32 {
+    %c10 = arith.constant 10 : i32
+    %c3 = arith.constant 3 : i32
+    %c4 = arith.constant 4 : i32
+    %0 = arith.muli %c3, %c4 : i32
+    %1 = arith.addi %c10, %0 : i32
+    %2 = func.call @print_int(%1) : (i32) -&gt; i32
+    func.return %2 : i32
+  }
+}
+</code></pre>
+<p><strong>실행 결과:</strong></p>
+<pre><code class="language-bash">$ ./program
+22
+$ echo $?
+22
+</code></pre>
+<p>결과가 stdout에 출력되고 종료 코드로도 반환된다!</p>
+<h2 id="완전한-컴파일러-드라이버-1"><a class="header" href="#완전한-컴파일러-드라이버-1">완전한 컴파일러 드라이버</a></h2>
+<p>Chapter 05의 컴파일러 드라이버를 업데이트하여 새로운 기능을 지원한다:</p>
+<p><strong>Compiler.fs 업데이트:</strong></p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+open System
+open System.IO
+
+module Compiler =
+
+    /// 소스 파일을 네이티브 실행 파일로 컴파일
+    let compile (sourceFile: string) (outputFile: string) (withPrint: bool) =
+        printfn "=== FunLang Compiler ==="
+        printfn "Source: %s" sourceFile
+        printfn "Output: %s" outputFile
+        printfn ""
+
+        // 1단계: 파싱
+        printfn "[1/7] Parsing..."
+        let source = File.ReadAllText(sourceFile)
+        let program = Parser.parse source  // 실제 파서 사용 (LangTutorial 재사용)
+        printfn "  AST: %A" program
+
+        // 2단계: MLIR로 변환
+        printfn "[2/7] Translating to MLIR..."
+        let mlirMod =
+            if withPrint then
+                CodeGen.translateToMlirWithPrint program
+            else
+                CodeGen.translateToMlir program
+        printfn "  MLIR (high-level):"
+        printfn "%s" (mlirMod.Print())
+
+        // 3단계: 검증
+        printfn "[3/7] Verifying MLIR..."
+        CodeGen.verify mlirMod
+        printfn "  ✓ Verification passed"
+
+        // 4-7단계: Lowering, LLVM IR, object file, linking (Chapter 05와 동일)
+        Lowering.lowerToLLVMDialect mlirMod
+        let llvmIR = Lowering.translateToLLVMIR mlirMod
+        let objectFile = outputFile + ".o"
+        NativeCodeGen.emitObjectFile llvmIR objectFile
+        NativeCodeGen.linkExecutable objectFile outputFile
+
+        mlirMod.Dispose()
+
+        printfn ""
+        printfn "=== Compilation successful ==="
+        printfn "Run: ./%s" outputFile
+
+[&lt;EntryPoint&gt;]
+let main args =
+    if args.Length &lt; 2 then
+        eprintfn "Usage: compiler &lt;source.fun&gt; &lt;output&gt; [--print]"
+        exit 1
+
+    let sourceFile = args.[0]
+    let outputFile = args.[1]
+    let withPrint = args.Length &gt; 2 &amp;&amp; args.[2] = "--print"
+
+    Compiler.compile sourceFile outputFile withPrint
+    0
+</code></pre>
+<p><strong>사용 예시:</strong></p>
+<pre><code class="language-bash"># 결과를 출력하지 않음 (종료 코드만)
+$ dotnet run test.fun program
+
+# 결과를 출력함 (stdout + 종료 코드)
+$ dotnet run test.fun program --print
+$ ./program
+22
+</code></pre>
+<h2 id="공통-에러-2부"><a class="header" href="#공통-에러-2부">공통 에러 (2부)</a></h2>
+<h3 id="에러-3-비교가-i1을-반환하지만-i32가-필요한-곳에서-사용"><a class="header" href="#에러-3-비교가-i1을-반환하지만-i32가-필요한-곳에서-사용">에러 3: 비교가 i1을 반환하지만 i32가 필요한 곳에서 사용</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>MLIR verification failed:
+  Type mismatch in func.return: expected i32, got i1
+</code></pre>
+<p><strong>원인:</strong>
+비교 연산은 i1 (boolean)을 반환하지만 main 함수는 i32를 반환해야 한다.</p>
+<p><strong>해결:</strong>
+i1을 i32로 확장한다:</p>
+<pre><code class="language-fsharp">// arith.extui 사용 (zero extend)
+let extOp = builder.CreateArithExtUI(cmpVal, i32Type, location)
+</code></pre>
+<p><strong>또는</strong> main 함수가 i1을 반환하도록 변경 (덜 일반적):</p>
+<pre><code class="language-fsharp">// main 함수 시그니처를 i1으로 변경 (비권장)
+let funcType = builder.FunctionType([||], [| builder.Context.GetIntegerType(1) |])
+</code></pre>
+<p><strong>권장 방법:</strong> 항상 i32로 확장한다. Unix 종료 코드는 8비트 정수이므로 boolean을 정수로 표현하는 것이 자연스럽다.</p>
+<h3 id="에러-4-0으로-나누기-런타임-vs-컴파일-타임"><a class="header" href="#에러-4-0으로-나누기-런타임-vs-컴파일-타임">에러 4: 0으로 나누기 (런타임 vs 컴파일 타임)</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-bash">$ ./program
+Floating point exception (core dumped)
+</code></pre>
+<p><strong>원인:</strong>
+<code>10 / 0</code>과 같은 표현식이 런타임에 0으로 나누기를 시도한다.</p>
+<p><strong>컴파일 타임 해결:</strong>
+AST를 분석하여 상수 0으로 나누기를 감지한다:</p>
+<pre><code class="language-fsharp">| BinaryOp(Divide, lhs, IntLiteral 0) -&gt;
+    failwith "Compile error: division by zero"
+</code></pre>
+<p><strong>런타임 해결 (더 일반적):</strong>
+동적 검사 코드를 삽입한다:</p>
+<pre><code class="language-fsharp">| BinaryOp(Divide, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs
+    let rhsVal = compileExpr builder block location rhs
+
+    // rhsVal == 0 검사
+    let zero = builder.CreateConstant(0, builder.I32Type(), location)
+    let isZero = builder.CreateArithCmpi(ArithCmpIPredicate.eq, rhsVal, zero, location)
+
+    // if (rhsVal == 0) abort() else lhs / rhs
+    // scf.if 사용 (Chapter 08에서 다룸)
+    // 지금은 단순화를 위해 생략
+</code></pre>
+<p><strong>실용적 접근:</strong> 대부분의 컴파일러는 0으로 나누기를 런타임 에러로 남긴다. 프로그램이 SIGFPE로 종료되는 것이 예상 동작이다.</p>
+<h3 id="에러-5-printf-포맷-문자열에-null-terminator-누락"><a class="header" href="#에러-5-printf-포맷-문자열에-null-terminator-누락">에러 5: printf 포맷 문자열에 null terminator 누락</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code class="language-bash">$ ./program
+22ݠ�(garbage characters)
+</code></pre>
+<p><strong>원인:</strong>
+C 문자열은 null terminator (<code>\0</code>)가 필요하다. <code>"%d\n"</code> 대신 <code>"%d\n\0"</code>를 사용해야 한다.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-fsharp">// WRONG: null terminator 없음
+let formatStrValue = "%d\n"
+
+// CORRECT: null terminator 포함
+let formatStrValue = "%d\n\0"
+</code></pre>
+<p><strong>MLIR IR:</strong></p>
+<pre><code class="language-mlir">// CORRECT
+llvm.mlir.global private constant @.str.fmt("%d\0A\00") : !llvm.array&lt;4 x i8&gt;
+</code></pre>
+<h3 id="에러-6-arith-연산-후-llvm-dialect로-낮추기-잊음"><a class="header" href="#에러-6-arith-연산-후-llvm-dialect로-낮추기-잊음">에러 6: arith 연산 후 LLVM dialect로 낮추기 잊음</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Translation error: Unhandled operation 'arith.addi'
+</code></pre>
+<p><strong>원인:</strong>
+arith dialect를 LLVM IR로 변환하려면 먼저 LLVM dialect로 낮춰야 한다.</p>
+<p><strong>해결:</strong>
+Lowering 단계에서 <code>convert-arith-to-llvm</code> pass를 실행한다:</p>
+<pre><code class="language-fsharp">// Pass manager에 추가
+MlirStringRef.WithString "convert-arith-to-llvm" (fun passName -&gt;
+    let pass = MlirNative.mlirCreateConversionPass(passName)
+    MlirNative.mlirPassManagerAddOwnedPass(pm, pass))
+</code></pre>
+<p><strong>Pass 순서:</strong></p>
+<ol>
+<li><code>convert-func-to-llvm</code></li>
+<li><code>convert-arith-to-llvm</code></li>
+<li><code>reconcile-unrealized-casts</code></li>
+<li>그 다음 <code>mlirTranslateModuleToLLVMIR</code></li>
+</ol>
+<h2 id="장-요약"><a class="header" href="#장-요약">장 요약</a></h2>
+<p>이 장에서 다음을 성취했다:</p>
+<ol>
+<li><strong>확장된 AST</strong>: 이진 연산자, 비교, 단항 부정을 지원하는 표현식 타입</li>
+<li><strong>P/Invoke 바인딩</strong>: arith dialect의 addi, subi, muli, divsi, cmpi 연산</li>
+<li><strong>F# 래퍼 확장</strong>: OpBuilder에 편리한 헬퍼 메서드 추가</li>
+<li><strong>재귀 코드 생성</strong>: SSA 형태를 유지하며 복잡한 표현식 컴파일</li>
+<li><strong>출력 기능</strong>: printf를 통한 결과 출력</li>
+<li><strong>완전한 예제</strong>: MLIR IR 출력을 보여주는 실행 가능한 코드</li>
+</ol>
+<p><strong>독자가 할 수 있는 것:</strong></p>
+<ul>
+<li><code>10 + 3 * 4</code> 컴파일 → 네이티브 바이너리 → 실행 → 결과: 22 ✓</li>
+<li><code>5 &lt; 10</code> 컴파일 → boolean 반환 (1 = true) ✓</li>
+<li><code>-42</code> 컴파일 → 부정 연산 ✓</li>
+<li><code>print(10 + 20)</code> 컴파일 → stdout 출력: 30 ✓</li>
+</ul>
+<p><strong>다음 장 미리보기:</strong></p>
+<p>Chapter 07에서는 <strong>let 바인딩</strong>을 추가한다:</p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+x + y
+</code></pre>
+<p>이것은 다음을 도입한다:</p>
+<ul>
+<li>변수 이름과 SSA value 간의 환경 (symbol table)</li>
+<li>중첩된 스코프 (nested scopes)</li>
+<li>변수 섀도잉 (shadowing) vs 뮤테이션 (mutation)</li>
+</ul>
+<p><strong>Phase 2는 계속된다!</strong></p>
+<hr>
+<p><strong>이제 독자는 산술 표현식을 컴파일하고 결과를 출력할 수 있다!</strong></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="chapter-07-let-바인딩과-ssa-형태"><a class="header" href="#chapter-07-let-바인딩과-ssa-형태">Chapter 07: Let 바인딩과 SSA 형태</a></h1>
+<h2 id="소개-7"><a class="header" href="#소개-7">소개</a></h2>
+<p>프로그래밍에서 변수는 필수적이다. 값을 이름에 바인딩하고, 나중에 그 이름을 참조하여 값을 재사용한다. Chapter 06까지는 표현식을 직접 계산했지만, 실제 프로그램을 작성하려면 중간 결과를 저장하고 참조할 수 있어야 한다.</p>
+<p>이 장에서는 <strong>let 바인딩</strong>을 추가한다:</p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+x + y
+</code></pre>
+<p>함수형 언어의 let 바인딩은 명령형 언어의 변수 할당과 다르다:</p>
+<ul>
+<li><strong>명령형</strong>: <code>x = 5; x = 10;</code> (뮤테이션 - 값이 변경됨)</li>
+<li><strong>함수형</strong>: <code>let x = 5 in let x = 10 in x</code> (섀도잉 - 새로운 바인딩 생성, 뮤테이션 아님)</li>
+</ul>
+<p><strong>핵심 통찰력:</strong> let 바인딩은 **불변(immutable)**이다. 이것이 MLIR의 SSA (Static Single Assignment) 형태와 완벽하게 일치한다. 함수형 프로그래밍은 SSA를 자연스럽게 표현한다!</p>
+<p>이 장을 마치면:</p>
+<ul>
+<li>let 바인딩을 컴파일하여 네이티브 바이너리로 만들 수 있다</li>
+<li>중첩된 바인딩과 스코프를 이해한다</li>
+<li>SSA 형태가 무엇이고 왜 중요한지 안다</li>
+<li>환경 전달(environment passing)로 변수를 관리하는 방법을 안다</li>
+</ul>
+<blockquote>
+<p><strong>중요:</strong> 이 장은 SSA 개념을 소개한다. SSA는 현대 컴파일러의 핵심 기술이며, MLIR은 SSA를 기본으로 한다.</p>
+</blockquote>
+<h2 id="ssa-형태-설명"><a class="header" href="#ssa-형태-설명">SSA 형태 설명</a></h2>
+<h3 id="ssa란-무엇인가"><a class="header" href="#ssa란-무엇인가">SSA란 무엇인가?</a></h3>
+<p>**SSA (Static Single Assignment)**는 중간 표현(IR)의 속성이다:</p>
+<blockquote>
+<p><strong>정의:</strong> 각 변수는 프로그램에서 정확히 한 번만 할당된다.</p>
+</blockquote>
+<p>예시:</p>
+<pre><code class="language-fsharp">// SSA가 아님 (명령형):
+x = 5
+x = 10  // x가 두 번 할당됨!
+
+// SSA (함수형):
+let x1 = 5 in    // x1은 한 번만 할당
+let x2 = 10 in   // x2는 한 번만 할당
+x2
+</code></pre>
+<p>MLIR IR에서 SSA value는 <code>%</code> 기호로 표시된다:</p>
+<pre><code class="language-mlir">%x = arith.constant 5 : i32      // %x 정의 (한 번만)
+%y = arith.addi %x, %x : i32     // %x 사용 (여러 번 가능)
+%z = arith.muli %y, %x : i32     // %x, %y 사용
+</code></pre>
+<p>각 SSA value (<code>%x</code>, <code>%y</code>, <code>%z</code>)는 정확히 한 번만 정의된다. 사용은 여러 번 가능하다.</p>
+<h3 id="왜-ssa가-중요한가"><a class="header" href="#왜-ssa가-중요한가">왜 SSA가 중요한가?</a></h3>
+<p>SSA 형태는 컴파일러 최적화를 극적으로 단순화한다:</p>
+<h4 id="1-상수-전파-constant-propagation"><a class="header" href="#1-상수-전파-constant-propagation">1. 상수 전파 (Constant Propagation)</a></h4>
+<pre><code class="language-mlir">// SSA 형태
+%c5 = arith.constant 5 : i32
+%result = arith.addi %c5, %c5 : i32
+
+// 최적화: %c5가 상수임을 알고 있으므로
+%c10 = arith.constant 10 : i32  // 컴파일 타임에 계산
+</code></pre>
+<p>SSA value는 한 번만 정의되므로, 정의를 추적하여 상수 값을 전파할 수 있다.</p>
+<h4 id="2-죽은-코드-제거-dead-code-elimination"><a class="header" href="#2-죽은-코드-제거-dead-code-elimination">2. 죽은 코드 제거 (Dead Code Elimination)</a></h4>
+<pre><code class="language-mlir">// SSA 형태
+%unused = arith.constant 42 : i32  // 정의되지만 사용되지 않음
+%result = arith.constant 10 : i32
+func.return %result : i32
+
+// 최적화: %unused는 사용되지 않으므로 제거 가능
+</code></pre>
+<p>SSA value가 사용되지 않으면 정의도 불필요하다. 쉽게 감지하고 제거할 수 있다.</p>
+<h4 id="3-레지스터-할당-register-allocation"><a class="header" href="#3-레지스터-할당-register-allocation">3. 레지스터 할당 (Register Allocation)</a></h4>
+<pre><code class="language-mlir">%x = arith.constant 5 : i32       // %x의 수명 시작
+%y = arith.constant 10 : i32      // %y의 수명 시작
+%z = arith.addi %x, %y : i32      // %x, %y 사용 (%x, %y 수명 끝)
+func.return %z : i32               // %z 사용 (%z 수명 끝)
+</code></pre>
+<p>SSA value의 수명(lifetime)이 명확하다:</p>
+<ul>
+<li>정의 지점에서 시작</li>
+<li>마지막 사용 지점에서 끝</li>
+</ul>
+<p>레지스터 할당기가 수명 분석을 쉽게 수행하여 레지스터를 효율적으로 재사용할 수 있다.</p>
+<h3 id="let-바인딩은-자연스럽게-ssa다"><a class="header" href="#let-바인딩은-자연스럽게-ssa다">Let 바인딩은 자연스럽게 SSA다</a></h3>
+<p>함수형 언어의 let 바인딩은 불변이므로, 변환 없이 SSA로 직접 매핑된다:</p>
+<pre><code class="language-fsharp">// FunLang 소스
+let x = 5 in
+x + x
+</code></pre>
+<p><strong>MLIR IR로 변환:</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %x = arith.constant 5 : i32      // let x = 5
+  %result = arith.addi %x, %x : i32  // x + x
+  func.return %result : i32
+}
+</code></pre>
+<p><code>let x = 5</code>가 SSA value <code>%x</code>의 <strong>단일 정의</strong>가 된다. 추가 작업이 필요 없다!</p>
+<h3 id="명령형-언어와의-대비"><a class="header" href="#명령형-언어와의-대비">명령형 언어와의 대비</a></h3>
+<p>명령형 언어는 변수 뮤테이션을 허용하므로 SSA 변환이 필요하다:</p>
+<pre><code class="language-c">// C 코드 (SSA 아님)
+int x = 5;
+int y = x + x;
+x = 10;       // 뮤테이션!
+int z = x + y;
+</code></pre>
+<p><strong>SSA로 변환 (컴파일러가 수행):</strong></p>
+<pre><code class="language-mlir">%x_0 = arith.constant 5 : i32       // x = 5
+%y = arith.addi %x_0, %x_0 : i32    // y = x + x
+%x_1 = arith.constant 10 : i32      // x = 10 (새로운 SSA value)
+%z = arith.addi %x_1, %y : i32      // z = x + y
+</code></pre>
+<p>각 “할당“이 새로운 SSA value를 생성한다 (<code>%x_0</code>, <code>%x_1</code>). 이것이 SSA 변환(SSA conversion)이다.</p>
+<p><strong>함수형 언어의 이점:</strong> 뮤테이션이 없으므로 SSA 변환이 불필요하다. let 바인딩이 이미 SSA다!</p>
+<h3 id="섀도잉-새로운-값-뮤테이션-아님"><a class="header" href="#섀도잉-새로운-값-뮤테이션-아님">섀도잉: 새로운 값, 뮤테이션 아님</a></h3>
+<p>함수형 언어에서 같은 이름을 다시 바인딩하면 어떻게 될까?</p>
+<pre><code class="language-fsharp">let x = 5 in
+let x = 10 in
+x
+</code></pre>
+<p>이것은 **섀도잉(shadowing)**이다:</p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %x = arith.constant 5 : i32      // 첫 번째 x 바인딩
+  %x_0 = arith.constant 10 : i32   // 두 번째 x 바인딩 (새로운 값)
+  func.return %x_0 : i32            // 내부 x 사용
+}
+</code></pre>
+<p><strong>핵심:</strong> MLIR은 자동으로 고유한 이름을 생성한다 (<code>%x</code>, <code>%x_0</code>, <code>%x_1</code>, …). 섀도잉은 새로운 SSA value를 만들 뿐, 기존 값을 변경하지 않는다.</p>
+<p>외부 <code>%x</code>는 여전히 존재하지만 내부 스코프에서는 가려진다 (shadowed). 스코프가 끝나면 외부 <code>%x</code>가 다시 보인다.</p>
+<h3 id="ssa의-제약"><a class="header" href="#ssa의-제약">SSA의 제약</a></h3>
+<p>SSA에서 <strong>제어 흐름(control flow)</strong> 합류 지점에서는 어떻게 될까?</p>
+<pre><code class="language-fsharp">let x = if condition then 10 else 20 in
+x + x
+</code></pre>
+<p>if 표현식이 두 가지 다른 값 (10 또는 20)을 생성할 수 있다. 어떤 SSA value를 <code>x</code>에 바인딩해야 할까?</p>
+<p><strong>해답:</strong> MLIR은 <strong>block arguments</strong>를 사용한다. Chapter 08 (제어 흐름)에서 자세히 다룰 것이다. 지금은 let 바인딩이 단순한 값 바인딩이며 조건부 바인딩이 없다는 점만 기억하자.</p>
+<h3 id="ssa-요약"><a class="header" href="#ssa-요약">SSA 요약</a></h3>
+<p><strong>SSA 형태:</strong></p>
+<ul>
+<li>각 value는 정확히 한 번만 정의된다</li>
+<li>사용은 여러 번 가능하다</li>
+<li>컴파일러 최적화를 단순화한다</li>
+<li>MLIR은 SSA를 기본으로 한다</li>
+</ul>
+<p><strong>Let 바인딩과 SSA:</strong></p>
+<ul>
+<li>함수형 언어의 let 바인딩은 불변이다</li>
+<li>불변 = 자연스러운 SSA 형태</li>
+<li>섀도잉은 새로운 SSA value를 생성한다</li>
+<li>뮤테이션이 없으므로 SSA 변환이 불필요하다</li>
+</ul>
+<blockquote>
+<p><strong>명심:</strong> SSA는 이론이 아니라 실용이다. 모든 현대 컴파일러 (LLVM, GCC, MLIR)는 SSA를 사용한다. 함수형 언어는 SSA를 “무료로” 얻는다!</p>
+</blockquote>
+<h2 id="확장된-ast-let과-var"><a class="header" href="#확장된-ast-let과-var">확장된 AST: Let과 Var</a></h2>
+<p>이제 AST에 let 바인딩과 변수 참조를 추가한다.</p>
+<p><strong>Ast.fs</strong> 수정:</p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+/// 이진 연산자 (Chapter 06)
+type Operator =
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+
+/// 비교 연산자 (Chapter 06)
+type CompareOp =
+    | LessThan
+    | GreaterThan
+    | LessEqual
+    | GreaterEqual
+    | Equal
+    | NotEqual
+
+/// 단항 연산자 (Chapter 06)
+type UnaryOp =
+    | Negate
+
+/// FunLang 표현식 AST
+type Expr =
+    | IntLiteral of int
+    | BinaryOp of Operator * Expr * Expr
+    | UnaryOp of UnaryOp * Expr
+    | Comparison of CompareOp * Expr * Expr
+    // NEW: let 바인딩과 변수 참조
+    | Let of name: string * binding: Expr * body: Expr
+    | Var of name: string
+
+/// 최상위 프로그램
+type Program =
+    { expr: Expr }
+</code></pre>
+<p><strong>새로운 케이스 설명:</strong></p>
+<h3 id="let-of-name--binding--body"><a class="header" href="#let-of-name--binding--body">Let of name * binding * body</a></h3>
+<pre><code class="language-fsharp">| Let of name: string * binding: Expr * body: Expr
+</code></pre>
+<p><strong>의미:</strong> <code>let {name} = {binding} in {body}</code></p>
+<p><strong>필드:</strong></p>
+<ul>
+<li><code>name</code>: 바인딩할 변수 이름 (예: “x”)</li>
+<li><code>binding</code>: 변수에 바인딩할 표현식 (예: <code>IntLiteral 10</code>)</li>
+<li><code>body</code>: 바인딩이 유효한 스코프 (예: <code>BinaryOp(Add, Var "x", Var "x")</code>)</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// FunLang: let x = 10 in x + x
+Let("x",
+  IntLiteral 10,
+  BinaryOp(Add, Var "x", Var "x"))
+</code></pre>
+<p><strong>스코프:</strong> <code>body</code> 표현식 내에서만 <code>name</code>이 유효하다. 스코프 밖에서는 변수가 존재하지 않는다.</p>
+<h3 id="var-of-name"><a class="header" href="#var-of-name">Var of name</a></h3>
+<pre><code class="language-fsharp">| Var of name: string
+</code></pre>
+<p><strong>의미:</strong> 변수 참조 - 이전에 바인딩된 변수의 값을 사용한다.</p>
+<p><strong>필드:</strong></p>
+<ul>
+<li><code>name</code>: 참조할 변수 이름 (예: “x”)</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// FunLang: x
+Var "x"
+</code></pre>
+<p><strong>바인딩 필요:</strong> <code>Var "x"</code>를 사용하려면 스코프에서 <code>x</code>가 바인딩되어 있어야 한다. 바인딩되지 않은 변수를 참조하면 컴파일 에러다.</p>
+<h3 id="중첩된-let-바인딩"><a class="header" href="#중첩된-let-바인딩">중첩된 Let 바인딩</a></h3>
+<pre><code class="language-fsharp">// FunLang:
+// let x = 10 in
+// let y = 20 in
+// x + y
+
+Let("x",
+  IntLiteral 10,
+  Let("y",
+    IntLiteral 20,
+    BinaryOp(Add, Var "x", Var "y")))
+</code></pre>
+<p><strong>스코프 중첩:</strong></p>
+<ul>
+<li>외부 let (<code>x</code>)의 body는 내부 let (<code>y</code>)이다</li>
+<li>내부 let의 body에서 <code>x</code>와 <code>y</code> 모두 보인다</li>
+<li>내부 스코프는 외부 스코프를 “확장“한다</li>
+</ul>
+<h3 id="섀도잉-예시"><a class="header" href="#섀도잉-예시">섀도잉 예시</a></h3>
+<pre><code class="language-fsharp">// FunLang:
+// let x = 5 in
+// let x = x + 1 in
+// x
+
+Let("x",
+  IntLiteral 5,
+  Let("x",
+    BinaryOp(Add, Var "x", IntLiteral 1),  // 외부 x 사용
+    Var "x"))  // 내부 x 반환
+</code></pre>
+<p><strong>섀도잉 동작:</strong></p>
+<ul>
+<li>두 번째 <code>Let("x", ...)</code>: 새로운 <code>x</code> 바인딩</li>
+<li><code>BinaryOp(Add, Var "x", ...)</code>: 여기서 <code>Var "x"</code>는 <strong>외부 x</strong> (값 5)를 참조한다</li>
+<li><code>body</code>의 <code>Var "x"</code>: 여기서 <code>Var "x"</code>는 <strong>내부 x</strong> (값 6)를 참조한다</li>
+</ul>
+<p><strong>결과:</strong> 6을 반환한다.</p>
+<h3 id="ast-완전한-예시"><a class="header" href="#ast-완전한-예시">AST 완전한 예시</a></h3>
+<pre><code class="language-fsharp">// FunLang:
+// let x = 10 in
+// let y = 20 in
+// let z = x + y in
+// z * 2
+
+Let("x",
+  IntLiteral 10,
+  Let("y",
+    IntLiteral 20,
+    Let("z",
+      BinaryOp(Add, Var "x", Var "y"),
+      BinaryOp(Multiply, Var "z", IntLiteral 2))))
+</code></pre>
+<p><strong>예상 결과:</strong></p>
+<ul>
+<li>x = 10</li>
+<li>y = 20</li>
+<li>z = x + y = 30</li>
+<li>z * 2 = 60</li>
+</ul>
+<p>이 AST를 컴파일하면 60을 반환하는 네이티브 바이너리가 생성된다.</p>
+<h2 id="환경-개념-environment"><a class="header" href="#환경-개념-environment">환경 개념 (Environment)</a></h2>
+<p>변수를 컴파일하려면 **환경(environment)**이 필요하다.</p>
+<h3 id="환경이란"><a class="header" href="#환경이란">환경이란?</a></h3>
+<p><strong>정의:</strong> 환경은 변수 이름을 SSA value에 매핑하는 자료구조다.</p>
+<p><strong>타입 정의:</strong></p>
+<pre><code class="language-fsharp">/// 변수 이름 -&gt; MLIR SSA value 매핑
+type Env = Map&lt;string, MlirValue&gt;
+</code></pre>
+<p>F#의 <code>Map</code> 타입은 불변 딕셔너리다. 키-값 쌍을 저장하며, 함수형 방식으로 확장할 수 있다.</p>
+<h3 id="환경-연산"><a class="header" href="#환경-연산">환경 연산</a></h3>
+<h4 id="1-빈-환경-생성"><a class="header" href="#1-빈-환경-생성">1. 빈 환경 생성</a></h4>
+<pre><code class="language-fsharp">let emptyEnv : Env = Map.empty
+</code></pre>
+<p>프로그램 시작 시 환경은 비어 있다. 아직 변수가 바인딩되지 않았다.</p>
+<h4 id="2-환경-확장-바인딩-추가"><a class="header" href="#2-환경-확장-바인딩-추가">2. 환경 확장 (바인딩 추가)</a></h4>
+<pre><code class="language-fsharp">// x를 %c5 SSA value에 바인딩
+let env = Map.empty
+let env' = env.Add("x", someValue)
+</code></pre>
+<p><code>env.Add(name, value)</code>는 새로운 환경을 반환한다. 기존 환경 <code>env</code>는 변경되지 않는다 (불변성).</p>
+<h4 id="3-변수-조회"><a class="header" href="#3-변수-조회">3. 변수 조회</a></h4>
+<pre><code class="language-fsharp">// x의 SSA value 찾기
+match env.TryFind("x") with
+| Some(value) -&gt; value  // x가 바인딩되어 있음
+| None -&gt; failwith "Unbound variable: x"  // x가 바인딩되지 않음
+</code></pre>
+<p><code>TryFind</code>는 <code>Option</code> 타입을 반환한다:</p>
+<ul>
+<li><code>Some(value)</code>: 변수가 환경에 존재</li>
+<li><code>None</code>: 변수가 존재하지 않음 (컴파일 에러)</li>
+</ul>
+<h3 id="환경과-스코프"><a class="header" href="#환경과-스코프">환경과 스코프</a></h3>
+<p>스코프는 환경을 통해 구현된다:</p>
+<pre><code class="language-fsharp">// let x = 10 in let y = 20 in x + y
+// 각 let이 환경을 확장한다
+
+let env0 = Map.empty             // 초기 환경 (비어 있음)
+
+// let x = 10
+let env1 = env0.Add("x", %c10)   // env1 = { x -&gt; %c10 }
+
+// let y = 20
+let env2 = env1.Add("y", %c20)   // env2 = { x -&gt; %c10, y -&gt; %c20 }
+
+// x + y (env2에서 x와 y 조회)
+// x = %c10, y = %c20
+</code></pre>
+<p><strong>환경 스택 다이어그램:</strong></p>
+<pre><code>let x = 5 in       env = { x -&gt; %c5 }
+  let y = 10 in    env = { x -&gt; %c5, y -&gt; %c10 }
+    x + y          lookup x, lookup y -&gt; arith.addi %c5, %c10
+</code></pre>
+<p>각 let 바인딩이 환경에 새로운 항목을 추가한다. 내부 스코프의 환경은 외부 스코프의 모든 바인딩을 포함한다.</p>
+<h3 id="섀도잉과-환경"><a class="header" href="#섀도잉과-환경">섀도잉과 환경</a></h3>
+<p>같은 이름을 다시 바인딩하면?</p>
+<pre><code class="language-fsharp">// let x = 5 in let x = 10 in x
+let env0 = Map.empty
+let env1 = env0.Add("x", %c5)   // env1 = { x -&gt; %c5 }
+let env2 = env1.Add("x", %c10)  // env2 = { x -&gt; %c10 }
+
+// env2에서 x 조회 -&gt; %c10 (새로운 바인딩)
+</code></pre>
+<p><code>Map.Add</code>는 기존 키가 있으면 값을 덮어쓴다. 하지만 <code>env1</code>은 변경되지 않는다 (불변):</p>
+<pre><code class="language-fsharp">// env1에서 x 조회 -&gt; 여전히 %c5
+// env2에서 x 조회 -&gt; %c10
+</code></pre>
+<p>이것이 <strong>스코프 기반 섀도잉</strong>이다. 내부 스코프가 끝나면 외부 바인딩이 다시 보인다:</p>
+<pre><code class="language-fsharp">// let x = 5 in (let x = 10 in x) + x
+//               ^^^^^^^^^^^^^   ^^^
+//               내부 x = 10     외부 x = 5
+
+let env0 = Map.empty
+let env1 = env0.Add("x", %c5)
+
+// 내부 스코프
+let env2 = env1.Add("x", %c10)
+// 내부 body에서 x 조회 -&gt; %c10
+
+// 외부 스코프로 돌아옴 (env1 사용)
+// 외부 body에서 x 조회 -&gt; %c5
+</code></pre>
+<p><strong>결과:</strong> <code>10 + 5 = 15</code></p>
+<h3 id="환경-전달-패턴"><a class="header" href="#환경-전달-패턴">환경 전달 패턴</a></h3>
+<p>컴파일러는 환경을 함수 인자로 전달한다:</p>
+<pre><code class="language-fsharp">let rec compileExpr (builder: OpBuilder) (expr: Expr) (env: Env) : MlirValue =
+  match expr with
+  | IntLiteral n -&gt; ...  // env 사용 안 함
+  | Var name -&gt;
+      // env에서 변수 조회
+      match env.TryFind(name) with
+      | Some(value) -&gt; value
+      | None -&gt; failwithf "Unbound variable: %s" name
+  | Let(name, binding, body) -&gt;
+      // 1. binding 표현식 컴파일 (현재 env 사용)
+      let bindVal = compileExpr builder binding env
+      // 2. env 확장
+      let env' = env.Add(name, bindVal)
+      // 3. body 표현식 컴파일 (확장된 env' 사용)
+      compileExpr builder body env'
+  | BinaryOp(op, lhs, rhs) -&gt;
+      // 재귀 호출에 env 전달
+      let lhsVal = compileExpr builder lhs env
+      let rhsVal = compileExpr builder rhs env
+      ...
+</code></pre>
+<p><strong>핵심 패턴:</strong></p>
+<ul>
+<li><code>compileExpr</code>이 <code>env</code> 파라미터를 받는다</li>
+<li>모든 재귀 호출에서 <code>env</code>를 전달한다</li>
+<li><code>Let</code> 케이스에서 <code>env</code>를 확장하고 body에 전달한다</li>
+<li><code>Var</code> 케이스에서 <code>env</code>를 조회한다</li>
+</ul>
+<p>이것이 **환경 전달(environment passing)**이다. 함수형 프로그래밍에서 흔한 패턴이다.</p>
+<h3 id="환경-요약"><a class="header" href="#환경-요약">환경 요약</a></h3>
+<p><strong>환경:</strong></p>
+<ul>
+<li>변수 이름 -&gt; SSA value 매핑</li>
+<li>F# <code>Map&lt;string, MlirValue&gt;</code> 타입</li>
+<li>불변 자료구조</li>
+</ul>
+<p><strong>연산:</strong></p>
+<ul>
+<li><code>Map.empty</code>: 빈 환경</li>
+<li><code>env.Add(name, value)</code>: 바인딩 추가 (새 환경 반환)</li>
+<li><code>env.TryFind(name)</code>: 변수 조회 (Option 반환)</li>
+</ul>
+<p><strong>스코프:</strong></p>
+<ul>
+<li>각 let 바인딩이 환경을 확장한다</li>
+<li>내부 스코프는 외부 바인딩을 모두 포함한다</li>
+<li>섀도잉은 <code>Map.Add</code>로 구현된다</li>
+</ul>
+<p><strong>환경 전달:</strong></p>
+<ul>
+<li><code>compileExpr</code>에 <code>env</code> 파라미터 추가</li>
+<li>재귀 호출에서 <code>env</code> 전달</li>
+<li><code>Let</code> 케이스에서 <code>env</code> 확장</li>
+</ul>
+<blockquote>
+<p><strong>다음 섹션:</strong> 환경을 사용하여 let 바인딩을 MLIR IR로 컴파일하는 코드를 작성한다!</p>
+</blockquote>
+<h2 id="환경을-사용한-코드-생성"><a class="header" href="#환경을-사용한-코드-생성">환경을 사용한 코드 생성</a></h2>
+<p>이제 Chapter 06의 <code>compileExpr</code>을 확장하여 let 바인딩과 변수를 처리한다.</p>
+<h3 id="compileexpr-시그니처-변경"><a class="header" href="#compileexpr-시그니처-변경">compileExpr 시그니처 변경</a></h3>
+<p>먼저 환경 파라미터를 추가한다:</p>
+<pre><code class="language-fsharp">// 기존 (Chapter 06):
+let rec compileExpr
+    (builder: OpBuilder)
+    (block: MlirBlock)
+    (location: Location)
+    (expr: Expr)
+    : MlirValue = ...
+
+// 새로운 (Chapter 07):
+let rec compileExpr
+    (builder: OpBuilder)
+    (block: MlirBlock)
+    (location: Location)
+    (expr: Expr)
+    (env: Env)        // 환경 추가!
+    : MlirValue = ...
+</code></pre>
+<p><strong>환경 타입 정의:</strong></p>
+<pre><code class="language-fsharp">/// 변수 이름 -&gt; MLIR SSA value 매핑
+type Env = Map&lt;string, MlirValue&gt;
+</code></pre>
+<h3 id="let-케이스-구현"><a class="header" href="#let-케이스-구현">Let 케이스 구현</a></h3>
+<pre><code class="language-fsharp">| Let(name, binding, body) -&gt;
+    // 1. binding 표현식 컴파일 (현재 환경 사용)
+    let bindVal = compileExpr builder block location binding env
+
+    // 2. 환경 확장: name -&gt; bindVal 매핑 추가
+    let env' = env.Add(name, bindVal)
+
+    // 3. body 표현식 컴파일 (확장된 환경 사용)
+    compileExpr builder block location body env'
+</code></pre>
+<p><strong>동작 설명:</strong></p>
+<ol>
+<li><code>binding</code> 표현식을 먼저 컴파일한다. 이것이 변수에 바인딩될 값이다.</li>
+<li>현재 환경 <code>env</code>를 확장하여 <code>name</code>을 <code>bindVal</code>에 매핑한다. 새로운 환경 <code>env'</code>가 생성된다.</li>
+<li><code>body</code> 표현식을 컴파일할 때 확장된 환경 <code>env'</code>를 사용한다. body 내에서 <code>name</code>을 참조할 수 있다.</li>
+</ol>
+<p><strong>핵심:</strong> let 바인딩은 MLIR IR에 새로운 연산을 생성하지 않는다. 단지 환경을 확장하고 body를 컴파일할 뿐이다. SSA value는 <code>binding</code> 표현식에서 이미 생성되었다.</p>
+<h3 id="var-케이스-구현"><a class="header" href="#var-케이스-구현">Var 케이스 구현</a></h3>
+<pre><code class="language-fsharp">| Var(name) -&gt;
+    // 환경에서 변수 조회
+    match env.TryFind(name) with
+    | Some(value) -&gt; value  // 바인딩된 SSA value 반환
+    | None -&gt; failwithf "Unbound variable: %s" name  // 컴파일 에러
+</code></pre>
+<p><strong>동작 설명:</strong></p>
+<ul>
+<li><code>env.TryFind(name)</code>으로 변수를 조회한다.</li>
+<li>바인딩되어 있으면 (<code>Some(value)</code>) 해당 SSA value를 반환한다.</li>
+<li>바인딩되지 않았으면 (<code>None</code>) 에러를 발생시킨다.</li>
+</ul>
+<p><strong>중요:</strong> 변수 참조는 MLIR IR에 새로운 연산을 생성하지 않는다. 단지 기존 SSA value를 반환할 뿐이다. 이것이 SSA의 핵심이다!</p>
+<h3 id="기존-케이스-업데이트"><a class="header" href="#기존-케이스-업데이트">기존 케이스 업데이트</a></h3>
+<p>모든 기존 케이스에서 재귀 호출에 <code>env</code>를 전달해야 한다:</p>
+<pre><code class="language-fsharp">| IntLiteral value -&gt;
+    // 환경 사용 안 함 (리터럴은 변수를 참조하지 않음)
+    let i32Type = builder.I32Type()
+    let attr = builder.Context.GetIntegerAttr(i32Type, int64 value)
+    let constOp = builder.CreateConstant(attr, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, constOp)
+    builder.GetResult(constOp, 0)
+
+| BinaryOp(op, lhs, rhs) -&gt;
+    // 재귀 호출에 env 전달
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    let binOp = builder.CreateArithBinaryOp(op, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, binOp)
+    builder.GetResult(binOp, 0)
+
+| UnaryOp(Negate, expr) -&gt;
+    // 재귀 호출에 env 전달
+    let val = compileExpr builder block location expr env
+    let negOp = builder.CreateArithNegate(val, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, negOp)
+    builder.GetResult(negOp, 0)
+
+| Comparison(compareOp, lhs, rhs) -&gt;
+    // 재귀 호출에 env 전달
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+    let cmpVal = builder.GetResult(cmpOp, 0)
+    // i1 -&gt; i32 확장 (Chapter 06과 동일)
+    let i32Type = builder.I32Type()
+    let extOp = builder.CreateArithExtUI(cmpVal, i32Type, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, extOp)
+    builder.GetResult(extOp, 0)
+</code></pre>
+<p><strong>패턴:</strong> 모든 재귀 호출에서 현재 환경 <code>env</code>를 그대로 전달한다. Let 케이스만 환경을 확장한다.</p>
+<h3 id="완전한-codegenfs-리스팅"><a class="header" href="#완전한-codegenfs-리스팅">완전한 CodeGen.fs 리스팅</a></h3>
+<p><strong>CodeGen.fs</strong> (환경 지원 버전):</p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+open System
+open MlirWrapper
+open MlirBindings
+
+module CodeGen =
+
+    /// 변수 이름 -&gt; MLIR SSA value 매핑
+    type Env = Map&lt;string, MlirValue&gt;
+
+    /// 표현식을 MLIR value로 컴파일 (재귀적, 환경 전달)
+    let rec compileExpr
+        (builder: OpBuilder)
+        (block: MlirBlock)
+        (location: Location)
+        (expr: Expr)
+        (env: Env)
+        : MlirValue =
+
+        match expr with
+        | IntLiteral value -&gt;
+            let i32Type = builder.I32Type()
+            let attr = builder.Context.GetIntegerAttr(i32Type, int64 value)
+            let constOp = builder.CreateConstant(attr, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, constOp)
+            builder.GetResult(constOp, 0)
+
+        | Var(name) -&gt;
+            match env.TryFind(name) with
+            | Some(value) -&gt; value
+            | None -&gt; failwithf "Unbound variable: %s" name
+
+        | Let(name, binding, body) -&gt;
+            let bindVal = compileExpr builder block location binding env
+            let env' = env.Add(name, bindVal)
+            compileExpr builder block location body env'
+
+        | BinaryOp(op, lhs, rhs) -&gt;
+            let lhsVal = compileExpr builder block location lhs env
+            let rhsVal = compileExpr builder block location rhs env
+            let binOp = builder.CreateArithBinaryOp(op, lhsVal, rhsVal, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, binOp)
+            builder.GetResult(binOp, 0)
+
+        | UnaryOp(Negate, expr) -&gt;
+            let val = compileExpr builder block location expr env
+            let negOp = builder.CreateArithNegate(val, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, negOp)
+            builder.GetResult(negOp, 0)
+
+        | Comparison(compareOp, lhs, rhs) -&gt;
+            let lhsVal = compileExpr builder block location lhs env
+            let rhsVal = compileExpr builder block location rhs env
+            let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+            let cmpVal = builder.GetResult(cmpOp, 0)
+            let i32Type = builder.I32Type()
+            let extOp = builder.CreateArithExtUI(cmpVal, i32Type, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, extOp)
+            builder.GetResult(extOp, 0)
+
+    /// 프로그램을 MLIR module로 컴파일
+    let translateToMlir (program: Program) : Module =
+        let ctx = new Context()
+        ctx.LoadDialect("arith")
+        ctx.LoadDialect("func")
+
+        let loc = Location.Unknown(ctx)
+        let mlirMod = new Module(ctx, loc)
+
+        let builder = OpBuilder(ctx)
+        let i32Type = builder.I32Type()
+
+        // main 함수 생성
+        let funcType = builder.FunctionType([||], [| i32Type |])
+        let funcOp = builder.CreateFunction("main", funcType, loc)
+
+        let bodyRegion = MlirNative.mlirOperationGetRegion(funcOp, 0n)
+        let entryBlock = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
+        MlirNative.mlirRegionAppendOwnedBlock(bodyRegion, entryBlock)
+
+        // 빈 환경에서 시작
+        let env = Map.empty
+
+        // 표현식 컴파일 (환경 전달)
+        let resultValue = compileExpr builder entryBlock loc program.expr env
+
+        // return operation 생성
+        let returnOp = builder.CreateReturn([| resultValue |], loc)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, returnOp)
+
+        // 함수를 module에 추가
+        MlirNative.mlirBlockAppendOwnedOperation(mlirMod.Body, funcOp)
+
+        mlirMod
+
+    /// MLIR module 검증
+    let verify (mlirMod: Module) =
+        if not (mlirMod.Verify()) then
+            eprintfn "MLIR verification failed:"
+            eprintfn "%s" (mlirMod.Print())
+            failwith "MLIR IR is invalid"
+</code></pre>
+<p><strong>주목할 점:</strong></p>
+<ul>
+<li><code>compileExpr</code>이 <code>env</code> 파라미터를 받는다</li>
+<li><code>translateToMlir</code>에서 빈 환경 (<code>Map.empty</code>)으로 시작한다</li>
+<li>모든 재귀 호출에서 <code>env</code>를 전달한다</li>
+</ul>
+<h2 id="중첩된-let-바인딩-1"><a class="header" href="#중첩된-let-바인딩-1">중첩된 Let 바인딩</a></h2>
+<p>중첩된 let 바인딩이 어떻게 컴파일되는지 보자.</p>
+<p><strong>FunLang 소스:</strong></p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+let z = x + y in
+z * 2
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("x",
+  IntLiteral 10,
+  Let("y",
+    IntLiteral 20,
+    Let("z",
+      BinaryOp(Add, Var "x", Var "y"),
+      BinaryOp(Multiply, Var "z", IntLiteral 2))))
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li>
+<p><strong>Let(“x”, IntLiteral 10, …)</strong></p>
+<ul>
+<li><code>binding</code> 컴파일: <code>%c10 = arith.constant 10 : i32</code></li>
+<li><code>env0 = {}</code></li>
+<li><code>env1 = env0.Add("x", %c10) = { x -&gt; %c10 }</code></li>
+<li><code>body</code> 컴파일 (env1 사용)</li>
+</ul>
+</li>
+<li>
+<p><strong>Let(“y”, IntLiteral 20, …)</strong> (env1에서)</p>
+<ul>
+<li><code>binding</code> 컴파일: <code>%c20 = arith.constant 20 : i32</code></li>
+<li><code>env2 = env1.Add("y", %c20) = { x -&gt; %c10, y -&gt; %c20 }</code></li>
+<li><code>body</code> 컴파일 (env2 사용)</li>
+</ul>
+</li>
+<li>
+<p><strong>Let(“z”, BinaryOp(Add, Var “x”, Var “y”), …)</strong> (env2에서)</p>
+<ul>
+<li><code>binding</code> 컴파일:
+<ul>
+<li><code>Var "x"</code>: env2에서 조회 → %c10</li>
+<li><code>Var "y"</code>: env2에서 조회 → %c20</li>
+<li><code>%z = arith.addi %c10, %c20 : i32</code></li>
+</ul>
+</li>
+<li><code>env3 = env2.Add("z", %z) = { x -&gt; %c10, y -&gt; %c20, z -&gt; %z }</code></li>
+<li><code>body</code> 컴파일 (env3 사용)</li>
+</ul>
+</li>
+<li>
+<p><strong>BinaryOp(Multiply, Var “z”, IntLiteral 2)</strong> (env3에서)</p>
+<ul>
+<li><code>Var "z"</code>: env3에서 조회 → %z</li>
+<li><code>IntLiteral 2</code>: <code>%c2 = arith.constant 2 : i32</code></li>
+<li><code>%result = arith.muli %z, %c2 : i32</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c10 = arith.constant 10 : i32      // let x = 10
+    %c20 = arith.constant 20 : i32      // let y = 20
+    %z = arith.addi %c10, %c20 : i32    // let z = x + y
+    %c2 = arith.constant 2 : i32
+    %result = arith.muli %z, %c2 : i32  // z * 2
+    func.return %result : i32
+  }
+}
+</code></pre>
+<p><strong>분석:</strong></p>
+<ul>
+<li>각 let 바인딩이 SSA value를 생성한다</li>
+<li>변수 참조는 기존 SSA value를 재사용한다</li>
+<li>명시적인 저장/로드 연산이 없다 (모든 것이 레지스터에 있다)</li>
+<li>SSA value가 자유롭게 흐른다 (%c10과 %c20이 %z에서 사용됨)</li>
+</ul>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+60
+</code></pre>
+<p>예상대로 60을 반환한다!</p>
+<h2 id="변수-섀도잉"><a class="header" href="#변수-섀도잉">변수 섀도잉</a></h2>
+<p>섀도잉이 어떻게 작동하는지 보자.</p>
+<p><strong>FunLang 소스:</strong></p>
+<pre><code class="language-fsharp">let x = 5 in
+let x = x + 1 in
+x
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("x",
+  IntLiteral 5,
+  Let("x",
+    BinaryOp(Add, Var "x", IntLiteral 1),
+    Var "x"))
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li>
+<p><strong>첫 번째 Let(“x”, IntLiteral 5, …)</strong></p>
+<ul>
+<li><code>binding</code>: <code>%x = arith.constant 5 : i32</code></li>
+<li><code>env1 = { x -&gt; %x }</code></li>
+</ul>
+</li>
+<li>
+<p><strong>두 번째 Let(“x”, BinaryOp(Add, Var “x”, IntLiteral 1), …)</strong> (env1에서)</p>
+<ul>
+<li><code>binding</code>:
+<ul>
+<li><code>Var "x"</code>: env1에서 조회 → %x (값 5)</li>
+<li><code>IntLiteral 1</code>: <code>%c1 = arith.constant 1 : i32</code></li>
+<li><code>%x_0 = arith.addi %x, %c1 : i32</code></li>
+</ul>
+</li>
+<li><code>env2 = env1.Add("x", %x_0) = { x -&gt; %x_0 }</code>  ← 섀도잉!</li>
+</ul>
+</li>
+<li>
+<p><strong>Var “x”</strong> (env2에서)</p>
+<ul>
+<li>env2에서 조회 → %x_0 (값 6)</li>
+</ul>
+</li>
+</ol>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %x = arith.constant 5 : i32        // 외부 x
+    %c1 = arith.constant 1 : i32
+    %x_0 = arith.addi %x, %c1 : i32    // 내부 x = 외부 x + 1
+    func.return %x_0 : i32              // 내부 x 반환
+  }
+}
+</code></pre>
+<p><strong>핵심 통찰력:</strong></p>
+<ul>
+<li>MLIR은 자동으로 고유한 이름을 생성한다 (<code>%x</code>, <code>%x_0</code>)</li>
+<li>두 번째 <code>Let("x", ...)</code>에서 <code>binding</code> 표현식은 <strong>외부 x</strong>를 참조한다 (env1에서 컴파일)</li>
+<li>body 표현식은 <strong>내부 x</strong>를 참조한다 (env2에서 컴파일)</li>
+<li>섀도잉은 새로운 SSA value를 생성하지, 기존 value를 변경하지 않는다</li>
+</ul>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+6
+</code></pre>
+<p>예상대로 6을 반환한다!</p>
+<h2 id="완전한-예시와-드라이버"><a class="header" href="#완전한-예시와-드라이버">완전한 예시와 드라이버</a></h2>
+<p>이제 완전한 컴파일러 드라이버를 작성하자.</p>
+<p><strong>Main.fs 예시:</strong></p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+open System
+
+module Main =
+
+    [&lt;EntryPoint&gt;]
+    let main args =
+        printfn "=== FunLang Compiler with Let Bindings ==="
+
+        // 예시: let x = 10 in let y = 20 in x + y
+        let ast =
+            Let("x",
+              IntLiteral 10,
+              Let("y",
+                IntLiteral 20,
+                BinaryOp(Add, Var "x", Var "y")))
+
+        let program = { expr = ast }
+
+        printfn "AST: %A" ast
+        printfn ""
+
+        // MLIR로 컴파일
+        printfn "Compiling to MLIR..."
+        let mlirMod = CodeGen.translateToMlir program
+        printfn "%s" (mlirMod.Print())
+
+        // 검증
+        printfn "Verifying..."
+        CodeGen.verify mlirMod
+        printfn "✓ Verification passed"
+
+        // Lowering과 네이티브 코드 생성 (Chapter 05와 동일)
+        Lowering.lowerToLLVMDialect mlirMod
+        let llvmIR = Lowering.translateToLLVMIR mlirMod
+        NativeCodeGen.emitObjectFile llvmIR "program.o"
+        NativeCodeGen.linkExecutable "program.o" "program"
+
+        mlirMod.Dispose()
+
+        printfn ""
+        printfn "=== Compilation successful ==="
+        printfn "Run: ./program"
+        printfn "Expected output (exit code): 30"
+
+        0
+</code></pre>
+<p><strong>컴파일과 실행:</strong></p>
+<pre><code class="language-bash">$ dotnet run
+=== FunLang Compiler with Let Bindings ===
+AST: Let ("x", IntLiteral 10, Let ("y", IntLiteral 20, BinaryOp (Add, Var "x", Var "y")))
+
+Compiling to MLIR...
+module {
+  func.func @main() -&gt; i32 {
+    %c10 = arith.constant 10 : i32
+    %c20 = arith.constant 20 : i32
+    %0 = arith.addi %c10, %c20 : i32
+    func.return %0 : i32
+  }
+}
+Verifying...
+✓ Verification passed
+[... lowering과 linking ...]
+
+=== Compilation successful ===
+Run: ./program
+Expected output (exit code): 30
+
+$ ./program
+$ echo $?
+30
+</code></pre>
+<p>완벽하다!</p>
+<h2 id="공통-에러"><a class="header" href="#공통-에러">공통 에러</a></h2>
+<h3 id="에러-1-바인딩되지-않은-변수-참조"><a class="header" href="#에러-1-바인딩되지-않은-변수-참조">에러 1: 바인딩되지 않은 변수 참조</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Exception: Unbound variable: y
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>변수가 스코프에 없는데 참조하려고 했다.</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// WRONG: y가 바인딩되지 않음
+let x = 10 in
+y + x
+</code></pre>
+<p><strong>해결:</strong></p>
+<p>변수를 사용하기 전에 let 바인딩으로 정의한다:</p>
+<pre><code class="language-fsharp">// CORRECT
+let x = 10 in
+let y = 20 in
+y + x
+</code></pre>
+<h3 id="에러-2-스코프-밖에서-변수-사용"><a class="header" href="#에러-2-스코프-밖에서-변수-사용">에러 2: 스코프 밖에서 변수 사용</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Exception: Unbound variable: x
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>변수가 스코프 밖에서 사용되었다.</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// WRONG: 두 번째 x는 스코프 밖
+(let x = 10 in x + x) + x
+//                      ^ x는 여기서 바인딩되지 않음
+</code></pre>
+<p>let 바인딩의 스코프는 <code>body</code> 표현식까지만이다. 밖에서는 보이지 않는다.</p>
+<p><strong>해결:</strong></p>
+<p>필요한 스코프 전체를 감싸거나, 바인딩을 외부로 이동한다:</p>
+<pre><code class="language-fsharp">// CORRECT: x를 외부에서 바인딩
+let x = 10 in
+(x + x) + x
+</code></pre>
+<h3 id="에러-3-환경을-재귀-호출에-전달하지-않음"><a class="header" href="#에러-3-환경을-재귀-호출에-전달하지-않음">에러 3: 환경을 재귀 호출에 전달하지 않음</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Compilation error: 'env' is not defined
+</code></pre>
+<p><strong>원인:</strong></p>
+<p><code>compileExpr</code> 재귀 호출에서 <code>env</code> 파라미터를 빠뜨렸다.</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// WRONG: env 파라미터 누락
+| BinaryOp(op, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs  // env 없음!
+    ...
+</code></pre>
+<p><strong>해결:</strong></p>
+<p>모든 <code>compileExpr</code> 호출에 <code>env</code>를 전달한다:</p>
+<pre><code class="language-fsharp">// CORRECT
+| BinaryOp(op, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    ...
+</code></pre>
+<p><strong>패턴:</strong> 각 케이스를 추가할 때마다 재귀 호출에 <code>env</code>를 전달하는지 확인한다.</p>
+<h3 id="에러-4-let-바인딩에서-환경-확장-잊음"><a class="header" href="#에러-4-let-바인딩에서-환경-확장-잊음">에러 4: Let 바인딩에서 환경 확장 잊음</a></h3>
+<p><strong>증상:</strong></p>
+<p>변수가 body에서 보이지 않는다.</p>
+<p><strong>원인:</strong></p>
+<p><code>Let</code> 케이스에서 <code>env.Add</code>를 호출했지만 확장된 환경을 body에 전달하지 않았다.</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// WRONG: 확장된 환경을 사용하지 않음
+| Let(name, binding, body) -&gt;
+    let bindVal = compileExpr builder block location binding env
+    let env' = env.Add(name, bindVal)
+    compileExpr builder block location body env  // env' 대신 env 사용!
+</code></pre>
+<p><strong>해결:</strong></p>
+<p>확장된 환경 <code>env'</code>를 body에 전달한다:</p>
+<pre><code class="language-fsharp">// CORRECT
+| Let(name, binding, body) -&gt;
+    let bindVal = compileExpr builder block location binding env
+    let env' = env.Add(name, bindVal)
+    compileExpr builder block location body env'  // env' 사용!
+</code></pre>
+<h3 id="에러-5-섀도잉을-뮤테이션으로-착각"><a class="header" href="#에러-5-섀도잉을-뮤테이션으로-착각">에러 5: 섀도잉을 뮤테이션으로 착각</a></h3>
+<p><strong>개념 오류:</strong></p>
+<pre><code class="language-fsharp">// 이것은 뮤테이션이 아니다!
+let x = 5 in
+let x = 10 in
+x
+</code></pre>
+<p><strong>설명:</strong></p>
+<p>이것은 변수 “x“를 덮어쓰는 것이 아니다. 새로운 바인딩을 만드는 것이다:</p>
+<ul>
+<li>외부 <code>x</code>는 값 5를 가진 SSA value <code>%x</code></li>
+<li>내부 <code>x</code>는 값 10을 가진 SSA value <code>%x_0</code></li>
+<li>두 value 모두 존재한다 (외부 x는 변경되지 않음)</li>
+</ul>
+<p><strong>MLIR IR 확인:</strong></p>
+<pre><code class="language-mlir">%x = arith.constant 5 : i32    // 외부 x (여전히 존재)
+%x_0 = arith.constant 10 : i32  // 내부 x (새로운 value)
+func.return %x_0 : i32
+</code></pre>
+<h2 id="장-요약-1"><a class="header" href="#장-요약-1">장 요약</a></h2>
+<p>이 장에서 다음을 성취했다:</p>
+<ol>
+<li><strong>SSA 형태 이해</strong>: 각 value는 한 번만 정의되며, 이것이 컴파일러 최적화를 단순화한다</li>
+<li><strong>Let 바인딩 추가</strong>: 함수형 언어의 불변 바인딩이 SSA와 자연스럽게 일치한다</li>
+<li><strong>환경 구현</strong>: <code>Map&lt;string, MlirValue&gt;</code>로 변수 스코프 관리</li>
+<li><strong>환경 전달 패턴</strong>: 재귀 함수에 환경을 전달하여 중첩 스코프 구현</li>
+<li><strong>섀도잉 vs 뮤테이션</strong>: 섀도잉은 새로운 SSA value를 생성하지, 기존 value를 변경하지 않는다</li>
+<li><strong>완전한 예제</strong>: 중첩된 let 바인딩이 올바른 MLIR IR로 컴파일된다</li>
+</ol>
+<p><strong>독자가 할 수 있는 것:</strong></p>
+<ul>
+<li><code>let x = 5 in x + x</code> 컴파일 → 네이티브 바이너리 → 결과: 10 ✓</li>
+<li><code>let x = 10 in let y = 20 in x + y</code> 컴파일 → 결과: 30 ✓</li>
+<li>섀도잉 이해: <code>let x = 5 in let x = 10 in x</code> → 결과: 10 ✓</li>
+<li>환경 전달로 스코프 관리 ✓</li>
+<li>스코프 에러 디버깅 (바인딩되지 않은 변수) ✓</li>
+</ul>
+<p><strong>핵심 개념:</strong></p>
+<ul>
+<li><strong>SSA 형태</strong>: 각 value는 한 번만 정의된다</li>
+<li><strong>Let 바인딩 = SSA value</strong>: 불변 바인딩이 SSA를 자연스럽게 표현한다</li>
+<li><strong>환경 = 변수 스코프</strong>: Map으로 변수 이름을 SSA value에 매핑한다</li>
+<li><strong>환경 전달 = 스코프 중첩</strong>: 재귀 호출로 스코프를 확장한다</li>
+<li><strong>섀도잉 ≠ 뮤테이션</strong>: 새로운 value 생성, 기존 value 변경 아님</li>
+</ul>
+<p><strong>다음 장 미리보기:</strong></p>
+<p>Chapter 08에서는 **제어 흐름 (if/else)**을 추가한다:</p>
+<pre><code class="language-fsharp">let x = if 5 &lt; 10 then 42 else 0 in
+x + x
+</code></pre>
+<p>이것은 다음을 도입한다:</p>
+<ul>
+<li><strong>scf.if</strong> 연산: 구조화된 제어 흐름</li>
+<li><strong>Block arguments</strong>: MLIR의 PHI 노드 대안</li>
+<li><strong>scf.yield</strong>: 분기에서 값 반환</li>
+<li><strong>SSA at control flow merges</strong>: 조건부 값을 어떻게 SSA로 표현하는가</li>
+</ul>
+<p><strong>Phase 2는 계속된다!</strong></p>
+<hr>
+<p><strong>이제 독자는 let 바인딩과 변수를 컴파일하고, SSA 형태를 이해한다!</strong></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="chapter-08-제어-흐름과-block-arguments"><a class="header" href="#chapter-08-제어-흐름과-block-arguments">Chapter 08: 제어 흐름과 Block Arguments</a></h1>
+<h2 id="소개-8"><a class="header" href="#소개-8">소개</a></h2>
+<p>프로그래밍에서 조건부 실행은 필수다. 조건에 따라 다른 코드 경로를 실행하는 능력은 모든 실용적인 프로그램의 핵심이다.</p>
+<p>함수형 언어에서 **if/then/else는 표현식(expression)**이다. 명령형 언어의 문(statement)이 아니라, 값을 생성하는 표현식이다:</p>
+<pre><code class="language-fsharp">// 함수형 스타일 - if는 값을 반환한다
+let result = if condition then 42 else 0
+
+// 명령형 스타일과 대비
+int result;
+if (condition) {
+    result = 42;
+} else {
+    result = 0;
+}
+</code></pre>
+<p>함수형 스타일에서 if 표현식은 <strong>값을 생성</strong>한다. 두 분기(then/else) 중 하나가 실행되고, 그 결과가 if 표현식의 값이 된다.</p>
+<p><strong>컴파일 도전과제:</strong> SSA 형태에서 두 분기가 어떻게 하나의 값으로 합쳐지는가?</p>
+<pre><code class="language-fsharp">let x = if condition then 10 else 20 in
+x + x
+</code></pre>
+<p>조건이 true면 <code>x = 10</code>, false면 <code>x = 20</code>이다. 하지만 SSA 형태에서 <code>x</code>는 단일 SSA value여야 한다. 두 분기의 값을 어떻게 합칠까?</p>
+<p><strong>MLIR의 우아한 해답:</strong> <strong>Block Arguments</strong></p>
+<p>전통적인 SSA는 PHI 노드를 사용하지만, MLIR은 더 깔끔한 방식을 제공한다. 이 장에서 MLIR의 block arguments와 <code>scf.if</code> 연산을 배운다.</p>
+<p>이 장을 마치면:</p>
+<ul>
+<li>if/then/else 표현식을 네이티브 바이너리로 컴파일할 수 있다</li>
+<li>Block arguments와 PHI 노드의 차이를 이해한다</li>
+<li>MLIR의 <code>scf.if</code> 연산과 <code>scf.yield</code> 종결자를 사용할 수 있다</li>
+<li>제어 흐름 합류 지점에서 SSA 값이 어떻게 병합되는지 안다</li>
+</ul>
+<blockquote>
+<p><strong>중요:</strong> Block arguments는 MLIR의 핵심 혁신이다. PHI 노드의 복잡성을 제거하고 SSA 형태를 더 명확하게 만든다.</p>
+</blockquote>
+<h2 id="phi-노드-문제"><a class="header" href="#phi-노드-문제">PHI 노드 문제</a></h2>
+<h3 id="전통적인-ssa-phi-노드"><a class="header" href="#전통적인-ssa-phi-노드">전통적인 SSA: PHI 노드</a></h3>
+<p>LLVM IR과 전통적인 SSA 형태는 <strong>PHI 노드</strong>를 사용하여 제어 흐름 합류 지점에서 값을 병합한다.</p>
+<p><strong>LLVM IR 예시:</strong></p>
+<pre><code class="language-llvm">define i32 @example(i1 %cond) {
+entry:
+  br i1 %cond, label %then, label %else
+
+then:
+  %a = add i32 10, 1
+  br label %merge
+
+else:
+  %b = add i32 20, 1
+  br label %merge
+
+merge:
+  %result = phi i32 [ %a, %then ], [ %b, %else ]
+  ret i32 %result
+}
+</code></pre>
+<p><strong>동작 설명:</strong></p>
+<ol>
+<li><code>entry</code> 블록에서 조건 분기 (<code>br i1 %cond</code>)</li>
+<li><code>then</code> 블록: <code>%a = 11</code> 계산 후 <code>merge</code>로 이동</li>
+<li><code>else</code> 블록: <code>%b = 21</code> 계산 후 <code>merge</code>로 이동</li>
+<li><code>merge</code> 블록: <strong>PHI 노드</strong>가 선택
+<ul>
+<li><code>%then</code> 블록에서 왔으면 <code>%a</code> 사용</li>
+<li><code>%else</code> 블록에서 왔으면 <code>%b</code> 사용</li>
+</ul>
+</li>
+</ol>
+<p>PHI 노드는 “어느 블록에서 왔는가“에 따라 값을 선택한다. 표기법: <code>phi type [ value1, pred1 ], [ value2, pred2 ]</code></p>
+<h3 id="phi-노드의-문제점"><a class="header" href="#phi-노드의-문제점">PHI 노드의 문제점</a></h3>
+<h4 id="1-블록-시작-위치-제약"><a class="header" href="#1-블록-시작-위치-제약">1. 블록 시작 위치 제약</a></h4>
+<p>PHI 노드는 <strong>반드시 블록의 시작</strong>에 있어야 한다:</p>
+<pre><code class="language-llvm">merge:
+  %result = phi i32 [ %a, %then ], [ %b, %else ]  ; PHI는 여기!
+  %x = add i32 %result, 1                          ; 일반 연산은 PHI 뒤
+  ; PHI를 여기에 추가할 수 없다 - 순서 규칙 위반
+</code></pre>
+<p>이 제약은 코드 생성을 복잡하게 만든다. PHI 노드를 먼저 모으고, 일반 연산을 뒤에 배치해야 한다.</p>
+<h4 id="2-lost-copy-problem"><a class="header" href="#2-lost-copy-problem">2. Lost Copy Problem</a></h4>
+<p>PHI 노드의 의미는 “블록 진입 시” 값을 선택하는 것이다. 하지만 실제 구현에서는 <strong>선행 블록의 끝</strong>에서 값을 복사한다:</p>
+<pre><code class="language-llvm">then:
+  %a = add i32 10, 1
+  ; 실제로는 여기서 %a를 %result로 복사
+  br label %merge
+
+merge:
+  %result = phi i32 [ %a, %then ], [ %b, %else ]
+  ; %result는 이미 복사된 값을 가진다
+</code></pre>
+<p>이것이 <strong>lost copy problem</strong>이다:</p>
+<ul>
+<li>PHI 노드는 “merge 블록 진입 시” 선택하는 것처럼 보인다</li>
+<li>실제 구현은 “선행 블록 종료 시” 복사한다</li>
+<li>의미론과 구현의 불일치</li>
+</ul>
+<h4 id="3-dominance-frontier-계산"><a class="header" href="#3-dominance-frontier-계산">3. Dominance Frontier 계산</a></h4>
+<p>PHI 노드를 올바르게 배치하려면 <strong>dominance frontier</strong> 알고리즘이 필요하다:</p>
+<pre><code>// 어디에 PHI 노드를 삽입해야 할까?
+// 복잡한 제어 흐름에서는 자명하지 않다
+if (cond1) {
+  x = 10;
+} else if (cond2) {
+  x = 20;
+} else {
+  x = 30;
+}
+// 여기서 x에 PHI 노드가 필요하다
+// 하지만 몇 개의 선행 블록이 있는가?
+</code></pre>
+<p>Dominance frontier는 “변수가 재정의되는 모든 블록의 지배 경계“를 계산한다. 알고리즘이 복잡하고 구현이 어렵다.</p>
+<h4 id="4-가독성-문제"><a class="header" href="#4-가독성-문제">4. 가독성 문제</a></h4>
+<p>PHI 노드는 직관적이지 않다:</p>
+<pre><code class="language-llvm">%result = phi i32 [ %a, %then ], [ %b, %else ]
+; 이것이 무엇을 의미하는가?
+; "then에서 왔으면 %a, else에서 왔으면 %b"
+; 함수 호출처럼 보이지만 실제로는 특별한 의미를 가진다
+</code></pre>
+<p>초보자가 PHI 노드를 이해하기 어렵다. 특별한 규칙(블록 시작, 순서 지정, edge 의미론)을 배워야 한다.</p>
+<h3 id="phi-노드-요약"><a class="header" href="#phi-노드-요약">PHI 노드 요약</a></h3>
+<p><strong>PHI 노드의 특징:</strong></p>
+<ul>
+<li>제어 흐름 합류 지점에서 값을 병합한다</li>
+<li>블록 시작에 위치해야 한다 (특별한 위치 규칙)</li>
+<li>Lost copy problem - 의미론과 구현의 불일치</li>
+<li>Dominance frontier 계산 필요</li>
+<li>가독성이 낮다</li>
+</ul>
+<p><strong>MLIR의 해답:</strong> Block Arguments - PHI 노드를 대체하는 더 깔끔한 방식</p>
+<h2 id="block-arguments-in-mlir"><a class="header" href="#block-arguments-in-mlir">Block Arguments in MLIR</a></h2>
+<p>MLIR은 PHI 노드 대신 <strong>block arguments</strong>를 사용한다.</p>
+<h3 id="block-arguments-개념"><a class="header" href="#block-arguments-개념">Block Arguments 개념</a></h3>
+<p><strong>핵심 아이디어:</strong> 기본 블록(basic block)도 함수처럼 파라미터를 받을 수 있다.</p>
+<p>함수는 인자를 받는다:</p>
+<pre><code class="language-fsharp">let add(x: int, y: int) = x + y
+</code></pre>
+<p><strong>MLIR에서는 블록도 인자를 받는다:</strong></p>
+<pre><code class="language-mlir">^myblock(%arg0: i32, %arg1: i32):
+  %sum = arith.addi %arg0, %arg1 : i32
+  ...
+</code></pre>
+<p><code>^myblock</code>은 두 개의 i32 인자를 받는다. 블록으로 분기할 때 값을 전달한다:</p>
+<pre><code class="language-mlir">cf.br ^myblock(%value1, %value2 : i32, i32)
+</code></pre>
+<p>이것은 함수 호출과 유사하다: <code>myblock(value1, value2)</code></p>
+<h3 id="block-arguments-vs-phi-nodes"><a class="header" href="#block-arguments-vs-phi-nodes">Block Arguments vs PHI Nodes</a></h3>
+<p>같은 예시를 block arguments로 작성하면:</p>
+<p><strong>MLIR with Block Arguments:</strong></p>
+<pre><code class="language-mlir">func.func @example(%cond: i1) -&gt; i32 {
+  cf.cond_br %cond, ^then, ^else
+
+^then:
+  %a = arith.constant 11 : i32
+  cf.br ^merge(%a : i32)
+
+^else:
+  %b = arith.constant 21 : i32
+  cf.br ^merge(%b : i32)
+
+^merge(%result: i32):
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>차이점 분석:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>측면</th><th>PHI 노드 (LLVM)</th><th>Block Arguments (MLIR)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>값 전달</strong></td><td><code>phi i32 [ %a, %then ], [ %b, %else ]</code></td><td><code>cf.br ^merge(%a : i32)</code></td></tr>
+<tr><td><strong>의미론</strong></td><td>“어느 블록에서 왔는가”</td><td>“블록 호출 시 인자 전달”</td></tr>
+<tr><td><strong>위치 제약</strong></td><td>블록 시작에만 가능</td><td>블록 인자로 선언 (일반 파라미터)</td></tr>
+<tr><td><strong>가독성</strong></td><td>특별한 문법, edge 리스트</td><td>함수 호출과 유사</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>핵심 통찰력:</strong></p>
+<ul>
+<li><strong>PHI 노드:</strong> “merge 블록이 선행 블록을 검사하여 값을 선택”</li>
+<li><strong>Block Arguments:</strong> “선행 블록이 merge 블록에 값을 전달” (함수 호출처럼)</li>
+</ul>
+<p>Block arguments는 제어의 역전(inversion of control)이다:</p>
+<ul>
+<li>PHI: pull 방식 (merge 블록이 값을 가져온다)</li>
+<li>Block Arguments: push 방식 (선행 블록이 값을 전달한다)</li>
+</ul>
+<h3 id="block-arguments의-장점"><a class="header" href="#block-arguments의-장점">Block Arguments의 장점</a></h3>
+<h4 id="1-통일된-의미론"><a class="header" href="#1-통일된-의미론">1. 통일된 의미론</a></h4>
+<p>함수 인자와 블록 인자가 같은 개념이다:</p>
+<pre><code class="language-mlir">// 함수 인자
+func.func @foo(%arg: i32) -&gt; i32 {
+  ...
+}
+
+// 블록 인자 (동일한 문법!)
+^myblock(%arg: i32):
+  ...
+</code></pre>
+<p>배울 것이 하나다. 함수를 이해하면 블록도 이해한다.</p>
+<h4 id="2-lost-copy-problem-해결"><a class="header" href="#2-lost-copy-problem-해결">2. Lost Copy Problem 해결</a></h4>
+<p>Block arguments는 의미론과 구현이 일치한다:</p>
+<pre><code class="language-mlir">^then:
+  %a = arith.constant 11 : i32
+  cf.br ^merge(%a : i32)  ; 명시적으로 %a 전달
+</code></pre>
+<p>“분기할 때 값을 전달한다“는 의미가 명확하다. Lost copy problem이 없다.</p>
+<h4 id="3-위치-제약-없음"><a class="header" href="#3-위치-제약-없음">3. 위치 제약 없음</a></h4>
+<p>Block arguments는 블록 파라미터다. 블록 내 어디서든 일반 value처럼 사용할 수 있다:</p>
+<pre><code class="language-mlir">^merge(%result: i32):
+  %x = arith.constant 1 : i32
+  %y = arith.addi %result, %x : i32  ; %result 사용
+  func.return %y : i32
+</code></pre>
+<p>특별한 위치 규칙이 없다. 블록 파라미터는 블록 내 모든 곳에서 유효하다.</p>
+<h4 id="4-가독성"><a class="header" href="#4-가독성">4. 가독성</a></h4>
+<p>코드가 더 명확하다:</p>
+<pre><code class="language-mlir">cf.br ^merge(%a : i32)  ; "merge 블록을 %a와 함께 호출"
+^merge(%result: i32):   ; "merge 블록은 %result 파라미터를 받는다"
+</code></pre>
+<p>함수 호출 비유가 자연스럽다. 초보자가 쉽게 이해한다.</p>
+<h3 id="block-arguments-예시"><a class="header" href="#block-arguments-예시">Block Arguments 예시</a></h3>
+<p><strong>복잡한 제어 흐름:</strong></p>
+<pre><code class="language-mlir">func.func @complex(%x: i32) -&gt; i32 {
+  %c0 = arith.constant 0 : i32
+  %c10 = arith.constant 10 : i32
+
+  %cond1 = arith.cmpi slt, %x, %c0 : i32
+  cf.cond_br %cond1, ^negative, ^nonnegative
+
+^negative:
+  %neg = arith.constant -1 : i32
+  cf.br ^merge(%neg : i32)
+
+^nonnegative:
+  %cond2 = arith.cmpi sgt, %x, %c10 : i32
+  cf.cond_br %cond2, ^large, ^small
+
+^large:
+  %l = arith.constant 1 : i32
+  cf.br ^merge(%l : i32)
+
+^small:
+  cf.br ^merge(%c0 : i32)
+
+^merge(%result: i32):
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>동작:</strong></p>
+<ul>
+<li><code>x &lt; 0</code>: ^negative → ^merge(-1)</li>
+<li><code>x &gt; 10</code>: ^nonnegative → ^large → ^merge(1)</li>
+<li><code>0 ≤ x ≤ 10</code>: ^nonnegative → ^small → ^merge(0)</li>
+</ul>
+<p><code>^merge</code> 블록은 세 곳에서 호출된다. 각 선행 블록이 값을 전달한다. Block argument <code>%result</code>가 전달된 값을 받는다.</p>
+<p><strong>PHI 노드로 작성했다면:</strong></p>
+<pre><code class="language-llvm">merge:
+  %result = phi i32 [ %neg, %negative ], [ %l, %large ], [ %c0, %small ]
+</code></pre>
+<p>어느 쪽이 더 명확한가? Block arguments가 push 방식으로 값을 전달하므로 추적하기 쉽다.</p>
+<h3 id="block-arguments-요약"><a class="header" href="#block-arguments-요약">Block Arguments 요약</a></h3>
+<p><strong>Block Arguments:</strong></p>
+<ul>
+<li>기본 블록이 함수처럼 파라미터를 받는다</li>
+<li>분기 시 값을 전달: <code>cf.br ^block(%value : type)</code></li>
+<li>블록 선언에서 파라미터 정의: <code>^block(%arg: type):</code></li>
+</ul>
+<p><strong>장점:</strong></p>
+<ul>
+<li>함수 인자와 통일된 의미론</li>
+<li>Lost copy problem 해결</li>
+<li>위치 제약 없음</li>
+<li>가독성 향상</li>
+</ul>
+<p><strong>PHI 노드 대비:</strong></p>
+<ul>
+<li>PHI는 pull (merge가 선택), Block Arguments는 push (선행이 전달)</li>
+<li>PHI는 특별한 규칙, Block Arguments는 일반 파라미터</li>
+</ul>
+<blockquote>
+<p><strong>다음 섹션:</strong> MLIR의 고수준 제어 흐름인 <code>scf.if</code> 연산을 배운다!</p>
+</blockquote>
+<h2 id="scfif-고수준-제어-흐름"><a class="header" href="#scfif-고수준-제어-흐름">scf.if: 고수준 제어 흐름</a></h2>
+<p>Block arguments를 직접 사용하는 것은 저수준(low-level) 방식이다. MLIR은 **구조화된 제어 흐름(Structured Control Flow)**을 위한 <code>scf</code> dialect를 제공한다.</p>
+<h3 id="scf-dialect-소개"><a class="header" href="#scf-dialect-소개">scf Dialect 소개</a></h3>
+<p><strong>scf (Structured Control Flow) dialect:</strong></p>
+<ul>
+<li>고수준 제어 흐름 연산 제공</li>
+<li><code>scf.if</code>, <code>scf.for</code>, <code>scf.while</code> 등</li>
+<li>구조화된 방식으로 제어 흐름 표현</li>
+<li>나중에 저수준 <code>cf</code> dialect로 lowering된다</li>
+</ul>
+<p><strong>Progressive Lowering 철학:</strong></p>
+<pre><code>scf.if (high-level)
+  ↓ lowering pass
+cf.cond_br (low-level branches)
+  ↓ lowering pass
+llvm.cond_br (LLVM IR)
+</code></pre>
+<p>사용자는 고수준 <code>scf.if</code>를 사용한다. 컴파일러가 자동으로 저수준 분기로 변환한다.</p>
+<h3 id="scfif-문법"><a class="header" href="#scfif-문법">scf.if 문법</a></h3>
+<p><strong>기본 형태:</strong></p>
+<pre><code class="language-mlir">%result = scf.if %condition -&gt; (result_type) {
+  // then region
+  scf.yield %then_value : result_type
+} else {
+  // else region
+  scf.yield %else_value : result_type
+}
+</code></pre>
+<p><strong>구성 요소:</strong></p>
+<ol>
+<li><strong>%condition</strong>: i1 타입의 boolean 값</li>
+<li><strong>-&gt; (result_type)</strong>: 반환할 타입 선언</li>
+<li><strong>then region</strong>: 조건이 true일 때 실행</li>
+<li><strong>else region</strong>: 조건이 false일 때 실행</li>
+<li><strong>scf.yield</strong>: 각 region의 종결자, 값을 반환</li>
+</ol>
+<p><strong>중요:</strong> 양쪽 region이 <strong>같은 타입</strong>을 yield해야 한다!</p>
+<h3 id="scfif-예시"><a class="header" href="#scfif-예시">scf.if 예시</a></h3>
+<p><strong>간단한 예시:</strong></p>
+<pre><code class="language-mlir">func.func @example(%cond: i1) -&gt; i32 {
+  %result = scf.if %cond -&gt; (i32) {
+    %c42 = arith.constant 42 : i32
+    scf.yield %c42 : i32
+  } else {
+    %c0 = arith.constant 0 : i32
+    scf.yield %c0 : i32
+  }
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>동작:</strong></p>
+<ul>
+<li><code>%cond</code>가 true: then region 실행 → <code>%c42</code> yield → <code>%result = 42</code></li>
+<li><code>%cond</code>가 false: else region 실행 → <code>%c0</code> yield → <code>%result = 0</code></li>
+</ul>
+<p><strong>핵심:</strong> <code>scf.if</code>는 <strong>표현식</strong>이다. 값을 반환한다 (<code>%result</code>). if/then/else의 함수형 의미론!</p>
+<h3 id="scfyield-종결자"><a class="header" href="#scfyield-종결자">scf.yield 종결자</a></h3>
+<p><strong>scf.yield의 역할:</strong></p>
+<pre><code class="language-mlir">scf.yield %value : type
+</code></pre>
+<ul>
+<li>Region의 **종결자(terminator)**다</li>
+<li>Region을 종료하고 값을 반환한다</li>
+<li>함수의 <code>return</code>과 유사하지만, region에서 사용한다</li>
+</ul>
+<p><strong>중요 규칙:</strong></p>
+<ol>
+<li>
+<p><strong>모든 region은 종결자가 필요하다</strong></p>
+<pre><code class="language-mlir">scf.if %cond -&gt; (i32) {
+  %c42 = arith.constant 42 : i32
+  // 에러! scf.yield 누락
+}
+</code></pre>
+</li>
+<li>
+<p><strong>yield 타입이 일치해야 한다</strong></p>
+<pre><code class="language-mlir">// 에러! then은 i32, else는 i1
+scf.if %cond -&gt; (i32) {
+  %c42 = arith.constant 42 : i32
+  scf.yield %c42 : i32
+} else {
+  %true = arith.constant 1 : i1
+  scf.yield %true : i1  // 타입 불일치!
+}
+</code></pre>
+</li>
+<li>
+<p><strong>선언된 결과 타입과 일치해야 한다</strong></p>
+<pre><code class="language-mlir">// 에러! -&gt; (i32) 선언했지만 i64 yield
+%result = scf.if %cond -&gt; (i32) {
+  %c42 = arith.constant 42 : i64
+  scf.yield %c42 : i64  // 타입 불일치!
+}
+</code></pre>
+</li>
+</ol>
+<h3 id="scfif의-장점"><a class="header" href="#scfif의-장점">scf.if의 장점</a></h3>
+<h4 id="1-타입-안전성"><a class="header" href="#1-타입-안전성">1. 타입 안전성</a></h4>
+<p>결과 타입을 미리 선언한다 (<code>-&gt; (i32)</code>). 컴파일러가 양쪽 region을 검증한다.</p>
+<pre><code class="language-mlir">%result = scf.if %cond -&gt; (i32) {
+  scf.yield %then_val : i32
+} else {
+  scf.yield %else_val : i32
+}
+// 컴파일러: "양쪽 모두 i32를 yield하는가?" ✓
+</code></pre>
+<h4 id="2-구조화된-형태"><a class="header" href="#2-구조화된-형태">2. 구조화된 형태</a></h4>
+<p><code>scf.if</code>는 블록 구조가 명확하다:</p>
+<ul>
+<li>then region</li>
+<li>else region</li>
+<li>둘 다 명확한 시작과 끝</li>
+</ul>
+<p>저수준 분기(<code>cf.cond_br</code>)는 임의의 블록으로 점프할 수 있다 (덜 구조화됨).</p>
+<h4 id="3-변환-용이성"><a class="header" href="#3-변환-용이성">3. 변환 용이성</a></h4>
+<p>고수준 구조는 최적화와 분석이 쉽다:</p>
+<ul>
+<li>Dead branch elimination</li>
+<li>Condition hoisting</li>
+<li>Pattern matching</li>
+</ul>
+<p>저수준 분기는 제어 흐름 그래프(CFG) 분석이 필요하다.</p>
+<h3 id="scfif에서-cfcond_br로-lowering"><a class="header" href="#scfif에서-cfcond_br로-lowering">scf.if에서 cf.cond_br로 Lowering</a></h3>
+<p><code>scf.if</code>는 나중에 <code>cf.cond_br</code>와 block arguments로 변환된다.</p>
+<p><strong>High-level (scf.if):</strong></p>
+<pre><code class="language-mlir">%result = scf.if %cond -&gt; (i32) {
+  %c42 = arith.constant 42 : i32
+  scf.yield %c42 : i32
+} else {
+  %c0 = arith.constant 0 : i32
+  scf.yield %c0 : i32
+}
+func.return %result : i32
+</code></pre>
+<p><strong>Lowering 후 (cf.cond_br + block arguments):</strong></p>
+<pre><code class="language-mlir">cf.cond_br %cond, ^then, ^else
+
+^then:
+  %c42 = arith.constant 42 : i32
+  cf.br ^merge(%c42 : i32)
+
+^else:
+  %c0 = arith.constant 0 : i32
+  cf.br ^merge(%c0 : i32)
+
+^merge(%result: i32):
+  func.return %result : i32
+</code></pre>
+<p><strong>변환 과정:</strong></p>
+<ol>
+<li><code>scf.if</code>의 then region → <code>^then</code> 블록</li>
+<li><code>scf.if</code>의 else region → <code>^else</code> 블록</li>
+<li><code>scf.yield</code> → <code>cf.br ^merge(value)</code></li>
+<li><code>scf.if</code>의 결과 → <code>^merge</code> 블록의 block argument</li>
+</ol>
+<p><strong>자동 변환:</strong> <code>--convert-scf-to-cf</code> pass가 이 변환을 수행한다. 사용자는 신경 쓰지 않아도 된다!</p>
+<h3 id="multiple-results"><a class="header" href="#multiple-results">Multiple Results</a></h3>
+<p><code>scf.if</code>는 여러 값을 반환할 수 있다:</p>
+<pre><code class="language-mlir">%x, %y = scf.if %cond -&gt; (i32, i32) {
+  %a = arith.constant 10 : i32
+  %b = arith.constant 20 : i32
+  scf.yield %a, %b : i32, i32
+} else {
+  %c = arith.constant 30 : i32
+  %d = arith.constant 40 : i32
+  scf.yield %c, %d : i32, i32
+}
+// %x, %y는 (10, 20) 또는 (30, 40)
+</code></pre>
+<p><strong>Lowering 후:</strong></p>
+<pre><code class="language-mlir">^merge(%x: i32, %y: i32):
+  // %x, %y는 block arguments
+</code></pre>
+<p>Block arguments도 여러 개 가질 수 있다. <code>scf.if</code>의 유연성이 그대로 lowering된다.</p>
+<h3 id="scfif-요약"><a class="header" href="#scfif-요약">scf.if 요약</a></h3>
+<p><strong>scf.if 연산:</strong></p>
+<ul>
+<li>고수준 구조화된 제어 흐름</li>
+<li>결과 타입 선언: <code>-&gt; (type)</code></li>
+<li>양쪽 region이 같은 타입 yield</li>
+<li><code>scf.yield</code> 종결자로 값 반환</li>
+</ul>
+<p><strong>장점:</strong></p>
+<ul>
+<li>타입 안전성</li>
+<li>구조화된 형태</li>
+<li>최적화 용이성</li>
+<li>Progressive lowering: scf → cf → llvm</li>
+</ul>
+<p><strong>다음:</strong> F# P/Invoke 바인딩을 추가하여 <code>scf.if</code>와 <code>scf.yield</code>를 생성한다!</p>
+<h2 id="pinvoke-바인딩-scf-dialect"><a class="header" href="#pinvoke-바인딩-scf-dialect">P/Invoke 바인딩: SCF Dialect</a></h2>
+<p>이제 F#에서 SCF dialect 연산을 사용할 수 있도록 P/Invoke 바인딩을 추가한다.</p>
+<h3 id="mlir-c-api-for-scf"><a class="header" href="#mlir-c-api-for-scf">MLIR C API for SCF</a></h3>
+<p>MLIR C API는 <code>mlir-c/Dialect/SCF.h</code> 헤더에서 SCF dialect 지원을 제공한다.</p>
+<p><strong>주요 함수:</strong></p>
+<pre><code class="language-c">// mlir-c/Dialect/SCF.h
+
+// scf.if operation 생성
+MlirOperation mlirSCFIfCreate(
+    MlirLocation location,
+    MlirValue condition,
+    bool hasElse
+);
+
+// scf.yield operation 생성
+MlirOperation mlirSCFYieldCreate(
+    MlirLocation location,
+    intptr_t nResults,
+    MlirValue const *results
+);
+
+// scf.if의 then/else region 접근
+MlirRegion mlirSCFIfGetThenRegion(MlirOperation ifOp);
+MlirRegion mlirSCFIfGetElseRegion(MlirOperation ifOp);
+</code></pre>
+<p><strong>Note:</strong> 실제 MLIR C API에서 SCF dialect 지원은 제한적일 수 있다. 필요한 함수가 없으면 C++ shim을 작성한다 (Appendix 참조).</p>
+<h3 id="f-pinvoke-바인딩"><a class="header" href="#f-pinvoke-바인딩">F# P/Invoke 바인딩</a></h3>
+<p><strong>MlirBindings.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">namespace MlirBindings
+
+open System
+open System.Runtime.InteropServices
+
+module MlirNative =
+    // ... 기존 바인딩 ...
+
+    // ===== SCF Dialect Operations =====
+
+    /// scf.if operation 생성
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirSCFIfCreate(
+        MlirLocation location,
+        MlirValue condition,
+        bool hasElse
+    )
+
+    /// scf.yield operation 생성
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirSCFYieldCreate(
+        MlirLocation location,
+        nativeint nResults,
+        MlirValue[] results
+    )
+
+    /// scf.if의 then region 가져오기
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirSCFIfGetThenRegion(MlirOperation ifOp)
+
+    /// scf.if의 else region 가져오기
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirRegion mlirSCFIfGetElseRegion(MlirOperation ifOp)
+
+    /// operation의 결과 개수 설정 (scf.if 결과 타입용)
+    [&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern void mlirOperationSetResultTypes(
+        MlirOperation operation,
+        nativeint nTypes,
+        MlirType[] types
+    )
+</code></pre>
+<p><strong>바인딩 설명:</strong></p>
+<ol>
+<li>
+<p><strong>mlirSCFIfCreate</strong>: <code>scf.if</code> operation 생성</p>
+<ul>
+<li><code>location</code>: operation 위치</li>
+<li><code>condition</code>: i1 타입 boolean 값</li>
+<li><code>hasElse</code>: else region 포함 여부 (true면 then/else, false면 then만)</li>
+</ul>
+</li>
+<li>
+<p><strong>mlirSCFYieldCreate</strong>: <code>scf.yield</code> operation 생성</p>
+<ul>
+<li><code>nResults</code>: yield할 값 개수</li>
+<li><code>results</code>: yield할 값 배열</li>
+</ul>
+</li>
+<li>
+<p><strong>mlirSCFIfGetThenRegion/ElseRegion</strong>: region 접근</p>
+<ul>
+<li><code>scf.if</code>는 내부에 then/else region을 가진다</li>
+<li>Region에 블록을 추가하고 연산을 작성한다</li>
+</ul>
+</li>
+</ol>
+<h3 id="c-api-제약과-대안"><a class="header" href="#c-api-제약과-대안">C API 제약과 대안</a></h3>
+<p>MLIR C API의 SCF dialect 지원은 완전하지 않을 수 있다. 특히:</p>
+<ul>
+<li><code>scf.if</code> 결과 타입 설정 API가 명확하지 않을 수 있다</li>
+<li>Region builder API가 제한적일 수 있다</li>
+</ul>
+<p><strong>대안 1: Operation State Builder 사용</strong></p>
+<p>MLIR C API의 일반 operation builder를 사용:</p>
+<pre><code class="language-fsharp">let createScfIf (builder: OpBuilder) (condition: MlirValue) (resultTypes: MlirType[]) (location: MlirLocation) =
+    let opName = MlirHelpers.fromString("scf.if")
+    let state = MlirNative.mlirOperationStateGet(opName, location)
+
+    // operand 추가 (condition)
+    MlirNative.mlirOperationStateAddOperands(state, 1n, [| condition |])
+
+    // 결과 타입 추가
+    MlirNative.mlirOperationStateAddResults(state, nativeint resultTypes.Length, resultTypes)
+
+    // region 추가 (then, else)
+    MlirNative.mlirOperationStateAddOwnedRegions(state, 2n, [| thenRegion; elseRegion |])
+
+    // operation 생성
+    MlirNative.mlirOperationCreate(state)
+</code></pre>
+<p><strong>대안 2: C++ Shim 작성</strong></p>
+<p>Appendix (Chapter 01-03에서 다룬 C++ dialect wrapper 패턴)에 따라 C++ shim을 작성:</p>
+<pre><code class="language-cpp">// mlir_scf_wrapper.cpp
+extern "C" {
+
+MlirOperation mlirCreateSCFIf(
+    MlirLocation location,
+    MlirValue condition,
+    MlirType* resultTypes,
+    intptr_t numResults,
+    bool hasElse
+) {
+    // C++ MLIR API 사용
+    mlir::OpBuilder builder(...);
+    auto ifOp = builder.create&lt;mlir::scf::IfOp&gt;(
+        unwrap(location),
+        llvm::ArrayRef&lt;mlir::Type&gt;(...),
+        unwrap(condition),
+        hasElse
+    );
+    return wrap(ifOp.getOperation());
+}
+
+} // extern "C"
+</code></pre>
+<p>이 shim을 컴파일하여 F#에서 호출한다.</p>
+<p><strong>권장 방안:</strong> 먼저 C API를 시도하고, 부족하면 C++ shim을 작성한다. Chapter 01 Appendix가 이미 패턴을 확립했다.</p>
+<h3 id="opbuilder-헬퍼-메서드"><a class="header" href="#opbuilder-헬퍼-메서드">OpBuilder 헬퍼 메서드</a></h3>
+<p>고수준 래퍼를 <code>OpBuilder</code> 클래스에 추가한다:</p>
+<p><strong>MlirWrapper.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">type OpBuilder(context: Context) =
+    // ... 기존 메서드 ...
+
+    /// scf.if operation 생성
+    member this.CreateScfIf(condition: MlirValue, resultTypes: MlirType[], location: MlirLocation) : MlirOperation =
+        let ifOp = MlirNative.mlirSCFIfCreate(location, condition, true)
+
+        // 결과 타입 설정 (C API 함수 사용)
+        MlirNative.mlirOperationSetResultTypes(ifOp, nativeint resultTypes.Length, resultTypes)
+
+        ifOp
+
+    /// scf.if의 then region에 블록 추가
+    member this.GetThenBlock(ifOp: MlirOperation) : MlirBlock =
+        let thenRegion = MlirNative.mlirSCFIfGetThenRegion(ifOp)
+        let block = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
+        MlirNative.mlirRegionAppendOwnedBlock(thenRegion, block)
+        block
+
+    /// scf.if의 else region에 블록 추가
+    member this.GetElseBlock(ifOp: MlirOperation) : MlirBlock =
+        let elseRegion = MlirNative.mlirSCFIfGetElseRegion(ifOp)
+        let block = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
+        MlirNative.mlirRegionAppendOwnedBlock(elseRegion, block)
+        block
+
+    /// scf.yield operation 생성
+    member this.CreateScfYield(results: MlirValue[], location: MlirLocation) : MlirOperation =
+        MlirNative.mlirSCFYieldCreate(location, nativeint results.Length, results)
+</code></pre>
+<p><strong>사용 예시:</strong></p>
+<pre><code class="language-fsharp">// scf.if operation 생성
+let i32Type = builder.I32Type()
+let ifOp = builder.CreateScfIf(condition, [| i32Type |], location)
+
+// then region 작성
+let thenBlock = builder.GetThenBlock(ifOp)
+// ... thenBlock에 연산 추가 ...
+let thenYield = builder.CreateScfYield([| thenValue |], location)
+MlirNative.mlirBlockAppendOwnedOperation(thenBlock, thenYield)
+
+// else region 작성
+let elseBlock = builder.GetElseBlock(ifOp)
+// ... elseBlock에 연산 추가 ...
+let elseYield = builder.CreateScfYield([| elseValue |], location)
+MlirNative.mlirBlockAppendOwnedOperation(elseBlock, elseYield)
+</code></pre>
+<h3 id="dialect-로딩"><a class="header" href="#dialect-로딩">Dialect 로딩</a></h3>
+<p>SCF dialect를 사용하려면 context에 로드해야 한다:</p>
+<pre><code class="language-fsharp">let ctx = new Context()
+ctx.LoadDialect("arith")
+ctx.LoadDialect("func")
+ctx.LoadDialect("scf")  // SCF dialect 로드!
+</code></pre>
+<p>이것으로 <code>scf.if</code>와 <code>scf.yield</code> 연산을 사용할 준비가 완료되었다!</p>
+<h3 id="pinvoke-바인딩-요약"><a class="header" href="#pinvoke-바인딩-요약">P/Invoke 바인딩 요약</a></h3>
+<p><strong>추가한 바인딩:</strong></p>
+<ul>
+<li><code>mlirSCFIfCreate</code>: scf.if operation 생성</li>
+<li><code>mlirSCFYieldCreate</code>: scf.yield operation 생성</li>
+<li><code>mlirSCFIfGetThenRegion/ElseRegion</code>: region 접근</li>
+</ul>
+<p><strong>OpBuilder 헬퍼:</strong></p>
+<ul>
+<li><code>CreateScfIf</code>: scf.if 생성 + 결과 타입 설정</li>
+<li><code>GetThenBlock/GetElseBlock</code>: region에 블록 추가</li>
+<li><code>CreateScfYield</code>: scf.yield 생성</li>
+</ul>
+<p><strong>C API 제약:</strong></p>
+<ul>
+<li>C API가 불완전하면 C++ shim 작성 (Appendix 패턴 따름)</li>
+<li>Operation State Builder를 일반 대안으로 사용</li>
+</ul>
+<p><strong>다음 섹션:</strong> AST에 If 케이스를 추가하고, 코드 생성을 구현한다!</p>
+<h2 id="ast-확장-if-표현식과-boolean-리터럴"><a class="header" href="#ast-확장-if-표현식과-boolean-리터럴">AST 확장: If 표현식과 Boolean 리터럴</a></h2>
+<p>이제 AST에 if 표현식과 boolean 리터럴을 추가한다.</p>
+<h3 id="expr-타입-확장"><a class="header" href="#expr-타입-확장">Expr 타입 확장</a></h3>
+<p><strong>Ast.fs 수정:</strong></p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+/// 이진 연산자 (Chapter 06)
+type Operator =
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+
+/// 비교 연산자 (Chapter 06)
+type CompareOp =
+    | LessThan
+    | GreaterThan
+    | LessEqual
+    | GreaterEqual
+    | Equal
+    | NotEqual
+
+/// 단항 연산자 (Chapter 06)
+type UnaryOp =
+    | Negate
+
+/// FunLang 표현식 AST
+type Expr =
+    | IntLiteral of int
+    | BinaryOp of Operator * Expr * Expr
+    | UnaryOp of UnaryOp * Expr
+    | Comparison of CompareOp * Expr * Expr
+    | Let of name: string * binding: Expr * body: Expr
+    | Var of name: string
+    // NEW: If 표현식과 Boolean 리터럴
+    | If of condition: Expr * thenBranch: Expr * elseBranch: Expr
+    | Bool of bool
+
+/// 최상위 프로그램
+type Program =
+    { expr: Expr }
+</code></pre>
+<p><strong>새로운 케이스 설명:</strong></p>
+<h3 id="if-of-condition--thenbranch--elsebranch"><a class="header" href="#if-of-condition--thenbranch--elsebranch">If of condition * thenBranch * elseBranch</a></h3>
+<pre><code class="language-fsharp">| If of condition: Expr * thenBranch: Expr * elseBranch: Expr
+</code></pre>
+<p><strong>의미:</strong> <code>if {condition} then {thenBranch} else {elseBranch}</code></p>
+<p><strong>필드:</strong></p>
+<ul>
+<li><code>condition</code>: 조건 표현식 (i1 boolean 값을 생성해야 함)</li>
+<li><code>thenBranch</code>: 조건이 true일 때 실행하는 표현식</li>
+<li><code>elseBranch</code>: 조건이 false일 때 실행하는 표현식</li>
+</ul>
+<p><strong>타입 제약:</strong></p>
+<ul>
+<li><code>condition</code>은 i1 타입을 생성해야 한다</li>
+<li><code>thenBranch</code>와 <code>elseBranch</code>는 <strong>같은 타입</strong>을 생성해야 한다</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// FunLang: if 5 &lt; 10 then 42 else 0
+If(
+  Comparison(LessThan, IntLiteral 5, IntLiteral 10),
+  IntLiteral 42,
+  IntLiteral 0
+)
+</code></pre>
+<h3 id="bool-of-bool"><a class="header" href="#bool-of-bool">Bool of bool</a></h3>
+<pre><code class="language-fsharp">| Bool of bool
+</code></pre>
+<p><strong>의미:</strong> Boolean 리터럴 - <code>true</code> 또는 <code>false</code></p>
+<p><strong>필드:</strong></p>
+<ul>
+<li><code>bool</code>: F# boolean 값 (true 또는 false)</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// FunLang: if true then 1 else 0
+If(
+  Bool true,
+  IntLiteral 1,
+  IntLiteral 0
+)
+</code></pre>
+<p><strong>MLIR로 컴파일:</strong> <code>Bool true</code> → <code>arith.constant 1 : i1</code>, <code>Bool false</code> → <code>arith.constant 0 : i1</code></p>
+<h3 id="ast-예시"><a class="header" href="#ast-예시">AST 예시</a></h3>
+<p><strong>간단한 if:</strong></p>
+<pre><code class="language-fsharp">// FunLang: if true then 42 else 0
+If(Bool true, IntLiteral 42, IntLiteral 0)
+</code></pre>
+<p><strong>비교 조건:</strong></p>
+<pre><code class="language-fsharp">// FunLang: if 5 &lt; 10 then 1 else 0
+If(
+  Comparison(LessThan, IntLiteral 5, IntLiteral 10),
+  IntLiteral 1,
+  IntLiteral 0
+)
+</code></pre>
+<p><strong>let 바인딩과 결합:</strong></p>
+<pre><code class="language-fsharp">// FunLang: let x = 5 in if x &gt; 0 then x * 2 else 0
+Let("x",
+  IntLiteral 5,
+  If(
+    Comparison(GreaterThan, Var "x", IntLiteral 0),
+    BinaryOp(Multiply, Var "x", IntLiteral 2),
+    IntLiteral 0
+  )
+)
+</code></pre>
+<h2 id="boolean-표현식"><a class="header" href="#boolean-표현식">Boolean 표현식</a></h2>
+<p>Boolean 값은 MLIR에서 <strong>i1 타입</strong> (1-bit integer)으로 표현된다.</p>
+<h3 id="boolean-타입-i1"><a class="header" href="#boolean-타입-i1">Boolean 타입: i1</a></h3>
+<p>MLIR은 boolean을 위한 전용 타입이 없다. 대신 1-bit integer (<code>i1</code>)를 사용한다:</p>
+<pre><code class="language-mlir">%true = arith.constant 1 : i1    // Boolean true
+%false = arith.constant 0 : i1   // Boolean false
+</code></pre>
+<p><strong>i1의 값:</strong></p>
+<ul>
+<li><code>1</code>: true</li>
+<li><code>0</code>: false</li>
+</ul>
+<h3 id="boolean-리터럴-컴파일"><a class="header" href="#boolean-리터럴-컴파일">Boolean 리터럴 컴파일</a></h3>
+<p><code>Bool</code> 케이스를 i1 상수로 컴파일한다:</p>
+<pre><code class="language-fsharp">| Bool(value) -&gt;
+    let i1Type = builder.Context.GetIntegerType(1)  // 1-bit integer
+    let intValue = if value then 1L else 0L
+    let attr = builder.Context.GetIntegerAttr(i1Type, intValue)
+    let constOp = builder.CreateConstant(attr, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, constOp)
+    builder.GetResult(constOp, 0)
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">// Bool true
+%true = arith.constant 1 : i1
+
+// Bool false
+%false = arith.constant 0 : i1
+</code></pre>
+<h3 id="비교-연산은-이미-i1을-반환한다"><a class="header" href="#비교-연산은-이미-i1을-반환한다">비교 연산은 이미 i1을 반환한다</a></h3>
+<p>Chapter 06에서 구현한 비교 연산 (<code>arith.cmpi</code>)은 i1을 반환한다:</p>
+<pre><code class="language-mlir">%c5 = arith.constant 5 : i32
+%c10 = arith.constant 10 : i32
+%cond = arith.cmpi slt, %c5, %c10 : i32  // 결과는 i1
+</code></pre>
+<p><strong>중요:</strong> if 조건으로 비교 연산을 사용할 때, i1 → i32 확장(<code>arith.extui</code>)을 제거해야 한다!</p>
+<p>Chapter 06에서는 main 함수 반환을 위해 i1을 i32로 확장했다:</p>
+<pre><code class="language-fsharp">// Chapter 06 코드 (비교 결과를 i32로 확장)
+| Comparison(compareOp, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+    let cmpVal = builder.GetResult(cmpOp, 0)  // i1 값
+    // i1 -&gt; i32 확장
+    let i32Type = builder.I32Type()
+    let extOp = builder.CreateArithExtUI(cmpVal, i32Type, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, extOp)
+    builder.GetResult(extOp, 0)  // i32 반환
+</code></pre>
+<p><strong>문제:</strong> if 조건은 i1이 필요한데, 위 코드는 i32를 반환한다!</p>
+<p><strong>해결 방안:</strong> 컨텍스트에 따라 확장 여부를 결정한다:</p>
+<ul>
+<li>if 조건: i1 그대로 사용</li>
+<li>main 함수 반환: i32로 확장</li>
+</ul>
+<p><strong>간단한 접근:</strong> Comparison 케이스가 i1을 반환하도록 하고, main 함수에서만 확장한다.</p>
+<p><strong>수정된 Comparison 케이스:</strong></p>
+<pre><code class="language-fsharp">| Comparison(compareOp, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+    builder.GetResult(cmpOp, 0)  // i1 반환 (확장 안 함)
+</code></pre>
+<p><strong>main 함수에서 확장:</strong></p>
+<pre><code class="language-fsharp">let resultValue = compileExpr builder entryBlock loc program.expr env
+
+// 결과가 i1이면 i32로 확장 (main 함수 반환용)
+let resultType = MlirNative.mlirValueGetType(resultValue)
+let finalResult =
+    if MlirNative.mlirTypeIsI1(resultType) then
+        let i32Type = builder.I32Type()
+        let extOp = builder.CreateArithExtUI(resultValue, i32Type, loc)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, extOp)
+        builder.GetResult(extOp, 0)
+    else
+        resultValue
+</code></pre>
+<h3 id="boolean-연산-선택-사항"><a class="header" href="#boolean-연산-선택-사항">Boolean 연산 (선택 사항)</a></h3>
+<p>Boolean 값에 논리 연산을 적용할 수 있다:</p>
+<p><strong>AND:</strong></p>
+<pre><code class="language-mlir">%a = arith.constant 1 : i1
+%b = arith.constant 0 : i1
+%result = arith.andi %a, %b : i1  // 결과: 0 (false)
+</code></pre>
+<p><strong>OR:</strong></p>
+<pre><code class="language-mlir">%result = arith.ori %a, %b : i1  // 결과: 1 (true)
+</code></pre>
+<p><strong>NOT (XOR with 1):</strong></p>
+<pre><code class="language-mlir">%c1 = arith.constant 1 : i1
+%result = arith.xori %a, %c1 : i1  // a의 반대
+</code></pre>
+<p><strong>AST 추가 (나중에):</strong></p>
+<p>Phase 2에서는 boolean 연산을 추가하지 않는다. if/then/else만으로 충분하다. 필요하면 나중에 추가한다.</p>
+<h2 id="ifthenelse-코드-생성"><a class="header" href="#ifthenelse-코드-생성">If/Then/Else 코드 생성</a></h2>
+<p>이제 If 케이스를 scf.if로 컴파일한다.</p>
+<h3 id="if-케이스-구현"><a class="header" href="#if-케이스-구현">If 케이스 구현</a></h3>
+<p><strong>CodeGen.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">| If(condition, thenExpr, elseExpr) -&gt;
+    // 1. 조건 표현식 컴파일 (i1 타입 필요)
+    let condVal = compileExpr builder block location condition env
+
+    // 2. 결과 타입 결정 (thenBranch의 타입을 사용)
+    // 실제로는 타입 추론이 필요하지만, 지금은 i32로 가정
+    let i32Type = builder.I32Type()
+    let resultTypes = [| i32Type |]
+
+    // 3. scf.if operation 생성
+    let ifOp = builder.CreateScfIf(condVal, resultTypes, location)
+
+    // 4. Then region 작성
+    let thenBlock = builder.GetThenBlock(ifOp)
+    let thenVal = compileExpr builder thenBlock location thenExpr env
+    let thenYield = builder.CreateScfYield([| thenVal |], location)
+    MlirNative.mlirBlockAppendOwnedOperation(thenBlock, thenYield)
+
+    // 5. Else region 작성
+    let elseBlock = builder.GetElseBlock(ifOp)
+    let elseVal = compileExpr builder elseBlock location elseExpr env
+    let elseYield = builder.CreateScfYield([| elseVal |], location)
+    MlirNative.mlirBlockAppendOwnedOperation(elseBlock, elseYield)
+
+    // 6. scf.if를 블록에 추가
+    MlirNative.mlirBlockAppendOwnedOperation(block, ifOp)
+
+    // 7. scf.if의 결과 반환
+    builder.GetResult(ifOp, 0)
+</code></pre>
+<p><strong>동작 설명:</strong></p>
+<ol>
+<li><strong>조건 컴파일:</strong> <code>condition</code> 표현식을 컴파일하여 i1 값을 얻는다</li>
+<li><strong>결과 타입:</strong> if 표현식의 결과 타입 (여기서는 i32로 가정)</li>
+<li><strong>scf.if 생성:</strong> <code>CreateScfIf</code>로 operation 생성</li>
+<li><strong>Then region:</strong> thenBranch 컴파일 → scf.yield로 값 반환</li>
+<li><strong>Else region:</strong> elseBranch 컴파일 → scf.yield로 값 반환</li>
+<li><strong>Operation 추가:</strong> scf.if를 부모 블록에 추가</li>
+<li><strong>결과 사용:</strong> scf.if의 결과 (SSA value)를 반환</li>
+</ol>
+<p><strong>핵심:</strong> 각 region에서 <code>compileExpr</code>를 호출할 때 <strong>해당 region의 블록</strong>을 전달한다. 이렇게 하면 연산이 올바른 region에 추가된다.</p>
+<h3 id="예시-if-true-then-42-else-0"><a class="header" href="#예시-if-true-then-42-else-0">예시: if true then 42 else 0</a></h3>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">If(Bool true, IntLiteral 42, IntLiteral 0)
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li><code>Bool true</code> 컴파일: <code>%true = arith.constant 1 : i1</code></li>
+<li><code>scf.if</code> 생성</li>
+<li>Then region:
+<ul>
+<li><code>IntLiteral 42</code> 컴파일: <code>%c42 = arith.constant 42 : i32</code></li>
+<li><code>scf.yield %c42</code></li>
+</ul>
+</li>
+<li>Else region:
+<ul>
+<li><code>IntLiteral 0</code> 컴파일: <code>%c0 = arith.constant 0 : i32</code></li>
+<li><code>scf.yield %c0</code></li>
+</ul>
+</li>
+<li>scf.if 결과: <code>%result</code></li>
+</ol>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %true = arith.constant 1 : i1
+    %result = scf.if %true -&gt; (i32) {
+      %c42 = arith.constant 42 : i32
+      scf.yield %c42 : i32
+    } else {
+      %c0 = arith.constant 0 : i32
+      scf.yield %c0 : i32
+    }
+    func.return %result : i32
+  }
+}
+</code></pre>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+42
+</code></pre>
+<p>조건이 true이므로 42를 반환한다!</p>
+<h3 id="예시-if-5--10-then-1-else-0"><a class="header" href="#예시-if-5--10-then-1-else-0">예시: if 5 &lt; 10 then 1 else 0</a></h3>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">If(
+  Comparison(LessThan, IntLiteral 5, IntLiteral 10),
+  IntLiteral 1,
+  IntLiteral 0
+)
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c5 = arith.constant 5 : i32
+    %c10 = arith.constant 10 : i32
+    %cond = arith.cmpi slt, %c5, %c10 : i32  // i1 결과
+    %result = scf.if %cond -&gt; (i32) {
+      %c1 = arith.constant 1 : i32
+      scf.yield %c1 : i32
+    } else {
+      %c0 = arith.constant 0 : i32
+      scf.yield %c0 : i32
+    }
+    func.return %result : i32
+  }
+}
+</code></pre>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+1
+</code></pre>
+<p>5 &lt; 10이 true이므로 1을 반환한다!</p>
+<h2 id="lowering-pass-업데이트"><a class="header" href="#lowering-pass-업데이트">Lowering Pass 업데이트</a></h2>
+<p>SCF dialect를 사용하므로 lowering pass에 <code>--convert-scf-to-cf</code>를 추가해야 한다.</p>
+<h3 id="pass-manager-순서"><a class="header" href="#pass-manager-순서">Pass Manager 순서</a></h3>
+<p><strong>Lowering.fs 수정:</strong></p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+module Lowering =
+
+    /// MLIR module을 LLVM dialect로 lowering
+    let lowerToLLVMDialect (mlirMod: Module) =
+        let ctx = mlirMod.Context
+        let pm = MlirNative.mlirPassManagerCreate(ctx.Handle)
+
+        // 1. SCF -&gt; CF 변환 (구조화된 제어 흐름 -&gt; 분기)
+        let scfToCfPass = MlirNative.mlirCreateConversionConvertSCFToCFPass()
+        MlirNative.mlirPassManagerAddOwnedPass(pm, scfToCfPass)
+
+        // 2. Arith -&gt; LLVM 변환
+        let arithToLLVMPass = MlirNative.mlirCreateConversionConvertArithToLLVMPass()
+        MlirNative.mlirPassManagerAddOwnedPass(pm, arithToLLVMPass)
+
+        // 3. Func -&gt; LLVM 변환
+        let funcToLLVMPass = MlirNative.mlirCreateConversionConvertFuncToLLVMPass()
+        MlirNative.mlirPassManagerAddOwnedPass(pm, funcToLLVMPass)
+
+        // 4. Unrealized casts 정리
+        let reconcilePass = MlirNative.mlirCreateConversionReconcileUnrealizedCastsPass()
+        MlirNative.mlirPassManagerAddOwnedPass(pm, reconcilePass)
+
+        // Pass 실행
+        let result = MlirNative.mlirPassManagerRun(pm, mlirMod.Handle)
+        if not (MlirNative.mlirLogicalResultIsSuccess(result)) then
+            failwith "Failed to run lowering passes"
+
+        MlirNative.mlirPassManagerDestroy(pm)
+
+    /// MLIR module을 LLVM IR로 변환
+    let translateToLLVMIR (mlirMod: Module) : string =
+        let llvmIR = MlirNative.mlirTranslateModuleToLLVMIR(mlirMod.Handle)
+        MlirHelpers.toString llvmIR
+</code></pre>
+<p><strong>Pass 순서 설명:</strong></p>
+<ol>
+<li><strong>SCF → CF:</strong> <code>scf.if</code> → <code>cf.cond_br</code> + block arguments</li>
+<li><strong>Arith → LLVM:</strong> <code>arith.constant</code>, <code>arith.addi</code> 등 → <code>llvm.mlir.constant</code>, <code>llvm.add</code> 등</li>
+<li><strong>Func → LLVM:</strong> <code>func.func</code>, <code>func.return</code> → <code>llvm.func</code>, <code>llvm.return</code></li>
+<li><strong>Reconcile:</strong> 중간 cast 연산 정리</li>
+</ol>
+<h3 id="mlirbindingsfs에-pass-추가"><a class="header" href="#mlirbindingsfs에-pass-추가">MlirBindings.fs에 Pass 추가</a></h3>
+<p><strong>MlirBindings.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">/// SCF to CF 변환 pass 생성
+[&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirPass mlirCreateConversionConvertSCFToCFPass()
+</code></pre>
+<p><strong>Note:</strong> 함수 이름은 MLIR C API 버전에 따라 다를 수 있다. <code>mlir-c/Conversion/Passes.h</code> 헤더를 확인한다.</p>
+<h3 id="lowering-후-mlir-ir"><a class="header" href="#lowering-후-mlir-ir">Lowering 후 MLIR IR</a></h3>
+<p><strong>scf.if lowering 전:</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %c5 = arith.constant 5 : i32
+  %c10 = arith.constant 10 : i32
+  %cond = arith.cmpi slt, %c5, %c10 : i32
+  %result = scf.if %cond -&gt; (i32) {
+    %c1 = arith.constant 1 : i32
+    scf.yield %c1 : i32
+  } else {
+    %c0 = arith.constant 0 : i32
+    scf.yield %c0 : i32
+  }
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>scf.if lowering 후 (cf dialect):</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %c5 = arith.constant 5 : i32
+  %c10 = arith.constant 10 : i32
+  %cond = arith.cmpi slt, %c5, %c10 : i32
+  cf.cond_br %cond, ^then, ^else
+
+^then:
+  %c1 = arith.constant 1 : i32
+  cf.br ^merge(%c1 : i32)
+
+^else:
+  %c0 = arith.constant 0 : i32
+  cf.br ^merge(%c0 : i32)
+
+^merge(%result: i32):
+  func.return %result : i32
+}
+</code></pre>
+<p><strong>핵심:</strong></p>
+<ul>
+<li><code>scf.if</code> → <code>cf.cond_br</code> + 블록</li>
+<li><code>scf.yield</code> → <code>cf.br ^merge(value)</code></li>
+<li>Block argument <code>%result</code>가 PHI 역할</li>
+</ul>
+<h2 id="let-바인딩과-if-결합"><a class="header" href="#let-바인딩과-if-결합">Let 바인딩과 If 결합</a></h2>
+<p>Let 바인딩과 if 표현식을 결합한 예시를 보자.</p>
+<p><strong>FunLang 소스:</strong></p>
+<pre><code class="language-fsharp">let x = 5 in
+if x &gt; 0 then x * 2 else 0
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("x",
+  IntLiteral 5,
+  If(
+    Comparison(GreaterThan, Var "x", IntLiteral 0),
+    BinaryOp(Multiply, Var "x", IntLiteral 2),
+    IntLiteral 0
+  )
+)
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li>
+<p><code>Let("x", IntLiteral 5, ...)</code></p>
+<ul>
+<li><code>IntLiteral 5</code> 컴파일: <code>%c5 = arith.constant 5 : i32</code></li>
+<li><code>env' = env.Add("x", %c5)</code></li>
+<li>Body 컴파일 (env’ 사용)</li>
+</ul>
+</li>
+<li>
+<p><code>If(...)</code> (env’에서)</p>
+<ul>
+<li>Condition: <code>Comparison(GreaterThan, Var "x", IntLiteral 0)</code>
+<ul>
+<li><code>Var "x"</code>: env’에서 조회 → %c5</li>
+<li><code>IntLiteral 0</code>: <code>%c0 = arith.constant 0 : i32</code></li>
+<li><code>%cond = arith.cmpi sgt, %c5, %c0 : i32</code></li>
+</ul>
+</li>
+<li>Then: <code>BinaryOp(Multiply, Var "x", IntLiteral 2)</code>
+<ul>
+<li><code>Var "x"</code>: env’에서 조회 → %c5</li>
+<li><code>IntLiteral 2</code>: <code>%c2 = arith.constant 2 : i32</code></li>
+<li><code>%then_val = arith.muli %c5, %c2 : i32</code></li>
+</ul>
+</li>
+<li>Else: <code>IntLiteral 0</code>
+<ul>
+<li><code>%else_val = arith.constant 0 : i32</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c5 = arith.constant 5 : i32          // let x = 5
+    %c0 = arith.constant 0 : i32
+    %cond = arith.cmpi sgt, %c5, %c0 : i32  // x &gt; 0
+    %result = scf.if %cond -&gt; (i32) {
+      %c2 = arith.constant 2 : i32
+      %then_val = arith.muli %c5, %c2 : i32  // x * 2
+      scf.yield %then_val : i32
+    } else {
+      %else_val = arith.constant 0 : i32
+      scf.yield %else_val : i32
+    }
+    func.return %result : i32
+  }
+}
+</code></pre>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+10
+</code></pre>
+<p>x = 5, x &gt; 0이 true, x * 2 = 10!</p>
+<h3 id="중첩된-if"><a class="header" href="#중첩된-if">중첩된 If</a></h3>
+<p>if 안에 if를 넣을 수도 있다:</p>
+<pre><code class="language-fsharp">// FunLang: if x &gt; 0 then (if x &lt; 10 then 1 else 2) else 0
+If(
+  Comparison(GreaterThan, Var "x", IntLiteral 0),
+  If(
+    Comparison(LessThan, Var "x", IntLiteral 10),
+    IntLiteral 1,
+    IntLiteral 2
+  ),
+  IntLiteral 0
+)
+</code></pre>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">%outer_cond = arith.cmpi sgt, %x, %c0 : i32
+%result = scf.if %outer_cond -&gt; (i32) {
+  %inner_cond = arith.cmpi slt, %x, %c10 : i32
+  %inner_result = scf.if %inner_cond -&gt; (i32) {
+    %c1 = arith.constant 1 : i32
+    scf.yield %c1 : i32
+  } else {
+    %c2 = arith.constant 2 : i32
+    scf.yield %c2 : i32
+  }
+  scf.yield %inner_result : i32
+} else {
+  %c0 = arith.constant 0 : i32
+  scf.yield %c0 : i32
+}
+</code></pre>
+<p>중첩된 scf.if가 올바르게 생성된다!</p>
+<h2 id="공통-에러-1"><a class="header" href="#공통-에러-1">공통 에러</a></h2>
+<h3 id="에러-1-조건이-i32인데-i1이-필요"><a class="header" href="#에러-1-조건이-i32인데-i1이-필요">에러 1: 조건이 i32인데 i1이 필요</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>MLIR verification failed:
+'scf.if' op operand #0 must be 1-bit signless integer, but got 'i32'
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>if 조건에 i32 값을 전달했다.</p>
+<p><strong>해결:</strong></p>
+<p>조건은 반드시 i1 타입이어야 한다:</p>
+<ul>
+<li>Boolean 리터럴: <code>Bool true</code> → <code>arith.constant 1 : i1</code></li>
+<li>비교 연산: <code>arith.cmpi</code> → i1 결과</li>
+<li>i32를 i1로 변환하지 말고, 비교 연산을 사용한다</li>
+</ul>
+<pre><code class="language-fsharp">// WRONG: i32를 조건으로 사용
+let x = IntLiteral 5
+If(x, ..., ...)  // 에러! x는 i32
+
+// CORRECT: 비교 연산 사용
+If(Comparison(GreaterThan, x, IntLiteral 0), ..., ...)
+</code></pre>
+<h3 id="에러-2-scfyield-타입-불일치"><a class="header" href="#에러-2-scfyield-타입-불일치">에러 2: scf.yield 타입 불일치</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>MLIR verification failed:
+'scf.yield' op types mismatch between then and else regions
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>then region과 else region이 다른 타입을 yield했다.</p>
+<p><strong>해결:</strong></p>
+<p>양쪽 region이 같은 타입을 yield해야 한다:</p>
+<pre><code class="language-fsharp">// WRONG: then은 i32, else는 i1
+If(cond,
+  IntLiteral 42,        // i32
+  Bool true)            // i1 - 타입 불일치!
+
+// CORRECT: 둘 다 i32
+If(cond,
+  IntLiteral 42,        // i32
+  IntLiteral 0)         // i32
+</code></pre>
+<h3 id="에러-3-scfyield-누락"><a class="header" href="#에러-3-scfyield-누락">에러 3: scf.yield 누락</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>MLIR verification failed:
+Region does not have a terminator
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>then 또는 else region에 scf.yield를 추가하지 않았다.</p>
+<p><strong>해결:</strong></p>
+<p>모든 region은 종결자가 필요하다. 코드 생성 시 항상 scf.yield를 추가한다:</p>
+<pre><code class="language-fsharp">// 올바른 코드 생성 패턴
+let thenBlock = builder.GetThenBlock(ifOp)
+let thenVal = compileExpr builder thenBlock location thenExpr env
+let thenYield = builder.CreateScfYield([| thenVal |], location)
+MlirNative.mlirBlockAppendOwnedOperation(thenBlock, thenYield)  // 필수!
+</code></pre>
+<h3 id="에러-4-convert-scf-to-cf-pass-누락"><a class="header" href="#에러-4-convert-scf-to-cf-pass-누락">에러 4: –convert-scf-to-cf pass 누락</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Failed to translate MLIR to LLVM IR:
+Unhandled operation: scf.if
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>Lowering pass에서 SCF → CF 변환을 실행하지 않았다.</p>
+<p><strong>해결:</strong></p>
+<p>Pass manager에 <code>--convert-scf-to-cf</code>를 추가한다:</p>
+<pre><code class="language-fsharp">let scfToCfPass = MlirNative.mlirCreateConversionConvertSCFToCFPass()
+MlirNative.mlirPassManagerAddOwnedPass(pm, scfToCfPass)
+</code></pre>
+<p>Pass 순서: SCF → CF → Arith → Func → Reconcile</p>
+<h2 id="장-요약-2"><a class="header" href="#장-요약-2">장 요약</a></h2>
+<p>이 장에서 다음을 성취했다:</p>
+<ol>
+<li><strong>PHI 노드 문제 이해</strong>: 위치 제약, lost copy problem, dominance frontier 계산</li>
+<li><strong>Block Arguments 학습</strong>: MLIR의 우아한 대안, 함수 인자와 통일된 의미론</li>
+<li><strong>scf.if 연산 사용</strong>: 고수준 구조화된 제어 흐름, scf.yield 종결자</li>
+<li><strong>P/Invoke 바인딩 추가</strong>: SCF dialect 지원 (mlirSCFIfCreate, mlirSCFYieldCreate)</li>
+<li><strong>AST 확장</strong>: If 표현식과 Bool 리터럴 추가</li>
+<li><strong>Boolean 타입</strong>: i1 (1-bit integer), true = 1, false = 0</li>
+<li><strong>코드 생성 구현</strong>: If 케이스를 scf.if로 컴파일</li>
+<li><strong>Lowering pass 업데이트</strong>: SCF → CF 변환 추가</li>
+<li><strong>완전한 예제</strong>: if/then/else와 let 바인딩 결합</li>
+</ol>
+<p><strong>독자가 할 수 있는 것:</strong></p>
+<ul>
+<li><code>if true then 42 else 0</code> 컴파일 → 네이티브 바이너리 → 결과: 42 ✓</li>
+<li><code>if 5 &lt; 10 then 1 else 0</code> 컴파일 → 결과: 1 ✓</li>
+<li><code>let x = 5 in if x &gt; 0 then x * 2 else 0</code> 컴파일 → 결과: 10 ✓</li>
+<li>Block arguments vs PHI 노드 차이 이해 ✓</li>
+<li>scf.if lowering 과정 이해 ✓</li>
+<li>Boolean 타입 (i1) 사용 ✓</li>
+<li>타입 불일치 에러 디버깅 ✓</li>
+</ul>
+<p><strong>핵심 개념:</strong></p>
+<ul>
+<li><strong>Block Arguments &gt; PHI 노드</strong>: 깔끔한 의미론, push vs pull</li>
+<li><strong>scf.if = 표현식</strong>: 값을 반환, 함수형 의미론</li>
+<li><strong>scf.yield = 종결자</strong>: Region에서 값 반환, return과 유사</li>
+<li><strong>i1 타입 = Boolean</strong>: 1 = true, 0 = false</li>
+<li><strong>Progressive Lowering</strong>: scf → cf → llvm</li>
+</ul>
+<p><strong>다음 장 미리보기:</strong></p>
+<p>Chapter 09에서는 <strong>메모리 관리</strong>를 다룬다:</p>
+<ul>
+<li>Stack vs Heap 할당</li>
+<li><code>memref.alloca</code> (stack allocation)</li>
+<li><code>memref.alloc</code> (heap allocation)</li>
+<li><strong>Boehm GC 통합</strong> (garbage collection)</li>
+</ul>
+<p>Phase 2의 마지막 장이다. Phase 3에서는 함수와 클로저를 구현할 것이다!</p>
+<hr>
+<p><strong>이제 독자는 if/then/else 제어 흐름을 컴파일하고, block arguments와 scf.if를 이해한다!</strong></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="chapter-09-메모리-관리와-boehm-gc"><a class="header" href="#chapter-09-메모리-관리와-boehm-gc">Chapter 09: 메모리 관리와 Boehm GC</a></h1>
+<h2 id="소개-9"><a class="header" href="#소개-9">소개</a></h2>
+<p>지금까지 FunLang 컴파일러는 모든 값을 SSA 레지스터로 처리했다. 정수, boolean, 심지어 let 바인딩도 메모리 연산 없이 SSA value로만 표현했다.</p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %c5 = arith.constant 5 : i32       // SSA value (레지스터)
+  %c10 = arith.constant 10 : i32     // SSA value (레지스터)
+  %sum = arith.addi %c5, %c10 : i32  // SSA value (레지스터)
+  func.return %sum : i32
+}
+</code></pre>
+<p>이 접근 방식은 단순한 표현식에서는 완벽하게 작동한다. 하지만 앞으로 구현할 기능은 <strong>메모리 할당</strong>이 필요하다:</p>
+<ul>
+<li><strong>클로저(Closures)</strong>: 외부 스코프의 변수를 캡처하는 함수</li>
+<li><strong>데이터 구조</strong>: 리스트, 튜플, 문자열 등 동적 크기 데이터</li>
+<li><strong>함수에서 반환되는 값</strong>: 함수 스코프를 벗어나 생존하는 값</li>
+</ul>
+<p>이 장에서는 메모리 관리 전략을 학습한다:</p>
+<ul>
+<li>Stack vs Heap 할당 전략</li>
+<li>MLIR의 <code>memref</code> dialect</li>
+<li><strong>Boehm GC</strong> 통합 (자동 메모리 회수)</li>
+</ul>
+<p><strong>중요한 관점:</strong> Phase 2 프로그램은 아직 메모리 할당이 필요하지 않다. 하지만 Phase 3 (함수와 클로저)에 들어가기 전에 GC 인프라를 미리 준비한다. “필요하기 전에 왜 GC가 필요한지“를 이해하는 것이 목표다.</p>
+<p>이 장을 마치면:</p>
+<ul>
+<li>Stack과 heap의 차이를 이해한다</li>
+<li>어떤 값이 stack에, 어떤 값이 heap에 가는지 안다</li>
+<li>MLIR의 <code>memref</code> 연산을 사용할 수 있다</li>
+<li>Boehm GC를 빌드하고 링킹할 수 있다</li>
+<li>왜 클로저에 GC가 필요한지 이해한다</li>
+</ul>
+<blockquote>
+<p><strong>Preview:</strong> Phase 3에서 클로저를 구현할 때, 이 장에서 준비한 GC가 바로 사용된다!</p>
+</blockquote>
+<h2 id="메모리-관리-전략"><a class="header" href="#메모리-관리-전략">메모리 관리 전략</a></h2>
+<p>프로그램이 실행될 때 두 종류의 메모리 영역을 사용한다: <strong>Stack</strong>과 <strong>Heap</strong>.</p>
+<h3 id="stack-할당"><a class="header" href="#stack-할당">Stack 할당</a></h3>
+<p>**Stack (스택)**은 함수 호출 시 자동으로 관리되는 메모리 영역이다.</p>
+<p><strong>Stack에 저장되는 것:</strong></p>
+<ul>
+<li>함수 파라미터</li>
+<li>지역 변수</li>
+<li>임시 계산 값</li>
+<li>함수 반환 주소</li>
+</ul>
+<p><strong>Stack의 특징:</strong></p>
+<ol>
+<li>
+<p><strong>자동 할당 및 해제</strong></p>
+<pre><code class="language-c">int foo() {
+    int x = 5;    // Stack에 할당
+    int y = 10;   // Stack에 할당
+    return x + y;
+    // 함수 종료 시 x, y 자동 해제
+}
+</code></pre>
+</li>
+<li>
+<p><strong>빠른 할당</strong></p>
+<ul>
+<li>Stack pointer만 이동 (포인터 연산 한 번)</li>
+<li>별도의 할당자(allocator) 불필요</li>
+</ul>
+</li>
+<li>
+<p><strong>LIFO (Last-In-First-Out) 구조</strong></p>
+<pre><code>foo() 호출:
+┌──────────────┐
+│ foo의 지역변수│ ← stack top
+├──────────────┤
+│ main의 지역변수│
+├──────────────┤
+│    ...       │
+└──────────────┘
+
+foo() 종료:
+┌──────────────┐
+│ main의 지역변수│ ← stack top (foo의 프레임 제거됨)
+├──────────────┤
+│    ...       │
+└──────────────┘
+</code></pre>
+</li>
+<li>
+<p><strong>크기 제한</strong></p>
+<ul>
+<li>Stack 크기는 고정 (보통 1-8MB)</li>
+<li>너무 많은 지역 변수나 깊은 재귀는 stack overflow 유발</li>
+</ul>
+</li>
+</ol>
+<p><strong>언제 stack을 사용하는가:</strong></p>
+<ul>
+<li>함수 내부에서만 사용되는 값</li>
+<li>크기가 컴파일 타임에 결정되는 값</li>
+<li>함수 종료 시 사라져도 되는 값</li>
+</ul>
+<h3 id="heap-할당"><a class="header" href="#heap-할당">Heap 할당</a></h3>
+<p>**Heap (힙)**은 명시적으로 할당하고 해제하는 메모리 영역이다.</p>
+<p><strong>Heap에 저장되는 것:</strong></p>
+<ul>
+<li>함수 스코프를 벗어나 생존하는 값</li>
+<li>동적 크기 데이터 (런타임에 크기 결정)</li>
+<li>여러 함수/클로저가 공유하는 값</li>
+</ul>
+<p><strong>Heap의 특징:</strong></p>
+<ol>
+<li>
+<p><strong>명시적 할당</strong></p>
+<pre><code class="language-c">void* ptr = malloc(100);  // Heap에 100바이트 할당
+// ... ptr 사용 ...
+free(ptr);                // 명시적 해제 필요
+</code></pre>
+</li>
+<li>
+<p><strong>느린 할당</strong></p>
+<ul>
+<li>할당자가 적절한 메모리 블록을 찾아야 함</li>
+<li>Fragmentation (단편화) 관리 필요</li>
+</ul>
+</li>
+<li>
+<p><strong>유연한 생명주기</strong></p>
+<pre><code class="language-c">int* create_value() {
+    int* p = malloc(sizeof(int));
+    *p = 42;
+    return p;  // 함수 종료 후에도 값이 살아있다
+}
+</code></pre>
+</li>
+<li>
+<p><strong>크기 제한이 크다</strong></p>
+<ul>
+<li>Heap은 시스템 전체 가용 메모리를 사용할 수 있다</li>
+<li>Stack보다 훨씬 큰 데이터 구조 가능</li>
+</ul>
+</li>
+</ol>
+<p><strong>언제 heap을 사용하는가:</strong></p>
+<ul>
+<li>함수에서 반환되는 값</li>
+<li>동적 크기 데이터 (리스트 길이를 런타임에 결정)</li>
+<li>여러 클로저가 공유하는 환경</li>
+</ul>
+<h3 id="funlang의-메모리-전략"><a class="header" href="#funlang의-메모리-전략">FunLang의 메모리 전략</a></h3>
+<p><strong>Phase 2 (현재):</strong></p>
+<ul>
+<li>모든 값이 SSA 레지스터</li>
+<li>정수와 boolean만 존재</li>
+<li>메모리 할당이 전혀 없다</li>
+</ul>
+<pre><code class="language-mlir">// Phase 2: 모든 것이 SSA value
+func.func @main() -&gt; i32 {
+  %c5 = arith.constant 5 : i32      // 레지스터
+  %c10 = arith.constant 10 : i32    // 레지스터
+  %sum = arith.addi %c5, %c10 : i32 // 레지스터
+  func.return %sum : i32
+}
+</code></pre>
+<p><strong>Phase 3 (클로저):</strong></p>
+<ul>
+<li>클로저가 환경을 캡처</li>
+<li><strong>캡처된 환경은 heap에 할당</strong> (함수를 벗어나 생존)</li>
+<li>GC가 자동으로 회수</li>
+</ul>
+<pre><code class="language-mlir">// Phase 3 예시 (preview):
+// let x = 5 in (fun y -&gt; x + y)  // 클로저가 x를 캡처
+func.func @main() -&gt; !closure {
+  %c5 = arith.constant 5 : i32
+
+  // 클로저 환경을 heap에 할당
+  %env_size = arith.constant 8 : i64  // x를 저장할 공간
+  %env = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+  // x를 환경에 저장
+  llvm.store %c5, %env : !llvm.ptr
+
+  // 클로저 생성 (함수 포인터 + 환경 포인터)
+  %closure = funlang.create_closure @lambda, %env
+  func.return %closure : !closure
+}
+</code></pre>
+<p><strong>Phase 6 (데이터 구조):</strong></p>
+<ul>
+<li>리스트, 튜플, 문자열</li>
+<li>모두 heap에 할당</li>
+<li>GC가 관리</li>
+</ul>
+<h3 id="stack-vs-heap-다이어그램"><a class="header" href="#stack-vs-heap-다이어그램">Stack vs Heap 다이어그램</a></h3>
+<pre><code>함수 호출 스택                      Heap (GC 관리)
+┌─────────────────────┐            ┌─────────────────────┐
+│ main() 프레임       │            │ 클로저 환경 #1      │
+│ - return addr       │     ┌─────&gt;│ - x = 5            │
+│ - local: result     │─────┘      │ - y = 10           │
+│ - temp: %c5, %c10   │            ├─────────────────────┤
+├─────────────────────┤            │ 리스트 노드         │
+│ foo() 프레임        │            │ - head = 1         │
+│ - return addr       │            │ - tail = ...       │
+│ - param: x          │            └─────────────────────┘
+│ - local: y          │                     ↑
+└─────────────────────┘                     │
+   (함수 종료 시 자동 해제)           (GC가 회수)
+</code></pre>
+<p><strong>핵심 차이:</strong></p>
+<ul>
+<li><strong>Stack</strong>: 함수 스코프에 묶임, 자동 해제, 빠름</li>
+<li><strong>Heap</strong>: 스코프 독립, 명시적 할당/해제, 유연함</li>
+</ul>
+<h3 id="왜-funlang은-heap이-필요한가"><a class="header" href="#왜-funlang은-heap이-필요한가">왜 FunLang은 Heap이 필요한가?</a></h3>
+<p><strong>클로저가 핵심 이유다:</strong></p>
+<pre><code class="language-fsharp">// FunLang 예시
+let makeAdder = fun x -&gt;
+    fun y -&gt; x + y
+
+let add5 = makeAdder 5   // 클로저: x=5를 캡처
+let add10 = makeAdder 10 // 클로저: x=10을 캡처
+
+add5 3    // 결과: 8  (x=5 사용)
+add10 3   // 결과: 13 (x=10 사용)
+</code></pre>
+<p><strong>문제:</strong></p>
+<ul>
+<li><code>makeAdder 5</code>가 반환될 때, <code>x=5</code>는 어디에 저장되는가?</li>
+<li><code>makeAdder</code> 함수는 이미 종료되었다 (stack 프레임 해제됨)</li>
+<li>하지만 <code>add5</code>를 호출할 때 <code>x=5</code>가 필요하다!</li>
+</ul>
+<p><strong>해답:</strong> <code>x=5</code>를 <strong>heap에 할당</strong>한다. 클로저는 heap 포인터를 가진다.</p>
+<pre><code>makeAdder(5) 실행:
+1. Heap에 환경 할당: { x: 5 }
+2. 클로저 생성: (function_ptr, env_ptr)
+3. makeAdder 종료 (stack 해제)
+4. 클로저 반환 (env_ptr는 여전히 유효)
+
+add5(3) 호출:
+1. env_ptr에서 x 로드: x = 5
+2. y = 3 (파라미터)
+3. x + y = 8 반환
+</code></pre>
+<p><strong>GC 없이는?</strong></p>
+<ul>
+<li>수동으로 <code>free(env_ptr)</code> 호출 필요</li>
+<li>언제 해제? <code>add5</code>가 더 이상 사용되지 않을 때</li>
+<li>하지만 <code>add5</code>가 다른 변수에 할당되었다면?</li>
+<li><strong>복잡성 폭발!</strong> → Garbage Collection 필요</li>
+</ul>
+<h2 id="mlir-memref-dialect-개요"><a class="header" href="#mlir-memref-dialect-개요">MLIR memref Dialect 개요</a></h2>
+<p>MLIR은 메모리 연산을 위해 <strong>memref (memory reference)</strong> dialect를 제공한다.</p>
+<h3 id="memref-타입"><a class="header" href="#memref-타입">memref 타입</a></h3>
+<p><strong>memref</strong>는 “메모리 영역에 대한 참조“를 나타낸다:</p>
+<pre><code class="language-mlir">memref&lt;10xi32&gt;           // 10개의 i32 배열
+memref&lt;1xi32&gt;            // 단일 i32 (크기 1 배열)
+memref&lt;5x5xf32&gt;          // 5×5 float 행렬
+memref&lt;*xi32&gt;            // 동적 크기 i32 배열
+</code></pre>
+<p><strong>구성:</strong></p>
+<ul>
+<li><code>memref&lt;shape x type&gt;</code>: shape은 차원, type은 요소 타입</li>
+<li><code>memref&lt;1xi32&gt;</code>: 하나의 i32를 저장하는 메모리 영역</li>
+</ul>
+<h3 id="stack-할당-memrefalloca"><a class="header" href="#stack-할당-memrefalloca">Stack 할당: memref.alloca</a></h3>
+<p><strong>Stack에 메모리를 할당</strong>하는 연산:</p>
+<pre><code class="language-mlir">func.func @stack_example() -&gt; i32 {
+  // Stack에 i32 하나 할당
+  %stack = memref.alloca() : memref&lt;1xi32&gt;
+
+  %c0 = arith.constant 0 : index      // 인덱스 0
+  %c42 = arith.constant 42 : i32      // 값 42
+
+  // Stack에 값 저장
+  memref.store %c42, %stack[%c0] : memref&lt;1xi32&gt;
+
+  // Stack에서 값 로드
+  %loaded = memref.load %stack[%c0] : memref&lt;1xi32&gt;
+
+  func.return %loaded : i32
+  // 함수 종료 시 stack 자동 해제
+}
+</code></pre>
+<p><strong>동작:</strong></p>
+<ol>
+<li><code>memref.alloca</code>: Stack에 공간 할당</li>
+<li><code>memref.store</code>: 메모리에 값 쓰기</li>
+<li><code>memref.load</code>: 메모리에서 값 읽기</li>
+<li>함수 종료: Stack 자동 해제</li>
+</ol>
+<p><strong>인덱스 타입:</strong></p>
+<ul>
+<li><code>index</code>: MLIR의 배열 인덱스 전용 타입</li>
+<li>플랫폼에 따라 i32 또는 i64로 lowering됨</li>
+</ul>
+<p><strong>LLVM IR로 lowering:</strong></p>
+<pre><code class="language-llvm">define i32 @stack_example() {
+  %stack = alloca i32, i32 1         ; Stack 할당
+  store i32 42, i32* %stack          ; 저장
+  %loaded = load i32, i32* %stack    ; 로드
+  ret i32 %loaded
+}
+</code></pre>
+<h3 id="heap-할당-memrefalloc"><a class="header" href="#heap-할당-memrefalloc">Heap 할당: memref.alloc</a></h3>
+<p><strong>Heap에 메모리를 할당</strong>하는 연산:</p>
+<pre><code class="language-mlir">func.func @heap_example() -&gt; memref&lt;10xi32&gt; {
+  // Heap에 i32 배열 10개 할당
+  %heap = memref.alloc() : memref&lt;10xi32&gt;
+
+  // ... heap 사용 ...
+
+  // 명시적 해제 (수동 메모리 관리)
+  // memref.dealloc %heap : memref&lt;10xi32&gt;
+
+  func.return %heap : memref&lt;10xi32&gt;
+  // heap은 함수 종료 후에도 유효
+}
+</code></pre>
+<p><strong>동작:</strong></p>
+<ol>
+<li><code>memref.alloc</code>: Heap에 메모리 할당 (malloc과 유사)</li>
+<li>메모리 사용</li>
+<li><code>memref.dealloc</code>: 명시적 해제 (free와 유사)
+<ul>
+<li><strong>주의:</strong> 수동 해제는 에러 유발 (use-after-free, double-free)</li>
+<li>FunLang은 GC를 사용하므로 dealloc을 호출하지 않는다!</li>
+</ul>
+</li>
+</ol>
+<p><strong>LLVM IR로 lowering:</strong></p>
+<pre><code class="language-llvm">define ptr @heap_example() {
+  ; malloc 호출
+  %size = mul i64 10, 4                    ; 10 * sizeof(i32)
+  %heap = call ptr @malloc(i64 %size)
+
+  ; ... heap 사용 ...
+
+  ret ptr %heap
+}
+</code></pre>
+<h3 id="memrefload와-memrefstore"><a class="header" href="#memrefload와-memrefstore">memref.load와 memref.store</a></h3>
+<p><strong>메모리 읽기/쓰기:</strong></p>
+<pre><code class="language-mlir">// 쓰기
+memref.store %value, %memref[%index] : memref&lt;10xi32&gt;
+
+// 읽기
+%loaded = memref.load %memref[%index] : memref&lt;10xi32&gt;
+</code></pre>
+<p><strong>다차원 배열:</strong></p>
+<pre><code class="language-mlir">// 5×5 행렬
+%matrix = memref.alloc() : memref&lt;5x5xi32&gt;
+%c1 = arith.constant 1 : index
+%c2 = arith.constant 2 : index
+%c42 = arith.constant 42 : i32
+
+// matrix[1][2] = 42
+memref.store %c42, %matrix[%c1, %c2] : memref&lt;5x5xi32&gt;
+
+// value = matrix[1][2]
+%value = memref.load %matrix[%c1, %c2] : memref&lt;5x5xi32&gt;
+</code></pre>
+<h3 id="phase-2에서-memref를-사용하지-않는-이유"><a class="header" href="#phase-2에서-memref를-사용하지-않는-이유">Phase 2에서 memref를 사용하지 않는 이유</a></h3>
+<p><strong>Phase 2 프로그램은 SSA 레지스터만으로 충분하다:</strong></p>
+<pre><code class="language-mlir">// Phase 2 스타일 (SSA only)
+func.func @main() -&gt; i32 {
+  %x = arith.constant 5 : i32      // SSA value
+  %y = arith.constant 10 : i32     // SSA value
+  %sum = arith.addi %x, %y : i32   // SSA value
+  func.return %sum : i32
+}
+
+// memref 스타일로 작성하면? (불필요하게 복잡)
+func.func @main() -&gt; i32 {
+  %x_mem = memref.alloca() : memref&lt;1xi32&gt;
+  %c0 = arith.constant 0 : index
+  %c5 = arith.constant 5 : i32
+  memref.store %c5, %x_mem[%c0] : memref&lt;1xi32&gt;
+
+  %y_mem = memref.alloca() : memref&lt;1xi32&gt;
+  %c10 = arith.constant 10 : i32
+  memref.store %c10, %y_mem[%c0] : memref&lt;1xi32&gt;
+
+  %x = memref.load %x_mem[%c0] : memref&lt;1xi32&gt;
+  %y = memref.load %y_mem[%c0] : memref&lt;1xi32&gt;
+  %sum = arith.addi %x, %y : i32
+  func.return %sum : i32
+}
+</code></pre>
+<p>첫 번째 버전이 훨씬 간단하다! SSA 레지스터만으로 충분하면 memref를 사용할 필요가 없다.</p>
+<p><strong>memref가 필요한 경우:</strong></p>
+<ul>
+<li>값이 함수 스코프를 벗어나야 할 때 (클로저 환경)</li>
+<li>포인터가 필요할 때 (데이터 구조 간 참조)</li>
+<li>Mutation이 필요할 때 (SSA는 immutable)</li>
+</ul>
+<h3 id="memref-요약"><a class="header" href="#memref-요약">memref 요약</a></h3>
+<p><strong>memref dialect:</strong></p>
+<ul>
+<li>MLIR의 메모리 연산 추상화</li>
+<li><code>memref.alloca</code>: Stack 할당 (자동 해제)</li>
+<li><code>memref.alloc</code>: Heap 할당 (수동 해제 또는 GC)</li>
+<li><code>memref.load/store</code>: 메모리 읽기/쓰기</li>
+</ul>
+<p><strong>Phase 2 vs Phase 3:</strong></p>
+<ul>
+<li>Phase 2: SSA 레지스터만 사용 (memref 불필요)</li>
+<li>Phase 3: 클로저 환경 → heap 할당 → memref 필요</li>
+</ul>
+<p><strong>다음 섹션:</strong> 왜 Garbage Collection이 필요한가?</p>
+<h2 id="왜-garbage-collection이-필요한가"><a class="header" href="#왜-garbage-collection이-필요한가">왜 Garbage Collection이 필요한가</a></h2>
+<p>Heap 메모리는 명시적으로 할당하고 해제해야 한다. 하지만 수동 메모리 관리는 <strong>매우 어렵고 에러가 많다</strong>.</p>
+<h3 id="수동-메모리-관리의-문제"><a class="header" href="#수동-메모리-관리의-문제">수동 메모리 관리의 문제</a></h3>
+<h4 id="1-use-after-free"><a class="header" href="#1-use-after-free">1. Use-After-Free</a></h4>
+<p><strong>freed 메모리에 접근:</strong></p>
+<pre><code class="language-c">int* ptr = malloc(sizeof(int));
+*ptr = 42;
+free(ptr);        // 메모리 해제
+printf("%d\n", *ptr);  // 에러! freed 메모리 접근
+</code></pre>
+<p><strong>결과:</strong></p>
+<ul>
+<li>Undefined behavior (프로그램 crash 또는 잘못된 값)</li>
+<li>보안 취약점 (공격자가 freed 메모리를 재사용)</li>
+</ul>
+<h4 id="2-double-free"><a class="header" href="#2-double-free">2. Double-Free</a></h4>
+<p><strong>같은 메모리를 두 번 해제:</strong></p>
+<pre><code class="language-c">int* ptr = malloc(sizeof(int));
+free(ptr);
+free(ptr);  // 에러! 이미 freed된 메모리
+</code></pre>
+<p><strong>결과:</strong></p>
+<ul>
+<li>Heap 메타데이터 손상</li>
+<li>프로그램 crash</li>
+</ul>
+<h4 id="3-memory-leak"><a class="header" href="#3-memory-leak">3. Memory Leak</a></h4>
+<p><strong>메모리 해제를 잊음:</strong></p>
+<pre><code class="language-c">void leak() {
+    int* ptr = malloc(sizeof(int));
+    *ptr = 42;
+    return;  // ptr을 free하지 않음!
+}
+
+// leak()을 1000번 호출하면?
+for (int i = 0; i &lt; 1000; i++) {
+    leak();  // 메모리 누수: 1000 * sizeof(int) 바이트
+}
+</code></pre>
+<p><strong>결과:</strong></p>
+<ul>
+<li>메모리 사용량 계속 증가</li>
+<li>Out-of-memory 에러</li>
+</ul>
+<h3 id="클로저가-수동-메모리-관리를-어렵게-만드는-이유"><a class="header" href="#클로저가-수동-메모리-관리를-어렵게-만드는-이유">클로저가 수동 메모리 관리를 어렵게 만드는 이유</a></h3>
+<p><strong>문제: 언제 클로저 환경을 해제하는가?</strong></p>
+<pre><code class="language-fsharp">// FunLang 예시
+let makeAdder x = fun y -&gt; x + y
+
+let add5 = makeAdder 5   // 클로저 1: env = { x: 5 }
+let add10 = makeAdder 10 // 클로저 2: env = { x: 10 }
+
+// Q: env { x: 5 }를 언제 해제하는가?
+// A: add5가 더 이상 사용되지 않을 때
+
+// 하지만 이것이 언제인가?
+let adders = [add5; add10]  // add5를 리스트에 저장
+// 여기서 add5를 해제할 수 있는가? No! 리스트가 참조 중
+
+let result = List.head adders 3  // add5 사용
+// 이제 해제? 아직 adders가 add5를 가리킨다
+
+// ... 프로그램 계속 실행 ...
+</code></pre>
+<p><strong>복잡성:</strong></p>
+<ul>
+<li><code>add5</code>가 언제 “더 이상 사용되지 않는가“를 결정하기 어렵다</li>
+<li>여러 변수가 같은 클로저를 참조할 수 있다</li>
+<li>클로저가 다른 클로저를 캡처할 수 있다 (환경이 중첩)</li>
+</ul>
+<p><strong>수동 관리 시도:</strong></p>
+<pre><code class="language-fsharp">// 명시적 free 추가?
+let add5 = makeAdder 5
+// ... add5 사용 ...
+free(add5)  // 하지만 다른 변수가 add5를 참조하면?
+
+let alias = add5
+free(add5)  // alias는 이제 invalid pointer!
+</code></pre>
+<p><strong>불가능한 이유:</strong></p>
+<ul>
+<li>참조 추적이 필요 (누가 클로저를 가리키는가?)</li>
+<li>런타임 추적 메커니즘 필요</li>
+<li><strong>이미 Garbage Collector를 구현하는 것과 같다!</strong></li>
+</ul>
+<h3 id="클로저-생명주기-예시"><a class="header" href="#클로저-생명주기-예시">클로저 생명주기 예시</a></h3>
+<p><strong>복잡한 시나리오:</strong></p>
+<pre><code class="language-fsharp">let outer x =
+    let inner y =
+        fun z -&gt; x + y + z  // x와 y를 모두 캡처
+    inner
+
+let f = outer 5 10   // f는 클로저, env = { x: 5, y: 10 }
+
+// outer 함수는 종료됨 (stack 해제)
+// 하지만 env { x: 5, y: 10 }은 heap에 살아있어야 함
+
+let result = f 3     // x=5, y=10, z=3 → 18
+
+// 언제 env를 해제?
+// f가 더 이상 참조되지 않을 때
+</code></pre>
+<p><strong>Garbage Collector의 역할:</strong></p>
+<ul>
+<li>런타임에 객체 참조를 추적한다</li>
+<li>더 이상 참조되지 않는 객체를 찾는다</li>
+<li>자동으로 메모리를 회수한다</li>
+</ul>
+<h3 id="garbage-collection의-이점"><a class="header" href="#garbage-collection의-이점">Garbage Collection의 이점</a></h3>
+<p><strong>1. 안전성</strong></p>
+<ul>
+<li>Use-after-free: 불가능 (GC가 사용 중인 객체를 해제하지 않음)</li>
+<li>Double-free: 불가능 (GC가 한 번만 해제)</li>
+<li>Memory leak: 최소화 (접근 불가능한 객체는 자동 회수)</li>
+</ul>
+<p><strong>2. 생산성</strong></p>
+<ul>
+<li>프로그래머가 메모리 관리를 신경 쓰지 않아도 됨</li>
+<li>버그가 적다</li>
+<li>코드가 간결해진다</li>
+</ul>
+<p><strong>3. 클로저 지원</strong></p>
+<ul>
+<li>클로저 환경의 생명주기를 자동 관리</li>
+<li>복잡한 참조 그래프도 처리</li>
+</ul>
+<p><strong>트레이드오프:</strong></p>
+<ul>
+<li>성능: GC가 주기적으로 실행됨 (pause time)</li>
+<li>메모리: GC는 약간의 메모리 오버헤드 존재</li>
+<li><strong>FunLang의 선택:</strong> 클로저 지원을 위해 GC는 필수</li>
+</ul>
+<h3 id="gc-없이-클로저를-구현한다면"><a class="header" href="#gc-없이-클로저를-구현한다면">GC 없이 클로저를 구현한다면?</a></h3>
+<p><strong>대안들:</strong></p>
+<ol>
+<li>
+<p><strong>Reference Counting</strong></p>
+<ul>
+<li>각 객체의 참조 카운트 추적</li>
+<li>카운트가 0이 되면 해제</li>
+<li><strong>문제:</strong> 순환 참조 처리 불가
+<pre><code class="language-fsharp">let rec loop x = fun y -&gt; loop y x  // 순환 참조!
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Arena Allocation</strong></p>
+<ul>
+<li>모든 객체를 arena에 할당</li>
+<li>Arena 전체를 한 번에 해제</li>
+<li><strong>문제:</strong> 클로저가 서로 다른 생명주기를 가질 때 비효율</li>
+</ul>
+</li>
+<li>
+<p><strong>Ownership System (Rust 스타일)</strong></p>
+<ul>
+<li>컴파일 타임에 생명주기 추적</li>
+<li>런타임 오버헤드 없음</li>
+<li><strong>문제:</strong> FunLang은 타입 추론 언어 (ownership 추가는 언어 복잡성 증가)</li>
+</ul>
+</li>
+</ol>
+<p><strong>결론:</strong> Garbage Collection이 가장 적합한 선택이다!</p>
+<h3 id="왜-gc가-필요한가-요약"><a class="header" href="#왜-gc가-필요한가-요약">왜 GC가 필요한가 요약</a></h3>
+<p><strong>문제:</strong></p>
+<ul>
+<li>클로저 환경은 heap에 할당해야 한다 (함수 스코프를 벗어남)</li>
+<li>환경의 생명주기는 복잡하다 (여러 참조, 중첩, 순환)</li>
+<li>수동 메모리 관리는 에러가 많다 (use-after-free, leak)</li>
+</ul>
+<p><strong>해답: Garbage Collection</strong></p>
+<ul>
+<li>런타임에 객체 참조를 추적한다</li>
+<li>접근 불가능한 객체를 자동으로 회수한다</li>
+<li>프로그래머가 메모리 관리를 신경 쓰지 않아도 된다</li>
+</ul>
+<p><strong>다음 섹션:</strong> Boehm GC 소개 - FunLang이 사용할 GC!</p>
+<h2 id="boehm-gc-소개"><a class="header" href="#boehm-gc-소개">Boehm GC 소개</a></h2>
+<p>FunLang은 <strong>Boehm-Demers-Weiser Garbage Collector</strong> (줄여서 Boehm GC 또는 bdwgc)를 사용한다.</p>
+<h3 id="boehm-gc란"><a class="header" href="#boehm-gc란">Boehm GC란?</a></h3>
+<p><strong>Boehm GC</strong>는 C와 C++을 위한 <strong>보수적(conservative) 가비지 컬렉터</strong>다.</p>
+<p><strong>핵심 특징:</strong></p>
+<ol>
+<li>
+<p><strong>Conservative Collection</strong></p>
+<ul>
+<li>“보수적“이란 정확한 타입 정보 없이 동작한다는 의미</li>
+<li>Stack과 heap을 스캔하여 “포인터처럼 보이는 값“을 찾는다</li>
+<li>값이 유효한 heap 주소 범위에 있으면 포인터로 간주한다</li>
+</ul>
+</li>
+<li>
+<p><strong>Drop-in Replacement for malloc/free</strong></p>
+<pre><code class="language-c">// 기존 코드
+int* ptr = malloc(sizeof(int) * 10);
+// ... 사용 ...
+free(ptr);
+
+// Boehm GC 사용
+int* ptr = GC_malloc(sizeof(int) * 10);
+// ... 사용 ...
+// free 불필요! GC가 자동으로 회수
+</code></pre>
+</li>
+<li>
+<p><strong>Battle-Tested</strong></p>
+<ul>
+<li>1988년부터 개발됨 (30년 이상 역사)</li>
+<li>많은 프로그래밍 언어 구현에서 사용:
+<ul>
+<li>GNU Guile (Scheme)</li>
+<li>Mono (.NET on Linux)</li>
+<li>W3m (텍스트 브라우저)</li>
+</ul>
+</li>
+<li>안정성이 검증됨</li>
+</ul>
+</li>
+<li>
+<p><strong>Thread-Safe</strong></p>
+<ul>
+<li>멀티스레드 환경에서 안전</li>
+<li>적절한 초기화 필요 (<code>GC_INIT()</code>)</li>
+</ul>
+</li>
+</ol>
+<h3 id="왜-boehm-gc를-선택했는가"><a class="header" href="#왜-boehm-gc를-선택했는가">왜 Boehm GC를 선택했는가?</a></h3>
+<p><strong>장점:</strong></p>
+<ol>
+<li>
+<p><strong>컴파일러 변경 최소화</strong></p>
+<ul>
+<li>Stack map 불필요 (conservative 스캔)</li>
+<li>Write barrier 불필요</li>
+<li>GC를 위한 특별한 코드 생성 불필요</li>
+</ul>
+</li>
+<li>
+<p><strong>간단한 통합</strong></p>
+<ul>
+<li>C 라이브러리로 제공</li>
+<li><code>GC_malloc</code> 호출만으로 사용 가능</li>
+<li>기존 C runtime과 함께 링킹</li>
+</ul>
+</li>
+<li>
+<p><strong>안정성</strong></p>
+<ul>
+<li>오래 사용됨, 버그가 적다</li>
+<li>다양한 플랫폼 지원 (Linux, macOS, Windows)</li>
+</ul>
+</li>
+</ol>
+<p><strong>단점:</strong></p>
+<ol>
+<li>
+<p><strong>보수적 수집</strong></p>
+<ul>
+<li>False positive: 포인터가 아닌 값을 포인터로 오인</li>
+<li>결과: 일부 객체가 회수되지 않을 수 있음 (메모리 누수)</li>
+<li>실제로는 드물고, 대부분의 프로그램에서 문제없음</li>
+</ul>
+</li>
+<li>
+<p><strong>Stop-the-world GC</strong></p>
+<ul>
+<li>GC 실행 중 프로그램 전체가 일시 중지</li>
+<li>Latency-critical 애플리케이션에는 부적합</li>
+<li>FunLang은 교육용이므로 문제없음</li>
+</ul>
+</li>
+</ol>
+<h3 id="대안과-비교"><a class="header" href="#대안과-비교">대안과 비교</a></h3>
+<p><strong>1. Reference Counting</strong></p>
+<ul>
+<li><strong>장점:</strong> 즉시 회수, 예측 가능</li>
+<li><strong>단점:</strong> 순환 참조 처리 불가, 성능 오버헤드 (카운트 업데이트)</li>
+<li><strong>FunLang:</strong> 클로저는 순환 참조 가능 → 부적합</li>
+</ul>
+<p><strong>2. LLVM Statepoints (Precise GC)</strong></p>
+<ul>
+<li><strong>장점:</strong> 정확한 수집 (false positive 없음)</li>
+<li><strong>단점:</strong> 복잡한 컴파일러 지원 필요 (safepoint 삽입, stack map 생성)</li>
+<li><strong>FunLang:</strong> 교육용으로는 너무 복잡 → 부적합</li>
+</ul>
+<p><strong>3. Custom Mark-Sweep GC</strong></p>
+<ul>
+<li><strong>장점:</strong> 완전한 제어</li>
+<li><strong>단점:</strong> 구현이 어렵고 버그가 많음</li>
+<li><strong>FunLang:</strong> Boehm GC가 이미 잘 동작 → 불필요</li>
+</ul>
+<p><strong>결론:</strong> Boehm GC가 FunLang에 가장 적합하다!</p>
+<h3 id="boehm-gc-핵심-함수"><a class="header" href="#boehm-gc-핵심-함수">Boehm GC 핵심 함수</a></h3>
+<p><strong>1. GC_INIT()</strong></p>
+<pre><code class="language-c">GC_INIT();  // 프로그램 시작 시 한 번 호출
+</code></pre>
+<ul>
+<li>GC를 초기화한다</li>
+<li>반드시 <code>main()</code> 시작 부분이나 첫 <code>GC_malloc</code> 전에 호출</li>
+<li>Thread-local storage 설정, heap 초기화</li>
+</ul>
+<p><strong>2. GC_malloc(size)</strong></p>
+<pre><code class="language-c">void* ptr = GC_malloc(100);  // 100바이트 할당
+</code></pre>
+<ul>
+<li>Heap에 메모리 할당</li>
+<li><code>malloc</code>과 동일하게 사용</li>
+<li>GC가 자동으로 회수 (free 불필요)</li>
+</ul>
+<p><strong>3. GC_malloc_atomic(size)</strong></p>
+<pre><code class="language-c">void* ptr = GC_malloc_atomic(100);  // 포인터 없는 데이터
+</code></pre>
+<ul>
+<li>포인터를 포함하지 않는 데이터용 할당</li>
+<li>예: 문자열, 정수 배열</li>
+<li>GC가 스캔하지 않음 (성능 향상)</li>
+</ul>
+<p><strong>4. GC_free(ptr)</strong> (선택 사항)</p>
+<pre><code class="language-c">GC_free(ptr);  // 명시적 해제 (힌트)
+</code></pre>
+<ul>
+<li>GC에게 “이 메모리를 즉시 회수해도 됨“을 알림</li>
+<li>필수는 아님 (GC가 나중에 자동 회수)</li>
+<li>성능 최적화용</li>
+</ul>
+<h3 id="conservative-gc-동작-원리"><a class="header" href="#conservative-gc-동작-원리">Conservative GC 동작 원리</a></h3>
+<p><strong>1. Heap 스캔:</strong></p>
+<pre><code>Heap:
+┌────────────────┐ 0x1000
+│ Object A       │
+├────────────────┤ 0x1010
+│ Object B       │
+├────────────────┤ 0x1020
+│ Free space     │
+└────────────────┘
+</code></pre>
+<p><strong>2. Stack 스캔:</strong></p>
+<pre><code>Stack:
+┌────────────────┐
+│ var1 = 0x1000  │ ← 포인터처럼 보임 (Object A 가리킴)
+├────────────────┤
+│ var2 = 42      │ ← 포인터 아님 (heap 범위 밖)
+├────────────────┤
+│ var3 = 0x1010  │ ← 포인터처럼 보임 (Object B 가리킴)
+└────────────────┘
+</code></pre>
+<p><strong>3. Mark Phase:</strong></p>
+<ul>
+<li>Stack에서 <code>0x1000</code>, <code>0x1010</code> 발견</li>
+<li>Object A와 Object B를 “live“로 표시</li>
+</ul>
+<p><strong>4. Sweep Phase:</strong></p>
+<ul>
+<li>Heap 전체를 스캔</li>
+<li>“live” 표시 없는 객체 회수</li>
+</ul>
+<p><strong>False Positive 예시:</strong></p>
+<pre><code class="language-c">int x = 0x1000;  // 우연히 heap 주소와 같은 정수
+// GC는 x를 포인터로 오인할 수 있음
+// 결과: 0x1000의 객체가 회수되지 않음 (누수)
+</code></pre>
+<p>실제로는 드물고, 대부분의 프로그램에서 문제없음.</p>
+<h2 id="boehm-gc-빌드-및-설치"><a class="header" href="#boehm-gc-빌드-및-설치">Boehm GC 빌드 및 설치</a></h2>
+<p>Boehm GC를 소스에서 빌드하거나 패키지 매니저로 설치할 수 있다.</p>
+<h3 id="소스에서-빌드"><a class="header" href="#소스에서-빌드">소스에서 빌드</a></h3>
+<p><strong>1. 저장소 클론:</strong></p>
+<pre><code class="language-bash"># Boehm GC 저장소
+git clone https://github.com/ivmai/bdwgc
+cd bdwgc
+
+# Atomic operations 라이브러리 (의존성)
+git clone https://github.com/ivmai/libatomic_ops
+</code></pre>
+<p><strong>2. libatomic_ops 링크:</strong></p>
+<pre><code class="language-bash"># bdwgc가 libatomic_ops를 찾을 수 있도록 심볼릭 링크 생성
+ln -s $(pwd)/libatomic_ops $(pwd)/libatomic_ops
+</code></pre>
+<p>또는:</p>
+<pre><code class="language-bash">cd bdwgc
+ln -s ../libatomic_ops libatomic_ops
+</code></pre>
+<p><strong>3. Build 설정:</strong></p>
+<pre><code class="language-bash">cd bdwgc
+autoreconf -vif        # autoconf 파일 생성
+automake --add-missing # 누락된 파일 추가
+./configure --prefix=$HOME/boehm-gc --enable-threads=posix
+</code></pre>
+<p><strong>configure 옵션:</strong></p>
+<ul>
+<li><code>--prefix=$HOME/boehm-gc</code>: 설치 경로 (홈 디렉토리)</li>
+<li><code>--enable-threads=posix</code>: 멀티스레드 지원 (POSIX threads)</li>
+</ul>
+<p><strong>4. 빌드 및 설치:</strong></p>
+<pre><code class="language-bash">make -j$(nproc)        # 병렬 빌드 (CPU 코어 수만큼)
+make check             # 테스트 실행 (선택 사항)
+make install           # $HOME/boehm-gc에 설치
+</code></pre>
+<p><strong>5. 환경 변수 설정:</strong></p>
+<pre><code class="language-bash"># 라이브러리 경로 추가
+export LD_LIBRARY_PATH=$HOME/boehm-gc/lib:$LD_LIBRARY_PATH
+
+# 헤더 경로 추가
+export C_INCLUDE_PATH=$HOME/boehm-gc/include:$C_INCLUDE_PATH
+
+# bashrc에 추가하여 영구 적용
+echo 'export LD_LIBRARY_PATH=$HOME/boehm-gc/lib:$LD_LIBRARY_PATH' &gt;&gt; ~/.bashrc
+echo 'export C_INCLUDE_PATH=$HOME/boehm-gc/include:$C_INCLUDE_PATH' &gt;&gt; ~/.bashrc
+</code></pre>
+<h3 id="패키지-매니저로-설치"><a class="header" href="#패키지-매니저로-설치">패키지 매니저로 설치</a></h3>
+<p><strong>Ubuntu/Debian:</strong></p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install libgc-dev
+</code></pre>
+<p><strong>macOS (Homebrew):</strong></p>
+<pre><code class="language-bash">brew install bdw-gc
+</code></pre>
+<p><strong>Fedora/RHEL:</strong></p>
+<pre><code class="language-bash">sudo dnf install gc-devel
+</code></pre>
+<p><strong>Arch Linux:</strong></p>
+<pre><code class="language-bash">sudo pacman -S gc
+</code></pre>
+<p>패키지 매니저로 설치하면 환경 변수 설정이 자동으로 처리된다.</p>
+<h3 id="설치-확인-1"><a class="header" href="#설치-확인-1">설치 확인</a></h3>
+<p><strong>테스트 프로그램 작성:</strong></p>
+<pre><code class="language-c">// test_gc.c
+#include &lt;stdio.h&gt;
+#include &lt;gc.h&gt;
+
+int main() {
+    GC_INIT();
+
+    void* ptr = GC_malloc(100);
+    if (ptr == NULL) {
+        printf("GC_malloc failed\n");
+        return 1;
+    }
+
+    printf("GC_malloc succeeded: %p\n", ptr);
+    // GC_free 불필요 - GC가 자동 회수
+
+    return 0;
+}
+</code></pre>
+<p><strong>컴파일 및 실행:</strong></p>
+<pre><code class="language-bash"># 소스 빌드한 경우
+gcc test_gc.c -o test_gc -I$HOME/boehm-gc/include -L$HOME/boehm-gc/lib -lgc
+./test_gc
+
+# 패키지 매니저로 설치한 경우
+gcc test_gc.c -o test_gc -lgc
+./test_gc
+</code></pre>
+<p><strong>예상 출력:</strong></p>
+<pre><code>GC_malloc succeeded: 0x7f1234567890
+</code></pre>
+<p>성공! Boehm GC가 올바르게 설치되었다.</p>
+<h2 id="funlang-runtime-통합"><a class="header" href="#funlang-runtime-통합">FunLang Runtime 통합</a></h2>
+<p>이제 FunLang 컴파일러가 생성하는 바이너리와 Boehm GC를 연결한다.</p>
+<h3 id="c-runtime-작성"><a class="header" href="#c-runtime-작성">C Runtime 작성</a></h3>
+<p><strong>runtime.c</strong> - FunLang 실행 환경:</p>
+<pre><code class="language-c">// runtime.c - FunLang runtime with Boehm GC
+#include &lt;stdio.h&gt;
+#include &lt;gc.h&gt;
+
+/**
+ * GC 초기화
+ * 프로그램 시작 시 한 번 호출
+ */
+void funlang_init() {
+    GC_INIT();
+}
+
+/**
+ * GC-managed 메모리 할당
+ *
+ * @param size 할당할 바이트 수
+ * @return 할당된 메모리 포인터
+ */
+void* funlang_alloc(size_t size) {
+    return GC_malloc(size);
+}
+
+/**
+ * Atomic 메모리 할당 (포인터 없는 데이터용)
+ *
+ * @param size 할당할 바이트 수
+ * @return 할당된 메모리 포인터
+ */
+void* funlang_alloc_atomic(size_t size) {
+    return GC_malloc_atomic(size);
+}
+
+/**
+ * 정수 출력 (Chapter 06에서 구현)
+ *
+ * @param value 출력할 정수 값
+ */
+void print_int(int value) {
+    printf("%d\n", value);
+}
+
+/**
+ * MLIR 컴파일된 main 함수
+ * F# 컴파일러가 생성한 LLVM IR에서 정의됨
+ */
+extern int funlang_main();
+
+/**
+ * C 프로그램 진입점
+ * GC 초기화 후 funlang_main 호출
+ */
+int main(int argc, char** argv) {
+    funlang_init();
+    int result = funlang_main();
+    return result;
+}
+</code></pre>
+<p><strong>Runtime 구조:</strong></p>
+<ol>
+<li><strong>funlang_init()</strong>: GC 초기화</li>
+<li><strong>funlang_alloc()</strong>: Heap 할당 (Phase 3+에서 사용)</li>
+<li><strong>print_int()</strong>: 정수 출력 (Phase 2에서 이미 사용 중)</li>
+<li><strong>main()</strong>: GC 초기화 → funlang_main 호출</li>
+</ol>
+<h3 id="runtime-컴파일"><a class="header" href="#runtime-컴파일">Runtime 컴파일</a></h3>
+<pre><code class="language-bash"># 소스 빌드한 경우
+gcc -c runtime.c -o runtime.o -I$HOME/boehm-gc/include
+
+# 패키지 매니저로 설치한 경우
+gcc -c runtime.c -o runtime.o
+</code></pre>
+<p><strong>결과:</strong> <code>runtime.o</code> 오브젝트 파일 생성</p>
+<h3 id="mlir에서-gc_malloc-호출"><a class="header" href="#mlir에서-gc_malloc-호출">MLIR에서 GC_malloc 호출</a></h3>
+<p>Phase 3에서 클로저 환경을 heap에 할당할 때 사용할 패턴 (미리보기):</p>
+<p><strong>1. GC_malloc 선언 (MLIR):</strong></p>
+<pre><code class="language-mlir">// External function 선언
+llvm.func @GC_malloc(i64) -&gt; !llvm.ptr attributes {
+    sym_visibility = "private"
+}
+</code></pre>
+<p><strong>2. Heap 할당 호출:</strong></p>
+<pre><code class="language-mlir">func.func @allocate_closure_env() -&gt; !llvm.ptr {
+    // 클로저 환경 크기 (예: 2개의 i64 값)
+    %size = arith.constant 16 : i64  // 2 * 8 bytes
+
+    // GC_malloc 호출
+    %env = llvm.call @GC_malloc(%size) : (i64) -&gt; !llvm.ptr
+
+    // env에 캡처된 값 저장
+    // (Phase 3에서 구현)
+
+    func.return %env : !llvm.ptr
+}
+</code></pre>
+<p><strong>3. F# 코드 생성 패턴:</strong></p>
+<pre><code class="language-fsharp">// MlirWrapper.fs에 추가할 헬퍼 메서드 (Phase 3)
+type OpBuilder(context: Context) =
+    // ... 기존 메서드 ...
+
+    /// GC_malloc external function 선언
+    member this.DeclareGCMalloc() : MlirOperation =
+        let ptrType = this.LLVMPointerType()
+        let i64Type = builder.Context.GetIntegerType(64)
+        let funcType = MlirNative.mlirFunctionTypeGet(
+            ctx.Handle,
+            1n, [| i64Type |],
+            1n, [| ptrType |]
+        )
+
+        let name = MlirHelpers.fromString("GC_malloc")
+        let funcOp = MlirNative.mlirLLVMFuncCreate(location, name, funcType)
+
+        // 가시성 속성 설정
+        // ...
+
+        funcOp
+
+    /// GC_malloc 호출하여 메모리 할당
+    member this.CallGCMalloc(size: MlirValue, location: MlirLocation) : MlirValue =
+        let gcMalloc = // ... GC_malloc 함수 참조 ...
+        let callOp = MlirNative.mlirLLVMCallCreate(
+            location, gcMalloc, 1n, [| size |]
+        )
+        MlirNative.mlirOperationGetResult(callOp, 0)
+</code></pre>
+<p><strong>Phase 2에서는 사용하지 않지만</strong>, runtime.c에 <code>funlang_alloc</code>을 미리 정의하여 Phase 3에서 바로 사용할 수 있다.</p>
+<h2 id="빌드-파이프라인-업데이트"><a class="header" href="#빌드-파이프라인-업데이트">빌드 파이프라인 업데이트</a></h2>
+<p>Boehm GC를 포함한 완전한 빌드 파이프라인:</p>
+<h3 id="단계별-빌드-과정"><a class="header" href="#단계별-빌드-과정">단계별 빌드 과정</a></h3>
+<p><strong>1. FunLang 소스 → LLVM IR:</strong></p>
+<pre><code class="language-bash"># F# 컴파일러 실행
+dotnet run "let x = 5 in if x &gt; 0 then x * 2 else 0"
+
+# 출력: output.ll (LLVM IR 파일)
+</code></pre>
+<p><strong>2. LLVM IR → Object 파일:</strong></p>
+<pre><code class="language-bash">llc -filetype=obj output.ll -o output.o
+</code></pre>
+<p><strong>3. Runtime 컴파일:</strong></p>
+<pre><code class="language-bash"># 소스 빌드한 경우
+gcc -c runtime.c -o runtime.o -I$HOME/boehm-gc/include
+
+# 패키지 매니저로 설치한 경우
+gcc -c runtime.c -o runtime.o
+</code></pre>
+<p><strong>4. 링킹 (Boehm GC 포함):</strong></p>
+<pre><code class="language-bash"># 소스 빌드한 경우
+gcc output.o runtime.o -o program \
+    -L$HOME/boehm-gc/lib -lgc \
+    -Wl,-rpath,$HOME/boehm-gc/lib
+
+# 패키지 매니저로 설치한 경우
+gcc output.o runtime.o -o program -lgc
+</code></pre>
+<p><strong>링커 옵션 설명:</strong></p>
+<ul>
+<li><code>-L$HOME/boehm-gc/lib</code>: 라이브러리 검색 경로</li>
+<li><code>-lgc</code>: Boehm GC 라이브러리 링크</li>
+<li><code>-Wl,-rpath,$HOME/boehm-gc/lib</code>: 실행 시 라이브러리 경로 (RPATH)</li>
+</ul>
+<p><strong>5. 실행:</strong></p>
+<pre><code class="language-bash">./program
+echo $?   # Exit code 확인
+</code></pre>
+<h3 id="자동화된-빌드-스크립트"><a class="header" href="#자동화된-빌드-스크립트">자동화된 빌드 스크립트</a></h3>
+<p><strong>build.sh:</strong></p>
+<pre><code class="language-bash">#!/bin/bash
+# FunLang 빌드 스크립트
+
+set -e  # 에러 시 중단
+
+FUNLANG_SRC="$1"
+OUTPUT="program"
+
+# 1. FunLang → LLVM IR
+echo "Compiling FunLang to LLVM IR..."
+dotnet run "$FUNLANG_SRC" &gt; output.ll
+
+# 2. LLVM IR → Object
+echo "Compiling LLVM IR to object file..."
+llc -filetype=obj output.ll -o output.o
+
+# 3. Runtime 컴파일 (필요 시)
+if [ ! -f runtime.o ]; then
+    echo "Compiling runtime..."
+    gcc -c runtime.c -o runtime.o
+fi
+
+# 4. 링킹
+echo "Linking with Boehm GC..."
+if [ -d "$HOME/boehm-gc" ]; then
+    # 소스 빌드
+    gcc output.o runtime.o -o "$OUTPUT" \
+        -L$HOME/boehm-gc/lib -lgc \
+        -Wl,-rpath,$HOME/boehm-gc/lib
+else
+    # 패키지 매니저
+    gcc output.o runtime.o -o "$OUTPUT" -lgc
+fi
+
+echo "Build complete: $OUTPUT"
+</code></pre>
+<p><strong>사용:</strong></p>
+<pre><code class="language-bash">chmod +x build.sh
+./build.sh "let x = 5 in x + x"
+./program
+</code></pre>
+<h3 id="f-통합"><a class="header" href="#f-통합">F# 통합</a></h3>
+<p><strong>Compiler.fs에 추가:</strong></p>
+<pre><code class="language-fsharp">module Compiler =
+
+    /// LLVM IR을 object 파일로 컴파일
+    let compileToObject (llvmIR: string) (outputPath: string) =
+        // LLVM IR을 파일에 쓰기
+        let llPath = Path.ChangeExtension(outputPath, ".ll")
+        File.WriteAllText(llPath, llvmIR)
+
+        // llc 호출
+        let llcArgs = sprintf "-filetype=obj %s -o %s" llPath outputPath
+        let result = Process.Start("llc", llcArgs)
+        result.WaitForExit()
+
+        if result.ExitCode &lt;&gt; 0 then
+            failwith "llc compilation failed"
+
+    /// Object 파일과 runtime을 링킹
+    let linkWithGC (objPath: string) (exePath: string) =
+        let runtimePath = "runtime.o"
+
+        // Boehm GC 경로 확인
+        let gcPath = Environment.GetEnvironmentVariable("HOME") + "/boehm-gc"
+        let hasSourceBuild = Directory.Exists(gcPath)
+
+        let gccArgs =
+            if hasSourceBuild then
+                sprintf "%s %s -o %s -L%s/lib -lgc -Wl,-rpath,%s/lib"
+                    objPath runtimePath exePath gcPath gcPath
+            else
+                sprintf "%s %s -o %s -lgc"
+                    objPath runtimePath exePath
+
+        let result = Process.Start("gcc", gccArgs)
+        result.WaitForExit()
+
+        if result.ExitCode &lt;&gt; 0 then
+            failwith "gcc linking failed"
+
+    /// 전체 컴파일 파이프라인
+    let compileProgram (source: string) (outputExe: string) =
+        // 1. Parse
+        let ast = Parser.parse source
+
+        // 2. MLIR IR 생성
+        let mlirModule = CodeGen.compile ast
+
+        // 3. Lowering
+        Lowering.lowerToLLVMDialect mlirModule
+
+        // 4. LLVM IR 변환
+        let llvmIR = Lowering.translateToLLVMIR mlirModule
+
+        // 5. Object 컴파일
+        let objPath = Path.ChangeExtension(outputExe, ".o")
+        compileToObject llvmIR objPath
+
+        // 6. 링킹
+        linkWithGC objPath outputExe
+
+        printfn "Compilation successful: %s" outputExe
+</code></pre>
+<p><strong>사용:</strong></p>
+<pre><code class="language-fsharp">// Program.fs
+[&lt;EntryPoint&gt;]
+let main argv =
+    if argv.Length &lt; 1 then
+        printfn "Usage: dotnet run &lt;source&gt; [output]"
+        1
+    else
+        let source = argv.[0]
+        let output = if argv.Length &gt; 1 then argv.[1] else "program"
+
+        Compiler.compileProgram source output
+        0
+</code></pre>
+<h2 id="phase-2-vs-phase-3-메모리-사용"><a class="header" href="#phase-2-vs-phase-3-메모리-사용">Phase 2 vs Phase 3+ 메모리 사용</a></h2>
+<p>FunLang의 메모리 사용 패턴은 단계별로 진화한다.</p>
+<h3 id="phase-2-현재"><a class="header" href="#phase-2-현재">Phase 2 (현재)</a></h3>
+<p><strong>특징:</strong></p>
+<ul>
+<li>모든 값이 SSA 레지스터</li>
+<li>메모리 할당 없음</li>
+<li>GC 초기화되지만 사용되지 않음</li>
+</ul>
+<p><strong>생성되는 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @funlang_main() -&gt; i32 {
+    %c5 = arith.constant 5 : i32
+    %c10 = arith.constant 10 : i32
+    %sum = arith.addi %c5, %c10 : i32
+    func.return %sum : i32
+  }
+}
+</code></pre>
+<p><strong>GC 호출:</strong> 없음 (<code>funlang_alloc</code> 호출 0회)</p>
+<h3 id="phase-3-함수와-클로저"><a class="header" href="#phase-3-함수와-클로저">Phase 3 (함수와 클로저)</a></h3>
+<p><strong>특징:</strong></p>
+<ul>
+<li>클로저가 환경을 캡처</li>
+<li>환경은 heap에 할당 (<code>GC_malloc</code>)</li>
+<li>GC가 죽은 클로저 회수</li>
+</ul>
+<p><strong>예시: 클로저 환경 할당</strong></p>
+<pre><code class="language-mlir">// let makeAdder x = fun y -&gt; x + y
+func.func @makeAdder(%x: i32) -&gt; !llvm.ptr {
+    // 클로저 환경 할당 (x를 저장)
+    %size = arith.constant 8 : i64
+    %env = llvm.call @GC_malloc(%size) : (i64) -&gt; !llvm.ptr
+
+    // x를 환경에 저장
+    %x_i64 = arith.extsi %x : i32 to i64
+    llvm.store %x_i64, %env : !llvm.ptr
+
+    // 클로저 생성 (function pointer + env pointer)
+    %closure = funlang.make_closure @lambda, %env
+
+    func.return %closure : !llvm.ptr
+}
+
+// fun y -&gt; x + y
+func.func private @lambda(%env: !llvm.ptr, %y: i32) -&gt; i32 {
+    // 환경에서 x 로드
+    %x_i64 = llvm.load %env : !llvm.ptr -&gt; i64
+    %x = arith.trunci %x_i64 : i64 to i32
+
+    // x + y
+    %result = arith.addi %x, %y : i32
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>GC 호출:</strong> <code>makeAdder</code> 호출마다 1회</p>
+<h3 id="phase-6-데이터-구조"><a class="header" href="#phase-6-데이터-구조">Phase 6 (데이터 구조)</a></h3>
+<p><strong>특징:</strong></p>
+<ul>
+<li>리스트, 튜플, 문자열 모두 heap 할당</li>
+<li>재귀적 데이터 구조 (리스트의 tail)</li>
+<li>GC가 복잡한 참조 그래프 처리</li>
+</ul>
+<p><strong>예시: 리스트 cons</strong></p>
+<pre><code class="language-mlir">// cons(1, cons(2, nil))
+func.func @build_list() -&gt; !llvm.ptr {
+    // nil
+    %nil = llvm.mlir.null : !llvm.ptr
+
+    // cons(2, nil)
+    %size = arith.constant 16 : i64  // head + tail
+    %cons2 = llvm.call @GC_malloc(%size) : (i64) -&gt; !llvm.ptr
+    %c2 = arith.constant 2 : i64
+    llvm.store %c2, %cons2 : !llvm.ptr
+    %tail_ptr = llvm.getelementptr %cons2[8] : !llvm.ptr
+    llvm.store %nil, %tail_ptr : !llvm.ptr
+
+    // cons(1, cons2)
+    %cons1 = llvm.call @GC_malloc(%size) : (i64) -&gt; !llvm.ptr
+    %c1 = arith.constant 1 : i64
+    llvm.store %c1, %cons1 : !llvm.ptr
+    %tail_ptr1 = llvm.getelementptr %cons1[8] : !llvm.ptr
+    llvm.store %cons2, %tail_ptr1 : !llvm.ptr
+
+    func.return %cons1 : !llvm.ptr
+}
+</code></pre>
+<p><strong>GC 호출:</strong> cons 노드마다 1회</p>
+<p><strong>메모리 그래프:</strong></p>
+<pre><code>%cons1 ─→ [ head: 1 | tail: ─→ %cons2 ─→ [ head: 2 | tail: nil ] ]
+</code></pre>
+<p>GC는 <code>%cons1</code>이 접근 불가능해지면 전체 체인을 회수한다.</p>
+<h3 id="메모리-사용-비교"><a class="header" href="#메모리-사용-비교">메모리 사용 비교</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>할당 위치</th><th>GC 사용</th><th>복잡도</th></tr>
+</thead>
+<tbody>
+<tr><td>Phase 2</td><td>SSA 레지스터만</td><td>초기화만 (호출 0회)</td><td>낮음</td></tr>
+<tr><td>Phase 3</td><td>클로저 환경 → Heap</td><td>클로저 생성 시</td><td>중간</td></tr>
+<tr><td>Phase 6</td><td>모든 데이터 구조 → Heap</td><td>거의 모든 연산</td><td>높음</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>핵심:</strong> Phase 2는 GC 인프라를 준비하지만, 실제 사용은 Phase 3부터다.</p>
+<h2 id="공통-에러-및-해결"><a class="header" href="#공통-에러-및-해결">공통 에러 및 해결</a></h2>
+<p>GC 통합 시 자주 발생하는 에러와 해결 방법:</p>
+<h3 id="에러-1-gc_malloc-호출-시-segfault"><a class="header" href="#에러-1-gc_malloc-호출-시-segfault">에러 1: GC_malloc 호출 시 Segfault</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Segmentation fault (core dumped)
+</code></pre>
+<p><strong>원인:</strong>
+<code>GC_INIT()</code>을 호출하지 않고 <code>GC_malloc</code>을 사용했다.</p>
+<p><strong>해결:</strong>
+<code>main()</code> 시작 부분에서 <code>GC_INIT()</code> 호출:</p>
+<pre><code class="language-c">int main() {
+    GC_INIT();  // 필수!
+    // ... 나머지 코드 ...
+}
+</code></pre>
+<p><strong>FunLang runtime.c:</strong></p>
+<pre><code class="language-c">void funlang_init() {
+    GC_INIT();
+}
+
+int main(int argc, char** argv) {
+    funlang_init();  // 첫 번째 호출
+    // ...
+}
+</code></pre>
+<h3 id="에러-2-linker-error---undefined-reference-to-gc_malloc"><a class="header" href="#에러-2-linker-error---undefined-reference-to-gc_malloc">에러 2: Linker Error - Undefined Reference to GC_malloc</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>undefined reference to `GC_malloc'
+collect2: error: ld returned 1 exit status
+</code></pre>
+<p><strong>원인:</strong>
+Boehm GC 라이브러리를 링킹하지 않았다.</p>
+<p><strong>해결:</strong>
+링킹 시 <code>-lgc</code> 옵션 추가:</p>
+<pre><code class="language-bash">gcc output.o runtime.o -o program -lgc
+</code></pre>
+<p>또는 라이브러리 경로 지정:</p>
+<pre><code class="language-bash">gcc output.o runtime.o -o program -L$HOME/boehm-gc/lib -lgc
+</code></pre>
+<h3 id="에러-3-실행-시-library-not-found"><a class="header" href="#에러-3-실행-시-library-not-found">에러 3: 실행 시 Library Not Found</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>error while loading shared libraries: libgc.so.1: cannot open shared object file
+</code></pre>
+<p><strong>원인:</strong>
+실행 시 <code>libgc.so</code>를 찾을 수 없다.</p>
+<p><strong>해결:</strong></p>
+<p><strong>옵션 1: LD_LIBRARY_PATH 설정</strong></p>
+<pre><code class="language-bash">export LD_LIBRARY_PATH=$HOME/boehm-gc/lib:$LD_LIBRARY_PATH
+./program
+</code></pre>
+<p><strong>옵션 2: RPATH 사용 (권장)</strong></p>
+<pre><code class="language-bash">gcc output.o runtime.o -o program \
+    -L$HOME/boehm-gc/lib -lgc \
+    -Wl,-rpath,$HOME/boehm-gc/lib
+</code></pre>
+<p>RPATH는 바이너리에 라이브러리 경로를 포함시킨다. <code>LD_LIBRARY_PATH</code> 설정 불필요.</p>
+<h3 id="에러-4-gc가-메모리를-회수하지-않음"><a class="header" href="#에러-4-gc가-메모리를-회수하지-않음">에러 4: GC가 메모리를 회수하지 않음</a></h3>
+<p><strong>증상:</strong>
+프로그램 메모리 사용량이 계속 증가한다.</p>
+<p><strong>원인:</strong>
+Boehm GC는 보수적(conservative)이므로 일부 객체를 회수하지 못할 수 있다.</p>
+<p><strong>확인 방법:</strong></p>
+<pre><code class="language-c">#include &lt;gc.h&gt;
+
+int main() {
+    GC_INIT();
+
+    for (int i = 0; i &lt; 1000000; i++) {
+        void* ptr = GC_malloc(100);
+        // ptr을 더 이상 사용하지 않음
+    }
+
+    // GC 통계 출력
+    GC_gcollect();  // 강제 수집
+    printf("Heap size: %zu\n", GC_get_heap_size());
+    printf("Free bytes: %zu\n", GC_get_free_bytes());
+
+    return 0;
+}
+</code></pre>
+<p><strong>일반적인 경우:</strong></p>
+<ul>
+<li>Phase 2-3 프로그램에서는 문제없음</li>
+<li>Conservative GC의 false positive는 드물다</li>
+<li>메모리 누수가 심각하면 정확한(precise) GC 고려</li>
+</ul>
+<h3 id="에러-5-multi-threading-관련-crash"><a class="header" href="#에러-5-multi-threading-관련-crash">에러 5: Multi-threading 관련 Crash</a></h3>
+<p><strong>증상:</strong>
+멀티스레드 프로그램에서 random crash.</p>
+<p><strong>원인:</strong>
+GC를 멀티스레드 모드로 초기화하지 않았다.</p>
+<p><strong>해결:</strong></p>
+<p><strong>Phase 2-5:</strong> 싱글스레드만 사용하므로 문제없음.</p>
+<p><strong>Phase 6+ (Future):</strong> 스레드 생성 시 GC-aware 함수 사용:</p>
+<pre><code class="language-c">#include &lt;gc.h&gt;
+#include &lt;pthread.h&gt;
+
+void* thread_func(void* arg) {
+    GC_pthread_create(...);  // GC-aware thread creation
+    // ...
+}
+</code></pre>
+<p>또는 빌드 시 thread-safe 옵션:</p>
+<pre><code class="language-bash">./configure --enable-threads=posix
+</code></pre>
+<h2 id="장-요약-3"><a class="header" href="#장-요약-3">장 요약</a></h2>
+<p>이 장에서 메모리 관리의 기초와 Boehm GC 통합을 완료했다.</p>
+<h3 id="주요-성취"><a class="header" href="#주요-성취">주요 성취</a></h3>
+<ol>
+<li>
+<p><strong>Stack vs Heap 이해</strong></p>
+<ul>
+<li>Stack: 함수 스코프, 자동 관리, LIFO</li>
+<li>Heap: 유연한 생명주기, 명시적 할당/해제</li>
+</ul>
+</li>
+<li>
+<p><strong>FunLang 메모리 전략</strong></p>
+<ul>
+<li>Phase 2: SSA 레지스터만 사용</li>
+<li>Phase 3+: 클로저 환경 → heap 할당</li>
+</ul>
+</li>
+<li>
+<p><strong>MLIR memref Dialect</strong></p>
+<ul>
+<li><code>memref.alloca</code>: Stack 할당</li>
+<li><code>memref.alloc</code>: Heap 할당</li>
+<li><code>memref.load/store</code>: 메모리 읽기/쓰기</li>
+</ul>
+</li>
+<li>
+<p><strong>GC 필요성 이해</strong></p>
+<ul>
+<li>수동 메모리 관리의 문제: use-after-free, leak, double-free</li>
+<li>클로저가 복잡한 생명주기를 가진다</li>
+<li>GC가 자동으로 회수한다</li>
+</ul>
+</li>
+<li>
+<p><strong>Boehm GC 통합</strong></p>
+<ul>
+<li>Conservative GC: 타입 정보 불필요</li>
+<li><code>GC_INIT()</code>, <code>GC_malloc()</code> 사용</li>
+<li>빌드 및 설치 완료</li>
+</ul>
+</li>
+<li>
+<p><strong>Runtime 작성</strong></p>
+<ul>
+<li><code>runtime.c</code>: GC 초기화, 메모리 할당 wrapper</li>
+<li><code>funlang_main()</code> 호출 전에 <code>funlang_init()</code></li>
+</ul>
+</li>
+<li>
+<p><strong>빌드 파이프라인</strong></p>
+<ul>
+<li>FunLang → LLVM IR → Object → 링킹 (+ Boehm GC)</li>
+<li>자동화 스크립트 및 F# 통합</li>
+</ul>
+</li>
+<li>
+<p><strong>에러 처리</strong></p>
+<ul>
+<li>GC_INIT 누락, 링킹 오류, 라이브러리 경로 문제 해결</li>
+</ul>
+</li>
+</ol>
+<h3 id="독자가-할-수-있는-것"><a class="header" href="#독자가-할-수-있는-것">독자가 할 수 있는 것</a></h3>
+<ul>
+<li>Stack과 heap의 차이를 설명할 수 있다 ✓</li>
+<li>언제 heap 할당이 필요한지 안다 (클로저, 데이터 구조) ✓</li>
+<li>Boehm GC를 빌드하고 설치할 수 있다 ✓</li>
+<li><code>runtime.c</code>를 작성하여 GC를 초기화할 수 있다 ✓</li>
+<li>FunLang 컴파일러 출력을 Boehm GC와 링킹할 수 있다 ✓</li>
+<li>GC 관련 에러를 디버깅할 수 있다 ✓</li>
+<li>왜 클로저가 GC를 필요로 하는지 이해한다 ✓</li>
+</ul>
+<h3 id="phase-2-완료"><a class="header" href="#phase-2-완료">Phase 2 완료!</a></h3>
+<p><strong>Chapter 06:</strong> 산술 표현식 (+, -, *, /, 비교, 부정, print)
+<strong>Chapter 07:</strong> Let 바인딩과 SSA 환경 전달
+<strong>Chapter 08:</strong> 제어 흐름 (scf.if, block arguments, boolean)
+<strong>Chapter 09:</strong> 메모리 관리 (stack/heap 전략, Boehm GC 통합)</p>
+<p><strong>독자가 컴파일할 수 있는 프로그램:</strong></p>
+<pre><code class="language-fsharp">// 복잡한 예시
+let x = 5 in
+let y = 10 in
+if x &gt; 0 then
+    if y &lt; 20 then
+        x * y
+    else
+        x + y
+else
+    0
+</code></pre>
+<p><strong>생성되는 바이너리:</strong></p>
+<ul>
+<li>MLIR로 컴파일</li>
+<li>LLVM IR로 lowering</li>
+<li>Native object 생성</li>
+<li>Boehm GC와 링킹</li>
+<li>실행 가능한 바이너리!</li>
+</ul>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+50
+</code></pre>
+<h3 id="phase-3-preview-함수와-클로저"><a class="header" href="#phase-3-preview-함수와-클로저">Phase 3 Preview: 함수와 클로저</a></h3>
+<p>다음 Phase에서 다룰 내용:</p>
+<p><strong>함수 정의:</strong></p>
+<pre><code class="language-fsharp">let add = fun x -&gt; fun y -&gt; x + y
+</code></pre>
+<p><strong>클로저 캡처:</strong></p>
+<pre><code class="language-fsharp">let makeAdder x = fun y -&gt; x + y
+let add5 = makeAdder 5  // x=5를 캡처
+</code></pre>
+<p><strong>메모리 할당:</strong></p>
+<ul>
+<li>클로저 환경을 heap에 할당 (<code>GC_malloc</code>)</li>
+<li>함수 포인터 + 환경 포인터 구조</li>
+<li>GC가 죽은 클로저 회수</li>
+</ul>
+<p><strong>MLIR 연산:</strong></p>
+<ul>
+<li><code>llvm.call @GC_malloc</code>: Heap 할당</li>
+<li><code>llvm.store</code>, <code>llvm.load</code>: 환경 읽기/쓰기</li>
+<li>Function 타입과 호출 규약</li>
+</ul>
+<p><strong>이 장에서 준비한 GC 인프라가 바로 사용된다!</strong></p>
+<hr>
+<p><strong>독자는 이제 메모리 관리를 이해하고, Boehm GC를 통합했다. Phase 3로 가자!</strong></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-커스텀-mlir-dialect-등록"><a class="header" href="#appendix-커스텀-mlir-dialect-등록">Appendix: 커스텀 MLIR Dialect 등록</a></h1>
+<h2 id="소개-10"><a class="header" href="#소개-10">소개</a></h2>
 <p>Chapter 01-05에서는 MLIR의 빌트인 dialect를 사용했다:</p>
 <ul>
 <li><code>arith</code>: 산술 연산</li>

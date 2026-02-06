@@ -1,0 +1,1233 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 07: Let 바인딩 - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-7fb77367.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-5209fc6b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./07-let-bindings.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-07-let-바인딩과-ssa-형태"><a class="header" href="#chapter-07-let-바인딩과-ssa-형태">Chapter 07: Let 바인딩과 SSA 형태</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p>프로그래밍에서 변수는 필수적이다. 값을 이름에 바인딩하고, 나중에 그 이름을 참조하여 값을 재사용한다. Chapter 06까지는 표현식을 직접 계산했지만, 실제 프로그램을 작성하려면 중간 결과를 저장하고 참조할 수 있어야 한다.</p>
+<p>이 장에서는 <strong>let 바인딩</strong>을 추가한다:</p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+x + y
+</code></pre>
+<p>함수형 언어의 let 바인딩은 명령형 언어의 변수 할당과 다르다:</p>
+<ul>
+<li><strong>명령형</strong>: <code>x = 5; x = 10;</code> (뮤테이션 - 값이 변경됨)</li>
+<li><strong>함수형</strong>: <code>let x = 5 in let x = 10 in x</code> (섀도잉 - 새로운 바인딩 생성, 뮤테이션 아님)</li>
+</ul>
+<p><strong>핵심 통찰력:</strong> let 바인딩은 **불변(immutable)**이다. 이것이 MLIR의 SSA (Static Single Assignment) 형태와 완벽하게 일치한다. 함수형 프로그래밍은 SSA를 자연스럽게 표현한다!</p>
+<p>이 장을 마치면:</p>
+<ul>
+<li>let 바인딩을 컴파일하여 네이티브 바이너리로 만들 수 있다</li>
+<li>중첩된 바인딩과 스코프를 이해한다</li>
+<li>SSA 형태가 무엇이고 왜 중요한지 안다</li>
+<li>환경 전달(environment passing)로 변수를 관리하는 방법을 안다</li>
+</ul>
+<blockquote>
+<p><strong>중요:</strong> 이 장은 SSA 개념을 소개한다. SSA는 현대 컴파일러의 핵심 기술이며, MLIR은 SSA를 기본으로 한다.</p>
+</blockquote>
+<h2 id="ssa-형태-설명"><a class="header" href="#ssa-형태-설명">SSA 형태 설명</a></h2>
+<h3 id="ssa란-무엇인가"><a class="header" href="#ssa란-무엇인가">SSA란 무엇인가?</a></h3>
+<p>**SSA (Static Single Assignment)**는 중간 표현(IR)의 속성이다:</p>
+<blockquote>
+<p><strong>정의:</strong> 각 변수는 프로그램에서 정확히 한 번만 할당된다.</p>
+</blockquote>
+<p>예시:</p>
+<pre><code class="language-fsharp">// SSA가 아님 (명령형):
+x = 5
+x = 10  // x가 두 번 할당됨!
+
+// SSA (함수형):
+let x1 = 5 in    // x1은 한 번만 할당
+let x2 = 10 in   // x2는 한 번만 할당
+x2
+</code></pre>
+<p>MLIR IR에서 SSA value는 <code>%</code> 기호로 표시된다:</p>
+<pre><code class="language-mlir">%x = arith.constant 5 : i32      // %x 정의 (한 번만)
+%y = arith.addi %x, %x : i32     // %x 사용 (여러 번 가능)
+%z = arith.muli %y, %x : i32     // %x, %y 사용
+</code></pre>
+<p>각 SSA value (<code>%x</code>, <code>%y</code>, <code>%z</code>)는 정확히 한 번만 정의된다. 사용은 여러 번 가능하다.</p>
+<h3 id="왜-ssa가-중요한가"><a class="header" href="#왜-ssa가-중요한가">왜 SSA가 중요한가?</a></h3>
+<p>SSA 형태는 컴파일러 최적화를 극적으로 단순화한다:</p>
+<h4 id="1-상수-전파-constant-propagation"><a class="header" href="#1-상수-전파-constant-propagation">1. 상수 전파 (Constant Propagation)</a></h4>
+<pre><code class="language-mlir">// SSA 형태
+%c5 = arith.constant 5 : i32
+%result = arith.addi %c5, %c5 : i32
+
+// 최적화: %c5가 상수임을 알고 있으므로
+%c10 = arith.constant 10 : i32  // 컴파일 타임에 계산
+</code></pre>
+<p>SSA value는 한 번만 정의되므로, 정의를 추적하여 상수 값을 전파할 수 있다.</p>
+<h4 id="2-죽은-코드-제거-dead-code-elimination"><a class="header" href="#2-죽은-코드-제거-dead-code-elimination">2. 죽은 코드 제거 (Dead Code Elimination)</a></h4>
+<pre><code class="language-mlir">// SSA 형태
+%unused = arith.constant 42 : i32  // 정의되지만 사용되지 않음
+%result = arith.constant 10 : i32
+func.return %result : i32
+
+// 최적화: %unused는 사용되지 않으므로 제거 가능
+</code></pre>
+<p>SSA value가 사용되지 않으면 정의도 불필요하다. 쉽게 감지하고 제거할 수 있다.</p>
+<h4 id="3-레지스터-할당-register-allocation"><a class="header" href="#3-레지스터-할당-register-allocation">3. 레지스터 할당 (Register Allocation)</a></h4>
+<pre><code class="language-mlir">%x = arith.constant 5 : i32       // %x의 수명 시작
+%y = arith.constant 10 : i32      // %y의 수명 시작
+%z = arith.addi %x, %y : i32      // %x, %y 사용 (%x, %y 수명 끝)
+func.return %z : i32               // %z 사용 (%z 수명 끝)
+</code></pre>
+<p>SSA value의 수명(lifetime)이 명확하다:</p>
+<ul>
+<li>정의 지점에서 시작</li>
+<li>마지막 사용 지점에서 끝</li>
+</ul>
+<p>레지스터 할당기가 수명 분석을 쉽게 수행하여 레지스터를 효율적으로 재사용할 수 있다.</p>
+<h3 id="let-바인딩은-자연스럽게-ssa다"><a class="header" href="#let-바인딩은-자연스럽게-ssa다">Let 바인딩은 자연스럽게 SSA다</a></h3>
+<p>함수형 언어의 let 바인딩은 불변이므로, 변환 없이 SSA로 직접 매핑된다:</p>
+<pre><code class="language-fsharp">// FunLang 소스
+let x = 5 in
+x + x
+</code></pre>
+<p><strong>MLIR IR로 변환:</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %x = arith.constant 5 : i32      // let x = 5
+  %result = arith.addi %x, %x : i32  // x + x
+  func.return %result : i32
+}
+</code></pre>
+<p><code>let x = 5</code>가 SSA value <code>%x</code>의 <strong>단일 정의</strong>가 된다. 추가 작업이 필요 없다!</p>
+<h3 id="명령형-언어와의-대비"><a class="header" href="#명령형-언어와의-대비">명령형 언어와의 대비</a></h3>
+<p>명령형 언어는 변수 뮤테이션을 허용하므로 SSA 변환이 필요하다:</p>
+<pre><code class="language-c">// C 코드 (SSA 아님)
+int x = 5;
+int y = x + x;
+x = 10;       // 뮤테이션!
+int z = x + y;
+</code></pre>
+<p><strong>SSA로 변환 (컴파일러가 수행):</strong></p>
+<pre><code class="language-mlir">%x_0 = arith.constant 5 : i32       // x = 5
+%y = arith.addi %x_0, %x_0 : i32    // y = x + x
+%x_1 = arith.constant 10 : i32      // x = 10 (새로운 SSA value)
+%z = arith.addi %x_1, %y : i32      // z = x + y
+</code></pre>
+<p>각 “할당“이 새로운 SSA value를 생성한다 (<code>%x_0</code>, <code>%x_1</code>). 이것이 SSA 변환(SSA conversion)이다.</p>
+<p><strong>함수형 언어의 이점:</strong> 뮤테이션이 없으므로 SSA 변환이 불필요하다. let 바인딩이 이미 SSA다!</p>
+<h3 id="섀도잉-새로운-값-뮤테이션-아님"><a class="header" href="#섀도잉-새로운-값-뮤테이션-아님">섀도잉: 새로운 값, 뮤테이션 아님</a></h3>
+<p>함수형 언어에서 같은 이름을 다시 바인딩하면 어떻게 될까?</p>
+<pre><code class="language-fsharp">let x = 5 in
+let x = 10 in
+x
+</code></pre>
+<p>이것은 **섀도잉(shadowing)**이다:</p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  %x = arith.constant 5 : i32      // 첫 번째 x 바인딩
+  %x_0 = arith.constant 10 : i32   // 두 번째 x 바인딩 (새로운 값)
+  func.return %x_0 : i32            // 내부 x 사용
+}
+</code></pre>
+<p><strong>핵심:</strong> MLIR은 자동으로 고유한 이름을 생성한다 (<code>%x</code>, <code>%x_0</code>, <code>%x_1</code>, …). 섀도잉은 새로운 SSA value를 만들 뿐, 기존 값을 변경하지 않는다.</p>
+<p>외부 <code>%x</code>는 여전히 존재하지만 내부 스코프에서는 가려진다 (shadowed). 스코프가 끝나면 외부 <code>%x</code>가 다시 보인다.</p>
+<h3 id="ssa의-제약"><a class="header" href="#ssa의-제약">SSA의 제약</a></h3>
+<p>SSA에서 <strong>제어 흐름(control flow)</strong> 합류 지점에서는 어떻게 될까?</p>
+<pre><code class="language-fsharp">let x = if condition then 10 else 20 in
+x + x
+</code></pre>
+<p>if 표현식이 두 가지 다른 값 (10 또는 20)을 생성할 수 있다. 어떤 SSA value를 <code>x</code>에 바인딩해야 할까?</p>
+<p><strong>해답:</strong> MLIR은 <strong>block arguments</strong>를 사용한다. Chapter 08 (제어 흐름)에서 자세히 다룰 것이다. 지금은 let 바인딩이 단순한 값 바인딩이며 조건부 바인딩이 없다는 점만 기억하자.</p>
+<h3 id="ssa-요약"><a class="header" href="#ssa-요약">SSA 요약</a></h3>
+<p><strong>SSA 형태:</strong></p>
+<ul>
+<li>각 value는 정확히 한 번만 정의된다</li>
+<li>사용은 여러 번 가능하다</li>
+<li>컴파일러 최적화를 단순화한다</li>
+<li>MLIR은 SSA를 기본으로 한다</li>
+</ul>
+<p><strong>Let 바인딩과 SSA:</strong></p>
+<ul>
+<li>함수형 언어의 let 바인딩은 불변이다</li>
+<li>불변 = 자연스러운 SSA 형태</li>
+<li>섀도잉은 새로운 SSA value를 생성한다</li>
+<li>뮤테이션이 없으므로 SSA 변환이 불필요하다</li>
+</ul>
+<blockquote>
+<p><strong>명심:</strong> SSA는 이론이 아니라 실용이다. 모든 현대 컴파일러 (LLVM, GCC, MLIR)는 SSA를 사용한다. 함수형 언어는 SSA를 “무료로” 얻는다!</p>
+</blockquote>
+<h2 id="확장된-ast-let과-var"><a class="header" href="#확장된-ast-let과-var">확장된 AST: Let과 Var</a></h2>
+<p>이제 AST에 let 바인딩과 변수 참조를 추가한다.</p>
+<p><strong>Ast.fs</strong> 수정:</p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+/// 이진 연산자 (Chapter 06)
+type Operator =
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+
+/// 비교 연산자 (Chapter 06)
+type CompareOp =
+    | LessThan
+    | GreaterThan
+    | LessEqual
+    | GreaterEqual
+    | Equal
+    | NotEqual
+
+/// 단항 연산자 (Chapter 06)
+type UnaryOp =
+    | Negate
+
+/// FunLang 표현식 AST
+type Expr =
+    | IntLiteral of int
+    | BinaryOp of Operator * Expr * Expr
+    | UnaryOp of UnaryOp * Expr
+    | Comparison of CompareOp * Expr * Expr
+    // NEW: let 바인딩과 변수 참조
+    | Let of name: string * binding: Expr * body: Expr
+    | Var of name: string
+
+/// 최상위 프로그램
+type Program =
+    { expr: Expr }
+</code></pre>
+<p><strong>새로운 케이스 설명:</strong></p>
+<h3 id="let-of-name--binding--body"><a class="header" href="#let-of-name--binding--body">Let of name * binding * body</a></h3>
+<pre><code class="language-fsharp">| Let of name: string * binding: Expr * body: Expr
+</code></pre>
+<p><strong>의미:</strong> <code>let {name} = {binding} in {body}</code></p>
+<p><strong>필드:</strong></p>
+<ul>
+<li><code>name</code>: 바인딩할 변수 이름 (예: “x”)</li>
+<li><code>binding</code>: 변수에 바인딩할 표현식 (예: <code>IntLiteral 10</code>)</li>
+<li><code>body</code>: 바인딩이 유효한 스코프 (예: <code>BinaryOp(Add, Var "x", Var "x")</code>)</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// FunLang: let x = 10 in x + x
+Let("x",
+  IntLiteral 10,
+  BinaryOp(Add, Var "x", Var "x"))
+</code></pre>
+<p><strong>스코프:</strong> <code>body</code> 표현식 내에서만 <code>name</code>이 유효하다. 스코프 밖에서는 변수가 존재하지 않는다.</p>
+<h3 id="var-of-name"><a class="header" href="#var-of-name">Var of name</a></h3>
+<pre><code class="language-fsharp">| Var of name: string
+</code></pre>
+<p><strong>의미:</strong> 변수 참조 - 이전에 바인딩된 변수의 값을 사용한다.</p>
+<p><strong>필드:</strong></p>
+<ul>
+<li><code>name</code>: 참조할 변수 이름 (예: “x”)</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// FunLang: x
+Var "x"
+</code></pre>
+<p><strong>바인딩 필요:</strong> <code>Var "x"</code>를 사용하려면 스코프에서 <code>x</code>가 바인딩되어 있어야 한다. 바인딩되지 않은 변수를 참조하면 컴파일 에러다.</p>
+<h3 id="중첩된-let-바인딩"><a class="header" href="#중첩된-let-바인딩">중첩된 Let 바인딩</a></h3>
+<pre><code class="language-fsharp">// FunLang:
+// let x = 10 in
+// let y = 20 in
+// x + y
+
+Let("x",
+  IntLiteral 10,
+  Let("y",
+    IntLiteral 20,
+    BinaryOp(Add, Var "x", Var "y")))
+</code></pre>
+<p><strong>스코프 중첩:</strong></p>
+<ul>
+<li>외부 let (<code>x</code>)의 body는 내부 let (<code>y</code>)이다</li>
+<li>내부 let의 body에서 <code>x</code>와 <code>y</code> 모두 보인다</li>
+<li>내부 스코프는 외부 스코프를 “확장“한다</li>
+</ul>
+<h3 id="섀도잉-예시"><a class="header" href="#섀도잉-예시">섀도잉 예시</a></h3>
+<pre><code class="language-fsharp">// FunLang:
+// let x = 5 in
+// let x = x + 1 in
+// x
+
+Let("x",
+  IntLiteral 5,
+  Let("x",
+    BinaryOp(Add, Var "x", IntLiteral 1),  // 외부 x 사용
+    Var "x"))  // 내부 x 반환
+</code></pre>
+<p><strong>섀도잉 동작:</strong></p>
+<ul>
+<li>두 번째 <code>Let("x", ...)</code>: 새로운 <code>x</code> 바인딩</li>
+<li><code>BinaryOp(Add, Var "x", ...)</code>: 여기서 <code>Var "x"</code>는 <strong>외부 x</strong> (값 5)를 참조한다</li>
+<li><code>body</code>의 <code>Var "x"</code>: 여기서 <code>Var "x"</code>는 <strong>내부 x</strong> (값 6)를 참조한다</li>
+</ul>
+<p><strong>결과:</strong> 6을 반환한다.</p>
+<h3 id="ast-완전한-예시"><a class="header" href="#ast-완전한-예시">AST 완전한 예시</a></h3>
+<pre><code class="language-fsharp">// FunLang:
+// let x = 10 in
+// let y = 20 in
+// let z = x + y in
+// z * 2
+
+Let("x",
+  IntLiteral 10,
+  Let("y",
+    IntLiteral 20,
+    Let("z",
+      BinaryOp(Add, Var "x", Var "y"),
+      BinaryOp(Multiply, Var "z", IntLiteral 2))))
+</code></pre>
+<p><strong>예상 결과:</strong></p>
+<ul>
+<li>x = 10</li>
+<li>y = 20</li>
+<li>z = x + y = 30</li>
+<li>z * 2 = 60</li>
+</ul>
+<p>이 AST를 컴파일하면 60을 반환하는 네이티브 바이너리가 생성된다.</p>
+<h2 id="환경-개념-environment"><a class="header" href="#환경-개념-environment">환경 개념 (Environment)</a></h2>
+<p>변수를 컴파일하려면 **환경(environment)**이 필요하다.</p>
+<h3 id="환경이란"><a class="header" href="#환경이란">환경이란?</a></h3>
+<p><strong>정의:</strong> 환경은 변수 이름을 SSA value에 매핑하는 자료구조다.</p>
+<p><strong>타입 정의:</strong></p>
+<pre><code class="language-fsharp">/// 변수 이름 -&gt; MLIR SSA value 매핑
+type Env = Map&lt;string, MlirValue&gt;
+</code></pre>
+<p>F#의 <code>Map</code> 타입은 불변 딕셔너리다. 키-값 쌍을 저장하며, 함수형 방식으로 확장할 수 있다.</p>
+<h3 id="환경-연산"><a class="header" href="#환경-연산">환경 연산</a></h3>
+<h4 id="1-빈-환경-생성"><a class="header" href="#1-빈-환경-생성">1. 빈 환경 생성</a></h4>
+<pre><code class="language-fsharp">let emptyEnv : Env = Map.empty
+</code></pre>
+<p>프로그램 시작 시 환경은 비어 있다. 아직 변수가 바인딩되지 않았다.</p>
+<h4 id="2-환경-확장-바인딩-추가"><a class="header" href="#2-환경-확장-바인딩-추가">2. 환경 확장 (바인딩 추가)</a></h4>
+<pre><code class="language-fsharp">// x를 %c5 SSA value에 바인딩
+let env = Map.empty
+let env' = env.Add("x", someValue)
+</code></pre>
+<p><code>env.Add(name, value)</code>는 새로운 환경을 반환한다. 기존 환경 <code>env</code>는 변경되지 않는다 (불변성).</p>
+<h4 id="3-변수-조회"><a class="header" href="#3-변수-조회">3. 변수 조회</a></h4>
+<pre><code class="language-fsharp">// x의 SSA value 찾기
+match env.TryFind("x") with
+| Some(value) -&gt; value  // x가 바인딩되어 있음
+| None -&gt; failwith "Unbound variable: x"  // x가 바인딩되지 않음
+</code></pre>
+<p><code>TryFind</code>는 <code>Option</code> 타입을 반환한다:</p>
+<ul>
+<li><code>Some(value)</code>: 변수가 환경에 존재</li>
+<li><code>None</code>: 변수가 존재하지 않음 (컴파일 에러)</li>
+</ul>
+<h3 id="환경과-스코프"><a class="header" href="#환경과-스코프">환경과 스코프</a></h3>
+<p>스코프는 환경을 통해 구현된다:</p>
+<pre><code class="language-fsharp">// let x = 10 in let y = 20 in x + y
+// 각 let이 환경을 확장한다
+
+let env0 = Map.empty             // 초기 환경 (비어 있음)
+
+// let x = 10
+let env1 = env0.Add("x", %c10)   // env1 = { x -&gt; %c10 }
+
+// let y = 20
+let env2 = env1.Add("y", %c20)   // env2 = { x -&gt; %c10, y -&gt; %c20 }
+
+// x + y (env2에서 x와 y 조회)
+// x = %c10, y = %c20
+</code></pre>
+<p><strong>환경 스택 다이어그램:</strong></p>
+<pre><code>let x = 5 in       env = { x -&gt; %c5 }
+  let y = 10 in    env = { x -&gt; %c5, y -&gt; %c10 }
+    x + y          lookup x, lookup y -&gt; arith.addi %c5, %c10
+</code></pre>
+<p>각 let 바인딩이 환경에 새로운 항목을 추가한다. 내부 스코프의 환경은 외부 스코프의 모든 바인딩을 포함한다.</p>
+<h3 id="섀도잉과-환경"><a class="header" href="#섀도잉과-환경">섀도잉과 환경</a></h3>
+<p>같은 이름을 다시 바인딩하면?</p>
+<pre><code class="language-fsharp">// let x = 5 in let x = 10 in x
+let env0 = Map.empty
+let env1 = env0.Add("x", %c5)   // env1 = { x -&gt; %c5 }
+let env2 = env1.Add("x", %c10)  // env2 = { x -&gt; %c10 }
+
+// env2에서 x 조회 -&gt; %c10 (새로운 바인딩)
+</code></pre>
+<p><code>Map.Add</code>는 기존 키가 있으면 값을 덮어쓴다. 하지만 <code>env1</code>은 변경되지 않는다 (불변):</p>
+<pre><code class="language-fsharp">// env1에서 x 조회 -&gt; 여전히 %c5
+// env2에서 x 조회 -&gt; %c10
+</code></pre>
+<p>이것이 <strong>스코프 기반 섀도잉</strong>이다. 내부 스코프가 끝나면 외부 바인딩이 다시 보인다:</p>
+<pre><code class="language-fsharp">// let x = 5 in (let x = 10 in x) + x
+//               ^^^^^^^^^^^^^   ^^^
+//               내부 x = 10     외부 x = 5
+
+let env0 = Map.empty
+let env1 = env0.Add("x", %c5)
+
+// 내부 스코프
+let env2 = env1.Add("x", %c10)
+// 내부 body에서 x 조회 -&gt; %c10
+
+// 외부 스코프로 돌아옴 (env1 사용)
+// 외부 body에서 x 조회 -&gt; %c5
+</code></pre>
+<p><strong>결과:</strong> <code>10 + 5 = 15</code></p>
+<h3 id="환경-전달-패턴"><a class="header" href="#환경-전달-패턴">환경 전달 패턴</a></h3>
+<p>컴파일러는 환경을 함수 인자로 전달한다:</p>
+<pre><code class="language-fsharp">let rec compileExpr (builder: OpBuilder) (expr: Expr) (env: Env) : MlirValue =
+  match expr with
+  | IntLiteral n -&gt; ...  // env 사용 안 함
+  | Var name -&gt;
+      // env에서 변수 조회
+      match env.TryFind(name) with
+      | Some(value) -&gt; value
+      | None -&gt; failwithf "Unbound variable: %s" name
+  | Let(name, binding, body) -&gt;
+      // 1. binding 표현식 컴파일 (현재 env 사용)
+      let bindVal = compileExpr builder binding env
+      // 2. env 확장
+      let env' = env.Add(name, bindVal)
+      // 3. body 표현식 컴파일 (확장된 env' 사용)
+      compileExpr builder body env'
+  | BinaryOp(op, lhs, rhs) -&gt;
+      // 재귀 호출에 env 전달
+      let lhsVal = compileExpr builder lhs env
+      let rhsVal = compileExpr builder rhs env
+      ...
+</code></pre>
+<p><strong>핵심 패턴:</strong></p>
+<ul>
+<li><code>compileExpr</code>이 <code>env</code> 파라미터를 받는다</li>
+<li>모든 재귀 호출에서 <code>env</code>를 전달한다</li>
+<li><code>Let</code> 케이스에서 <code>env</code>를 확장하고 body에 전달한다</li>
+<li><code>Var</code> 케이스에서 <code>env</code>를 조회한다</li>
+</ul>
+<p>이것이 **환경 전달(environment passing)**이다. 함수형 프로그래밍에서 흔한 패턴이다.</p>
+<h3 id="환경-요약"><a class="header" href="#환경-요약">환경 요약</a></h3>
+<p><strong>환경:</strong></p>
+<ul>
+<li>변수 이름 -&gt; SSA value 매핑</li>
+<li>F# <code>Map&lt;string, MlirValue&gt;</code> 타입</li>
+<li>불변 자료구조</li>
+</ul>
+<p><strong>연산:</strong></p>
+<ul>
+<li><code>Map.empty</code>: 빈 환경</li>
+<li><code>env.Add(name, value)</code>: 바인딩 추가 (새 환경 반환)</li>
+<li><code>env.TryFind(name)</code>: 변수 조회 (Option 반환)</li>
+</ul>
+<p><strong>스코프:</strong></p>
+<ul>
+<li>각 let 바인딩이 환경을 확장한다</li>
+<li>내부 스코프는 외부 바인딩을 모두 포함한다</li>
+<li>섀도잉은 <code>Map.Add</code>로 구현된다</li>
+</ul>
+<p><strong>환경 전달:</strong></p>
+<ul>
+<li><code>compileExpr</code>에 <code>env</code> 파라미터 추가</li>
+<li>재귀 호출에서 <code>env</code> 전달</li>
+<li><code>Let</code> 케이스에서 <code>env</code> 확장</li>
+</ul>
+<blockquote>
+<p><strong>다음 섹션:</strong> 환경을 사용하여 let 바인딩을 MLIR IR로 컴파일하는 코드를 작성한다!</p>
+</blockquote>
+<h2 id="환경을-사용한-코드-생성"><a class="header" href="#환경을-사용한-코드-생성">환경을 사용한 코드 생성</a></h2>
+<p>이제 Chapter 06의 <code>compileExpr</code>을 확장하여 let 바인딩과 변수를 처리한다.</p>
+<h3 id="compileexpr-시그니처-변경"><a class="header" href="#compileexpr-시그니처-변경">compileExpr 시그니처 변경</a></h3>
+<p>먼저 환경 파라미터를 추가한다:</p>
+<pre><code class="language-fsharp">// 기존 (Chapter 06):
+let rec compileExpr
+    (builder: OpBuilder)
+    (block: MlirBlock)
+    (location: Location)
+    (expr: Expr)
+    : MlirValue = ...
+
+// 새로운 (Chapter 07):
+let rec compileExpr
+    (builder: OpBuilder)
+    (block: MlirBlock)
+    (location: Location)
+    (expr: Expr)
+    (env: Env)        // 환경 추가!
+    : MlirValue = ...
+</code></pre>
+<p><strong>환경 타입 정의:</strong></p>
+<pre><code class="language-fsharp">/// 변수 이름 -&gt; MLIR SSA value 매핑
+type Env = Map&lt;string, MlirValue&gt;
+</code></pre>
+<h3 id="let-케이스-구현"><a class="header" href="#let-케이스-구현">Let 케이스 구현</a></h3>
+<pre><code class="language-fsharp">| Let(name, binding, body) -&gt;
+    // 1. binding 표현식 컴파일 (현재 환경 사용)
+    let bindVal = compileExpr builder block location binding env
+
+    // 2. 환경 확장: name -&gt; bindVal 매핑 추가
+    let env' = env.Add(name, bindVal)
+
+    // 3. body 표현식 컴파일 (확장된 환경 사용)
+    compileExpr builder block location body env'
+</code></pre>
+<p><strong>동작 설명:</strong></p>
+<ol>
+<li><code>binding</code> 표현식을 먼저 컴파일한다. 이것이 변수에 바인딩될 값이다.</li>
+<li>현재 환경 <code>env</code>를 확장하여 <code>name</code>을 <code>bindVal</code>에 매핑한다. 새로운 환경 <code>env'</code>가 생성된다.</li>
+<li><code>body</code> 표현식을 컴파일할 때 확장된 환경 <code>env'</code>를 사용한다. body 내에서 <code>name</code>을 참조할 수 있다.</li>
+</ol>
+<p><strong>핵심:</strong> let 바인딩은 MLIR IR에 새로운 연산을 생성하지 않는다. 단지 환경을 확장하고 body를 컴파일할 뿐이다. SSA value는 <code>binding</code> 표현식에서 이미 생성되었다.</p>
+<h3 id="var-케이스-구현"><a class="header" href="#var-케이스-구현">Var 케이스 구현</a></h3>
+<pre><code class="language-fsharp">| Var(name) -&gt;
+    // 환경에서 변수 조회
+    match env.TryFind(name) with
+    | Some(value) -&gt; value  // 바인딩된 SSA value 반환
+    | None -&gt; failwithf "Unbound variable: %s" name  // 컴파일 에러
+</code></pre>
+<p><strong>동작 설명:</strong></p>
+<ul>
+<li><code>env.TryFind(name)</code>으로 변수를 조회한다.</li>
+<li>바인딩되어 있으면 (<code>Some(value)</code>) 해당 SSA value를 반환한다.</li>
+<li>바인딩되지 않았으면 (<code>None</code>) 에러를 발생시킨다.</li>
+</ul>
+<p><strong>중요:</strong> 변수 참조는 MLIR IR에 새로운 연산을 생성하지 않는다. 단지 기존 SSA value를 반환할 뿐이다. 이것이 SSA의 핵심이다!</p>
+<h3 id="기존-케이스-업데이트"><a class="header" href="#기존-케이스-업데이트">기존 케이스 업데이트</a></h3>
+<p>모든 기존 케이스에서 재귀 호출에 <code>env</code>를 전달해야 한다:</p>
+<pre><code class="language-fsharp">| IntLiteral value -&gt;
+    // 환경 사용 안 함 (리터럴은 변수를 참조하지 않음)
+    let i32Type = builder.I32Type()
+    let attr = builder.Context.GetIntegerAttr(i32Type, int64 value)
+    let constOp = builder.CreateConstant(attr, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, constOp)
+    builder.GetResult(constOp, 0)
+
+| BinaryOp(op, lhs, rhs) -&gt;
+    // 재귀 호출에 env 전달
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    let binOp = builder.CreateArithBinaryOp(op, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, binOp)
+    builder.GetResult(binOp, 0)
+
+| UnaryOp(Negate, expr) -&gt;
+    // 재귀 호출에 env 전달
+    let val = compileExpr builder block location expr env
+    let negOp = builder.CreateArithNegate(val, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, negOp)
+    builder.GetResult(negOp, 0)
+
+| Comparison(compareOp, lhs, rhs) -&gt;
+    // 재귀 호출에 env 전달
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+    let cmpVal = builder.GetResult(cmpOp, 0)
+    // i1 -&gt; i32 확장 (Chapter 06과 동일)
+    let i32Type = builder.I32Type()
+    let extOp = builder.CreateArithExtUI(cmpVal, i32Type, location)
+    MlirNative.mlirBlockAppendOwnedOperation(block, extOp)
+    builder.GetResult(extOp, 0)
+</code></pre>
+<p><strong>패턴:</strong> 모든 재귀 호출에서 현재 환경 <code>env</code>를 그대로 전달한다. Let 케이스만 환경을 확장한다.</p>
+<h3 id="완전한-codegenfs-리스팅"><a class="header" href="#완전한-codegenfs-리스팅">완전한 CodeGen.fs 리스팅</a></h3>
+<p><strong>CodeGen.fs</strong> (환경 지원 버전):</p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+open System
+open MlirWrapper
+open MlirBindings
+
+module CodeGen =
+
+    /// 변수 이름 -&gt; MLIR SSA value 매핑
+    type Env = Map&lt;string, MlirValue&gt;
+
+    /// 표현식을 MLIR value로 컴파일 (재귀적, 환경 전달)
+    let rec compileExpr
+        (builder: OpBuilder)
+        (block: MlirBlock)
+        (location: Location)
+        (expr: Expr)
+        (env: Env)
+        : MlirValue =
+
+        match expr with
+        | IntLiteral value -&gt;
+            let i32Type = builder.I32Type()
+            let attr = builder.Context.GetIntegerAttr(i32Type, int64 value)
+            let constOp = builder.CreateConstant(attr, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, constOp)
+            builder.GetResult(constOp, 0)
+
+        | Var(name) -&gt;
+            match env.TryFind(name) with
+            | Some(value) -&gt; value
+            | None -&gt; failwithf "Unbound variable: %s" name
+
+        | Let(name, binding, body) -&gt;
+            let bindVal = compileExpr builder block location binding env
+            let env' = env.Add(name, bindVal)
+            compileExpr builder block location body env'
+
+        | BinaryOp(op, lhs, rhs) -&gt;
+            let lhsVal = compileExpr builder block location lhs env
+            let rhsVal = compileExpr builder block location rhs env
+            let binOp = builder.CreateArithBinaryOp(op, lhsVal, rhsVal, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, binOp)
+            builder.GetResult(binOp, 0)
+
+        | UnaryOp(Negate, expr) -&gt;
+            let val = compileExpr builder block location expr env
+            let negOp = builder.CreateArithNegate(val, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, negOp)
+            builder.GetResult(negOp, 0)
+
+        | Comparison(compareOp, lhs, rhs) -&gt;
+            let lhsVal = compileExpr builder block location lhs env
+            let rhsVal = compileExpr builder block location rhs env
+            let cmpOp = builder.CreateArithCompare(compareOp, lhsVal, rhsVal, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, cmpOp)
+            let cmpVal = builder.GetResult(cmpOp, 0)
+            let i32Type = builder.I32Type()
+            let extOp = builder.CreateArithExtUI(cmpVal, i32Type, location)
+            MlirNative.mlirBlockAppendOwnedOperation(block, extOp)
+            builder.GetResult(extOp, 0)
+
+    /// 프로그램을 MLIR module로 컴파일
+    let translateToMlir (program: Program) : Module =
+        let ctx = new Context()
+        ctx.LoadDialect("arith")
+        ctx.LoadDialect("func")
+
+        let loc = Location.Unknown(ctx)
+        let mlirMod = new Module(ctx, loc)
+
+        let builder = OpBuilder(ctx)
+        let i32Type = builder.I32Type()
+
+        // main 함수 생성
+        let funcType = builder.FunctionType([||], [| i32Type |])
+        let funcOp = builder.CreateFunction("main", funcType, loc)
+
+        let bodyRegion = MlirNative.mlirOperationGetRegion(funcOp, 0n)
+        let entryBlock = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
+        MlirNative.mlirRegionAppendOwnedBlock(bodyRegion, entryBlock)
+
+        // 빈 환경에서 시작
+        let env = Map.empty
+
+        // 표현식 컴파일 (환경 전달)
+        let resultValue = compileExpr builder entryBlock loc program.expr env
+
+        // return operation 생성
+        let returnOp = builder.CreateReturn([| resultValue |], loc)
+        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, returnOp)
+
+        // 함수를 module에 추가
+        MlirNative.mlirBlockAppendOwnedOperation(mlirMod.Body, funcOp)
+
+        mlirMod
+
+    /// MLIR module 검증
+    let verify (mlirMod: Module) =
+        if not (mlirMod.Verify()) then
+            eprintfn "MLIR verification failed:"
+            eprintfn "%s" (mlirMod.Print())
+            failwith "MLIR IR is invalid"
+</code></pre>
+<p><strong>주목할 점:</strong></p>
+<ul>
+<li><code>compileExpr</code>이 <code>env</code> 파라미터를 받는다</li>
+<li><code>translateToMlir</code>에서 빈 환경 (<code>Map.empty</code>)으로 시작한다</li>
+<li>모든 재귀 호출에서 <code>env</code>를 전달한다</li>
+</ul>
+<h2 id="중첩된-let-바인딩-1"><a class="header" href="#중첩된-let-바인딩-1">중첩된 Let 바인딩</a></h2>
+<p>중첩된 let 바인딩이 어떻게 컴파일되는지 보자.</p>
+<p><strong>FunLang 소스:</strong></p>
+<pre><code class="language-fsharp">let x = 10 in
+let y = 20 in
+let z = x + y in
+z * 2
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("x",
+  IntLiteral 10,
+  Let("y",
+    IntLiteral 20,
+    Let("z",
+      BinaryOp(Add, Var "x", Var "y"),
+      BinaryOp(Multiply, Var "z", IntLiteral 2))))
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li>
+<p><strong>Let(“x”, IntLiteral 10, …)</strong></p>
+<ul>
+<li><code>binding</code> 컴파일: <code>%c10 = arith.constant 10 : i32</code></li>
+<li><code>env0 = {}</code></li>
+<li><code>env1 = env0.Add("x", %c10) = { x -&gt; %c10 }</code></li>
+<li><code>body</code> 컴파일 (env1 사용)</li>
+</ul>
+</li>
+<li>
+<p><strong>Let(“y”, IntLiteral 20, …)</strong> (env1에서)</p>
+<ul>
+<li><code>binding</code> 컴파일: <code>%c20 = arith.constant 20 : i32</code></li>
+<li><code>env2 = env1.Add("y", %c20) = { x -&gt; %c10, y -&gt; %c20 }</code></li>
+<li><code>body</code> 컴파일 (env2 사용)</li>
+</ul>
+</li>
+<li>
+<p><strong>Let(“z”, BinaryOp(Add, Var “x”, Var “y”), …)</strong> (env2에서)</p>
+<ul>
+<li><code>binding</code> 컴파일:
+<ul>
+<li><code>Var "x"</code>: env2에서 조회 → %c10</li>
+<li><code>Var "y"</code>: env2에서 조회 → %c20</li>
+<li><code>%z = arith.addi %c10, %c20 : i32</code></li>
+</ul>
+</li>
+<li><code>env3 = env2.Add("z", %z) = { x -&gt; %c10, y -&gt; %c20, z -&gt; %z }</code></li>
+<li><code>body</code> 컴파일 (env3 사용)</li>
+</ul>
+</li>
+<li>
+<p><strong>BinaryOp(Multiply, Var “z”, IntLiteral 2)</strong> (env3에서)</p>
+<ul>
+<li><code>Var "z"</code>: env3에서 조회 → %z</li>
+<li><code>IntLiteral 2</code>: <code>%c2 = arith.constant 2 : i32</code></li>
+<li><code>%result = arith.muli %z, %c2 : i32</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %c10 = arith.constant 10 : i32      // let x = 10
+    %c20 = arith.constant 20 : i32      // let y = 20
+    %z = arith.addi %c10, %c20 : i32    // let z = x + y
+    %c2 = arith.constant 2 : i32
+    %result = arith.muli %z, %c2 : i32  // z * 2
+    func.return %result : i32
+  }
+}
+</code></pre>
+<p><strong>분석:</strong></p>
+<ul>
+<li>각 let 바인딩이 SSA value를 생성한다</li>
+<li>변수 참조는 기존 SSA value를 재사용한다</li>
+<li>명시적인 저장/로드 연산이 없다 (모든 것이 레지스터에 있다)</li>
+<li>SSA value가 자유롭게 흐른다 (%c10과 %c20이 %z에서 사용됨)</li>
+</ul>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+60
+</code></pre>
+<p>예상대로 60을 반환한다!</p>
+<h2 id="변수-섀도잉"><a class="header" href="#변수-섀도잉">변수 섀도잉</a></h2>
+<p>섀도잉이 어떻게 작동하는지 보자.</p>
+<p><strong>FunLang 소스:</strong></p>
+<pre><code class="language-fsharp">let x = 5 in
+let x = x + 1 in
+x
+</code></pre>
+<p><strong>AST:</strong></p>
+<pre><code class="language-fsharp">Let("x",
+  IntLiteral 5,
+  Let("x",
+    BinaryOp(Add, Var "x", IntLiteral 1),
+    Var "x"))
+</code></pre>
+<p><strong>컴파일 과정:</strong></p>
+<ol>
+<li>
+<p><strong>첫 번째 Let(“x”, IntLiteral 5, …)</strong></p>
+<ul>
+<li><code>binding</code>: <code>%x = arith.constant 5 : i32</code></li>
+<li><code>env1 = { x -&gt; %x }</code></li>
+</ul>
+</li>
+<li>
+<p><strong>두 번째 Let(“x”, BinaryOp(Add, Var “x”, IntLiteral 1), …)</strong> (env1에서)</p>
+<ul>
+<li><code>binding</code>:
+<ul>
+<li><code>Var "x"</code>: env1에서 조회 → %x (값 5)</li>
+<li><code>IntLiteral 1</code>: <code>%c1 = arith.constant 1 : i32</code></li>
+<li><code>%x_0 = arith.addi %x, %c1 : i32</code></li>
+</ul>
+</li>
+<li><code>env2 = env1.Add("x", %x_0) = { x -&gt; %x_0 }</code>  ← 섀도잉!</li>
+</ul>
+</li>
+<li>
+<p><strong>Var “x”</strong> (env2에서)</p>
+<ul>
+<li>env2에서 조회 → %x_0 (값 6)</li>
+</ul>
+</li>
+</ol>
+<p><strong>생성된 MLIR IR:</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @main() -&gt; i32 {
+    %x = arith.constant 5 : i32        // 외부 x
+    %c1 = arith.constant 1 : i32
+    %x_0 = arith.addi %x, %c1 : i32    // 내부 x = 외부 x + 1
+    func.return %x_0 : i32              // 내부 x 반환
+  }
+}
+</code></pre>
+<p><strong>핵심 통찰력:</strong></p>
+<ul>
+<li>MLIR은 자동으로 고유한 이름을 생성한다 (<code>%x</code>, <code>%x_0</code>)</li>
+<li>두 번째 <code>Let("x", ...)</code>에서 <code>binding</code> 표현식은 <strong>외부 x</strong>를 참조한다 (env1에서 컴파일)</li>
+<li>body 표현식은 <strong>내부 x</strong>를 참조한다 (env2에서 컴파일)</li>
+<li>섀도잉은 새로운 SSA value를 생성하지, 기존 value를 변경하지 않는다</li>
+</ul>
+<p><strong>실행:</strong></p>
+<pre><code class="language-bash">$ ./program
+$ echo $?
+6
+</code></pre>
+<p>예상대로 6을 반환한다!</p>
+<h2 id="완전한-예시와-드라이버"><a class="header" href="#완전한-예시와-드라이버">완전한 예시와 드라이버</a></h2>
+<p>이제 완전한 컴파일러 드라이버를 작성하자.</p>
+<p><strong>Main.fs 예시:</strong></p>
+<pre><code class="language-fsharp">namespace FunLangCompiler
+
+open System
+
+module Main =
+
+    [&lt;EntryPoint&gt;]
+    let main args =
+        printfn "=== FunLang Compiler with Let Bindings ==="
+
+        // 예시: let x = 10 in let y = 20 in x + y
+        let ast =
+            Let("x",
+              IntLiteral 10,
+              Let("y",
+                IntLiteral 20,
+                BinaryOp(Add, Var "x", Var "y")))
+
+        let program = { expr = ast }
+
+        printfn "AST: %A" ast
+        printfn ""
+
+        // MLIR로 컴파일
+        printfn "Compiling to MLIR..."
+        let mlirMod = CodeGen.translateToMlir program
+        printfn "%s" (mlirMod.Print())
+
+        // 검증
+        printfn "Verifying..."
+        CodeGen.verify mlirMod
+        printfn "✓ Verification passed"
+
+        // Lowering과 네이티브 코드 생성 (Chapter 05와 동일)
+        Lowering.lowerToLLVMDialect mlirMod
+        let llvmIR = Lowering.translateToLLVMIR mlirMod
+        NativeCodeGen.emitObjectFile llvmIR "program.o"
+        NativeCodeGen.linkExecutable "program.o" "program"
+
+        mlirMod.Dispose()
+
+        printfn ""
+        printfn "=== Compilation successful ==="
+        printfn "Run: ./program"
+        printfn "Expected output (exit code): 30"
+
+        0
+</code></pre>
+<p><strong>컴파일과 실행:</strong></p>
+<pre><code class="language-bash">$ dotnet run
+=== FunLang Compiler with Let Bindings ===
+AST: Let ("x", IntLiteral 10, Let ("y", IntLiteral 20, BinaryOp (Add, Var "x", Var "y")))
+
+Compiling to MLIR...
+module {
+  func.func @main() -&gt; i32 {
+    %c10 = arith.constant 10 : i32
+    %c20 = arith.constant 20 : i32
+    %0 = arith.addi %c10, %c20 : i32
+    func.return %0 : i32
+  }
+}
+Verifying...
+✓ Verification passed
+[... lowering과 linking ...]
+
+=== Compilation successful ===
+Run: ./program
+Expected output (exit code): 30
+
+$ ./program
+$ echo $?
+30
+</code></pre>
+<p>완벽하다!</p>
+<h2 id="공통-에러"><a class="header" href="#공통-에러">공통 에러</a></h2>
+<h3 id="에러-1-바인딩되지-않은-변수-참조"><a class="header" href="#에러-1-바인딩되지-않은-변수-참조">에러 1: 바인딩되지 않은 변수 참조</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Exception: Unbound variable: y
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>변수가 스코프에 없는데 참조하려고 했다.</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// WRONG: y가 바인딩되지 않음
+let x = 10 in
+y + x
+</code></pre>
+<p><strong>해결:</strong></p>
+<p>변수를 사용하기 전에 let 바인딩으로 정의한다:</p>
+<pre><code class="language-fsharp">// CORRECT
+let x = 10 in
+let y = 20 in
+y + x
+</code></pre>
+<h3 id="에러-2-스코프-밖에서-변수-사용"><a class="header" href="#에러-2-스코프-밖에서-변수-사용">에러 2: 스코프 밖에서 변수 사용</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Exception: Unbound variable: x
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>변수가 스코프 밖에서 사용되었다.</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// WRONG: 두 번째 x는 스코프 밖
+(let x = 10 in x + x) + x
+//                      ^ x는 여기서 바인딩되지 않음
+</code></pre>
+<p>let 바인딩의 스코프는 <code>body</code> 표현식까지만이다. 밖에서는 보이지 않는다.</p>
+<p><strong>해결:</strong></p>
+<p>필요한 스코프 전체를 감싸거나, 바인딩을 외부로 이동한다:</p>
+<pre><code class="language-fsharp">// CORRECT: x를 외부에서 바인딩
+let x = 10 in
+(x + x) + x
+</code></pre>
+<h3 id="에러-3-환경을-재귀-호출에-전달하지-않음"><a class="header" href="#에러-3-환경을-재귀-호출에-전달하지-않음">에러 3: 환경을 재귀 호출에 전달하지 않음</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Compilation error: 'env' is not defined
+</code></pre>
+<p><strong>원인:</strong></p>
+<p><code>compileExpr</code> 재귀 호출에서 <code>env</code> 파라미터를 빠뜨렸다.</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// WRONG: env 파라미터 누락
+| BinaryOp(op, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs  // env 없음!
+    ...
+</code></pre>
+<p><strong>해결:</strong></p>
+<p>모든 <code>compileExpr</code> 호출에 <code>env</code>를 전달한다:</p>
+<pre><code class="language-fsharp">// CORRECT
+| BinaryOp(op, lhs, rhs) -&gt;
+    let lhsVal = compileExpr builder block location lhs env
+    let rhsVal = compileExpr builder block location rhs env
+    ...
+</code></pre>
+<p><strong>패턴:</strong> 각 케이스를 추가할 때마다 재귀 호출에 <code>env</code>를 전달하는지 확인한다.</p>
+<h3 id="에러-4-let-바인딩에서-환경-확장-잊음"><a class="header" href="#에러-4-let-바인딩에서-환경-확장-잊음">에러 4: Let 바인딩에서 환경 확장 잊음</a></h3>
+<p><strong>증상:</strong></p>
+<p>변수가 body에서 보이지 않는다.</p>
+<p><strong>원인:</strong></p>
+<p><code>Let</code> 케이스에서 <code>env.Add</code>를 호출했지만 확장된 환경을 body에 전달하지 않았다.</p>
+<p><strong>예시:</strong></p>
+<pre><code class="language-fsharp">// WRONG: 확장된 환경을 사용하지 않음
+| Let(name, binding, body) -&gt;
+    let bindVal = compileExpr builder block location binding env
+    let env' = env.Add(name, bindVal)
+    compileExpr builder block location body env  // env' 대신 env 사용!
+</code></pre>
+<p><strong>해결:</strong></p>
+<p>확장된 환경 <code>env'</code>를 body에 전달한다:</p>
+<pre><code class="language-fsharp">// CORRECT
+| Let(name, binding, body) -&gt;
+    let bindVal = compileExpr builder block location binding env
+    let env' = env.Add(name, bindVal)
+    compileExpr builder block location body env'  // env' 사용!
+</code></pre>
+<h3 id="에러-5-섀도잉을-뮤테이션으로-착각"><a class="header" href="#에러-5-섀도잉을-뮤테이션으로-착각">에러 5: 섀도잉을 뮤테이션으로 착각</a></h3>
+<p><strong>개념 오류:</strong></p>
+<pre><code class="language-fsharp">// 이것은 뮤테이션이 아니다!
+let x = 5 in
+let x = 10 in
+x
+</code></pre>
+<p><strong>설명:</strong></p>
+<p>이것은 변수 “x“를 덮어쓰는 것이 아니다. 새로운 바인딩을 만드는 것이다:</p>
+<ul>
+<li>외부 <code>x</code>는 값 5를 가진 SSA value <code>%x</code></li>
+<li>내부 <code>x</code>는 값 10을 가진 SSA value <code>%x_0</code></li>
+<li>두 value 모두 존재한다 (외부 x는 변경되지 않음)</li>
+</ul>
+<p><strong>MLIR IR 확인:</strong></p>
+<pre><code class="language-mlir">%x = arith.constant 5 : i32    // 외부 x (여전히 존재)
+%x_0 = arith.constant 10 : i32  // 내부 x (새로운 value)
+func.return %x_0 : i32
+</code></pre>
+<h2 id="장-요약"><a class="header" href="#장-요약">장 요약</a></h2>
+<p>이 장에서 다음을 성취했다:</p>
+<ol>
+<li><strong>SSA 형태 이해</strong>: 각 value는 한 번만 정의되며, 이것이 컴파일러 최적화를 단순화한다</li>
+<li><strong>Let 바인딩 추가</strong>: 함수형 언어의 불변 바인딩이 SSA와 자연스럽게 일치한다</li>
+<li><strong>환경 구현</strong>: <code>Map&lt;string, MlirValue&gt;</code>로 변수 스코프 관리</li>
+<li><strong>환경 전달 패턴</strong>: 재귀 함수에 환경을 전달하여 중첩 스코프 구현</li>
+<li><strong>섀도잉 vs 뮤테이션</strong>: 섀도잉은 새로운 SSA value를 생성하지, 기존 value를 변경하지 않는다</li>
+<li><strong>완전한 예제</strong>: 중첩된 let 바인딩이 올바른 MLIR IR로 컴파일된다</li>
+</ol>
+<p><strong>독자가 할 수 있는 것:</strong></p>
+<ul>
+<li><code>let x = 5 in x + x</code> 컴파일 → 네이티브 바이너리 → 결과: 10 ✓</li>
+<li><code>let x = 10 in let y = 20 in x + y</code> 컴파일 → 결과: 30 ✓</li>
+<li>섀도잉 이해: <code>let x = 5 in let x = 10 in x</code> → 결과: 10 ✓</li>
+<li>환경 전달로 스코프 관리 ✓</li>
+<li>스코프 에러 디버깅 (바인딩되지 않은 변수) ✓</li>
+</ul>
+<p><strong>핵심 개념:</strong></p>
+<ul>
+<li><strong>SSA 형태</strong>: 각 value는 한 번만 정의된다</li>
+<li><strong>Let 바인딩 = SSA value</strong>: 불변 바인딩이 SSA를 자연스럽게 표현한다</li>
+<li><strong>환경 = 변수 스코프</strong>: Map으로 변수 이름을 SSA value에 매핑한다</li>
+<li><strong>환경 전달 = 스코프 중첩</strong>: 재귀 호출로 스코프를 확장한다</li>
+<li><strong>섀도잉 ≠ 뮤테이션</strong>: 새로운 value 생성, 기존 value 변경 아님</li>
+</ul>
+<p><strong>다음 장 미리보기:</strong></p>
+<p>Chapter 08에서는 **제어 흐름 (if/else)**을 추가한다:</p>
+<pre><code class="language-fsharp">let x = if 5 &lt; 10 then 42 else 0 in
+x + x
+</code></pre>
+<p>이것은 다음을 도입한다:</p>
+<ul>
+<li><strong>scf.if</strong> 연산: 구조화된 제어 흐름</li>
+<li><strong>Block arguments</strong>: MLIR의 PHI 노드 대안</li>
+<li><strong>scf.yield</strong>: 분기에서 값 반환</li>
+<li><strong>SSA at control flow merges</strong>: 조건부 값을 어떻게 SSA로 표현하는가</li>
+</ul>
+<p><strong>Phase 2는 계속된다!</strong></p>
+<hr>
+<p><strong>이제 독자는 let 바인딩과 변수를 컴파일하고, SSA 형태를 이해한다!</strong></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="06-arithmetic-expressions.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="08-control-flow.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="06-arithmetic-expressions.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="08-control-flow.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
