@@ -16,6 +16,8 @@
 - [Chapter 09: 메모리 관리](09-memory-management.md)
 - [Chapter 10: 함수](10-functions.md)
 - [Chapter 11: 재귀](11-recursion.md)
+- [Chapter 12: 클로저](12-closures.md)
+- [Chapter 13: 고차 함수](13-higher-order-functions.md)
 
 # 부록
 
