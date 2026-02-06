@@ -36,9 +36,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Prerequisites (LLVM/MLIR build) and MLIR Primer (concepts)
-- [ ] 01-02-PLAN.md — Hello MLIR from F# and complete P/Invoke bindings module
-- [ ] 01-03-PLAN.md — F# wrapper layer, arithmetic compiler, and custom dialect appendix
+- [x] 01-01-PLAN.md — Prerequisites (LLVM/MLIR build) and MLIR Primer (concepts)
+- [x] 01-02-PLAN.md — Hello MLIR from F# and complete P/Invoke bindings module
+- [x] 01-03-PLAN.md — F# wrapper layer, arithmetic compiler, and custom dialect appendix
 
 ### Phase 2: Core Language Basics
 **Goal**: Reader can compile arithmetic expressions, let bindings, and if/else control flow with working memory management
@@ -51,10 +51,13 @@ Plans:
   4. Reader can compile programs that print results to stdout
   5. Reader understands memory management strategy (stack vs heap) and has Boehm GC integrated
   6. Each chapter includes expected MLIR IR output and "Common Errors" debugging section
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD during planning
+- [ ] 02-01-PLAN.md — Chapter 06: Arithmetic expressions (binary ops, comparisons, negation, print)
+- [ ] 02-02-PLAN.md — Chapter 07: Let bindings (SSA form, environment passing, scoping)
+- [ ] 02-03-PLAN.md — Chapter 08: Control flow (scf.if, block arguments, boolean expressions)
+- [ ] 02-04-PLAN.md — Chapter 09: Memory management (stack vs heap, Boehm GC integration)
 
 ### Phase 3: Functions & Recursion
 **Goal**: Reader can compile function definitions, calls, and recursive functions including mutual recursion
@@ -140,8 +143,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Interop | 3/3 | Complete ✓ | 2026-02-06 |
-| 2. Core Language Basics | 0/TBD | Not started | - |
+| 1. Foundation & Interop | 3/3 | Complete | 2026-02-06 |
+| 2. Core Language Basics | 0/4 | Planned | - |
 | 3. Functions & Recursion | 0/TBD | Not started | - |
 | 4. Closures & Higher-Order Functions | 0/TBD | Not started | - |
 | 5. Custom MLIR Dialect | 0/TBD | Not started | - |
