@@ -60,11 +60,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Custom MLIR Dialect
 
-- [ ] **DIAL-01**: Tutorial explains custom FunLang dialect design (operations, types, attributes)
-- [ ] **DIAL-02**: Reader can define custom operations (e.g., funlang.closure, funlang.apply)
-- [ ] **DIAL-03**: Tutorial explains progressive lowering (FunLang dialect → SCF → LLVM)
-- [ ] **DIAL-04**: Reader can implement lowering passes from FunLang dialect to standard dialects
-- [ ] **DIAL-05**: Tutorial explains MLIR pattern-based rewrites
+- [x] **DIAL-01**: Tutorial explains custom FunLang dialect design (operations, types, attributes)
+- [x] **DIAL-02**: Reader can define custom operations (e.g., funlang.closure, funlang.apply)
+- [x] **DIAL-03**: Tutorial explains progressive lowering (FunLang dialect → SCF → LLVM)
+- [x] **DIAL-04**: Reader can implement lowering passes from FunLang dialect to standard dialects
+- [x] **DIAL-05**: Tutorial explains MLIR pattern-based rewrites
 
 ### Optimization
 
@@ -157,11 +157,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PMTC-03 | Phase 6 | Pending |
 | PMTC-04 | Phase 6 | Pending |
 | PMTC-05 | Phase 6 | Pending |
-| DIAL-01 | Phase 5 | Pending |
-| DIAL-02 | Phase 5 | Pending |
-| DIAL-03 | Phase 5 | Pending |
-| DIAL-04 | Phase 5 | Pending |
-| DIAL-05 | Phase 5 | Pending |
+| DIAL-01 | Phase 5 | Complete |
+| DIAL-02 | Phase 5 | Complete |
+| DIAL-03 | Phase 5 | Complete |
+| DIAL-04 | Phase 5 | Complete |
+| DIAL-05 | Phase 5 | Complete |
 | OPT-01 | Phase 7 | Pending |
 | OPT-02 | Phase 7 | Pending |
 | OPT-03 | Phase 7 | Pending |

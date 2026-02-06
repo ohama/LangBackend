@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Core Language Basics** - Arithmetic, let bindings, control flow, and memory strategy
 - [x] **Phase 3: Functions & Recursion** - Function definitions, calls, and recursive patterns
 - [x] **Phase 4: Closures & Higher-Order Functions** - Environment capture and closure compilation
-- [ ] **Phase 5: Custom MLIR Dialect** - FunLang dialect design and progressive lowering
+- [x] **Phase 5: Custom MLIR Dialect** - FunLang dialect design and progressive lowering
 - [ ] **Phase 6: Pattern Matching & Data Structures** - Lists, tuples, and decision tree compilation
 - [ ] **Phase 7: Optimization & Polish** - Optimization passes, quality improvements, and completion
 
@@ -105,9 +105,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Chapter 14: Custom Dialect Design (theory, TableGen ODS, C API shim pattern, progressive lowering)
-- [ ] 05-02-PLAN.md — Chapter 15: Custom Operations (funlang.closure, funlang.apply, funlang.match with F# integration)
-- [ ] 05-03-PLAN.md — Chapter 16: Lowering Passes (ConversionPattern, TypeConverter, DRR patterns, complete pipeline)
+- [x] 05-01-PLAN.md — Chapter 14: Custom Dialect Design (theory, TableGen ODS, C API shim pattern, progressive lowering)
+- [x] 05-02-PLAN.md — Chapter 15: Custom Operations (funlang.closure, funlang.apply, funlang.match with F# integration)
+- [x] 05-03-PLAN.md — Chapter 16: Lowering Passes (ConversionPattern, TypeConverter, DRR patterns, complete pipeline)
 
 ### Phase 6: Pattern Matching & Data Structures
 **Goal**: Reader can compile pattern matching on lists and tuples using decision tree compilation
@@ -151,6 +151,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 2. Core Language Basics | 4/4 | Complete | 2026-02-06 |
 | 3. Functions & Recursion | 2/2 | Complete | 2026-02-06 |
 | 4. Closures & Higher-Order Functions | 2/2 | Complete | 2026-02-06 |
-| 5. Custom MLIR Dialect | 0/3 | Planned | - |
+| 5. Custom MLIR Dialect | 3/3 | Complete | 2026-02-06 |
 | 6. Pattern Matching & Data Structures | 0/TBD | Not started | - |
 | 7. Optimization & Polish | 0/TBD | Not started | - |

@@ -1,0 +1,2662 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 14: 커스텀 Dialect 설계 - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-e7b79bcf.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-744e4df7.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./14-custom-dialect-design.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-14-커스텀-dialect-설계-custom-dialect-design"><a class="header" href="#chapter-14-커스텀-dialect-설계-custom-dialect-design">Chapter 14: 커스텀 Dialect 설계 (Custom Dialect Design)</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p><strong>커스텀 MLIR dialect</strong>는 도메인별 언어(DSL)를 높은 수준에서 표현하는 방법이다. FunLang 컴파일러는 Phase 4까지 빌트인 dialect만 사용했다:</p>
+<ul>
+<li><code>arith</code>: 산술 연산</li>
+<li><code>func</code>: 함수 정의와 호출</li>
+<li><code>scf</code>: 구조적 제어 흐름 (if/while)</li>
+<li><code>llvm</code>: LLVM IR 타입과 operation</li>
+</ul>
+<p>이 dialect들은 강력하고 범용적이지만, <strong>FunLang의 고수준 의미론을 직접 표현하지 못한다</strong>. Phase 4에서 클로저를 구현할 때 복잡성이 드러났다.</p>
+<h3 id="phase-4의-문제점-저수준-llvm-dialect의-복잡성"><a class="header" href="#phase-4의-문제점-저수준-llvm-dialect의-복잡성">Phase 4의 문제점: 저수준 LLVM Dialect의 복잡성</a></h3>
+<p>Chapter 12에서 클로저를 구현할 때, 단순한 개념을 복잡한 저수준 코드로 표현해야 했다:</p>
+<pre><code class="language-fsharp">// 개념적으로 단순한 코드
+let make_adder n =
+    fun x -&gt; x + n
+</code></pre>
+<p><strong>생성된 MLIR (Phase 4 방식):</strong></p>
+<pre><code class="language-mlir">func.func @make_adder(%n: i32) -&gt; !llvm.ptr {
+    // 1. 환경 크기 계산: 8 (fn ptr) + 4 (n) = 12 bytes
+    %env_size = arith.constant 12 : i64
+
+    // 2. GC_malloc 호출
+    %env_ptr = llvm.call @GC_malloc(%env_size) : (i64) -&gt; !llvm.ptr
+
+    // 3. 함수 포인터 저장 (env[0])
+    %fn_addr = llvm.mlir.addressof @lambda_adder : !llvm.ptr
+    %fn_slot = llvm.getelementptr %env_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %fn_addr, %fn_slot : !llvm.ptr, !llvm.ptr
+
+    // 4. 캡처된 변수 n 저장 (env[1])
+    %n_slot = llvm.getelementptr %env_ptr[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %n, %n_slot : i32, !llvm.ptr
+
+    // 5. 환경 포인터 반환 (클로저)
+    func.return %env_ptr : !llvm.ptr
+}
+
+// lambda_adder 함수 (환경 파라미터 추가)
+func.func @lambda_adder(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+    // 1. 환경에서 n 로드
+    %n_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %n = llvm.load %n_slot : !llvm.ptr -&gt; i32
+
+    // 2. x + n 계산
+    %result = arith.addi %x, %n : i32
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>문제점:</strong></p>
+<ol>
+<li>
+<p><strong>GEP (getelementptr) 패턴의 반복</strong></p>
+<ul>
+<li>환경 슬롯 접근할 때마다 <code>getelementptr + load</code> 패턴 필요</li>
+<li>인덱스 관리 오류 발생 가능 (env[0] vs env[1])</li>
+<li>코드 가독성 저하</li>
+</ul>
+</li>
+<li>
+<p><strong>저수준 메모리 관리 노출</strong></p>
+<ul>
+<li><code>GC_malloc</code> 크기 계산 (8 + 4 bytes?)</li>
+<li>포인터 산술 명시적 작성</li>
+<li>타입 불일치 가능성 (i32 vs !llvm.ptr)</li>
+</ul>
+</li>
+<li>
+<p><strong>도메인 의미론 상실</strong></p>
+<ul>
+<li>“클로저“라는 개념이 안 보인다</li>
+<li>“환경 포인터” = <code>!llvm.ptr</code> (opaque, 타입 안전성 없음)</li>
+<li>최적화 pass 작성 어려움 (어떤 포인터가 클로저인지?)</li>
+</ul>
+</li>
+<li>
+<p><strong>컴파일러 코드 복잡성 폭발</strong></p>
+<ul>
+<li>F# 컴파일러 코드가 저수준 세부사항 처리</li>
+<li>변수 1개 추가할 때마다 GEP 인덱스 계산</li>
+<li>에러 가능성 증가</li>
+</ul>
+</li>
+</ol>
+<p><strong>실제 컴파일러 코드 (Phase 4):</strong></p>
+<pre><code class="language-fsharp">// Lambda 컴파일 (Phase 4 버전)
+let compileLambda (builder: OpBuilder) (param: string) (body: Expr) (capturedVars: (string * MlirValue) list) =
+    // 1. 환경 크기 계산 (수동!)
+    let fnPtrSize = 8L
+    let varSize = 4L  // i32 가정
+    let totalSize = fnPtrSize + (int64 capturedVars.Length) * varSize
+    let sizeConst = builder.CreateI64Const(totalSize)
+
+    // 2. GC_malloc 호출
+    let envPtr = builder.CreateCall("GC_malloc", [sizeConst])
+
+    // 3. 함수 포인터 저장 (getelementptr 0)
+    let fnSlot = builder.CreateGEP(envPtr, 0)
+    builder.CreateStore(fnAddr, fnSlot)
+
+    // 4. 캡처된 변수들 저장 (getelementptr 1, 2, 3...)
+    capturedVars |&gt; List.iteri (fun i (name, value) -&gt;
+        let slot = builder.CreateGEP(envPtr, i + 1)
+        builder.CreateStore(value, slot)
+    )
+
+    envPtr
+</code></pre>
+<p>크기 계산, GEP 인덱스 관리, 타입 추론 등 저수준 세부사항이 컴파일러 로직에 섞여있다.</p>
+<h3 id="custom-dialect의-이점"><a class="header" href="#custom-dialect의-이점">Custom Dialect의 이점</a></h3>
+<p><strong>커스텀 dialect</strong>를 사용하면 <strong>높은 수준에서 의미론을 표현</strong>할 수 있다. 같은 코드를 FunLang dialect로 표현한다면:</p>
+<pre><code class="language-mlir">func.func @make_adder(%n: i32) -&gt; !funlang.closure {
+    // 클로저 생성 - 고수준 operation
+    %closure = funlang.make_closure @lambda_adder(%n) : !funlang.closure
+    func.return %closure : !funlang.closure
+}
+
+func.func @lambda_adder(%x: i32, %n: i32) -&gt; i32 {
+    // 캡처된 변수는 파라미터로 전달 (환경 명시적 관리 불필요)
+    %result = arith.addi %x, %n : i32
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>변화:</strong></p>
+<ol>
+<li>
+<p><strong>도메인 의미론 보존</strong></p>
+<ul>
+<li><code>!funlang.closure</code> 타입: 클로저임을 명시</li>
+<li><code>funlang.make_closure</code>: 클로저 생성의 의도가 명확</li>
+<li>GEP, malloc 등 구현 세부사항 숨김</li>
+</ul>
+</li>
+<li>
+<p><strong>컴파일러 코드 단순화</strong></p>
+</li>
+</ol>
+<pre><code class="language-fsharp">// Lambda 컴파일 (Phase 5 버전 - 커스텀 dialect 사용)
+let compileLambda (builder: OpBuilder) (param: string) (body: Expr) (capturedVars: (string * MlirValue) list) =
+    // 간단! dialect operation 호출
+    let capturedValues = capturedVars |&gt; List.map snd
+    builder.CreateFunLangClosure(lambdaFuncName, capturedValues)
+</code></pre>
+<p>환경 크기, GEP 인덱스, 메모리 레이아웃 등이 dialect operation 구현 안으로 캡슐화된다.</p>
+<ol start="3">
+<li>
+<p><strong>타입 안전성 향상</strong></p>
+<ul>
+<li><code>!llvm.ptr</code> (모든 포인터) → <code>!funlang.closure</code> (클로저 전용)</li>
+<li>타입 체커가 클로저 오용 방지 가능</li>
+<li>예: 정수 포인터를 클로저로 사용하려는 시도 방지</li>
+</ul>
+</li>
+<li>
+<p><strong>최적화 기회 증가</strong></p>
+<ul>
+<li>Dialect-specific optimization pass 작성 가능</li>
+<li>예: 환경에 변수 1개만 있을 때 inline 최적화</li>
+<li>예: 탈출하지 않는 클로저는 stack 할당</li>
+</ul>
+</li>
+<li>
+<p><strong>디버깅 용이성</strong></p>
+<ul>
+<li>높은 수준 IR을 먼저 검증 가능</li>
+<li>에러 메시지가 도메인 용어 사용 (“closure type mismatch” vs “pointer type mismatch”)</li>
+</ul>
+</li>
+</ol>
+<h3 id="progressive-lowering-왜-점진적으로-낮추는가"><a class="header" href="#progressive-lowering-왜-점진적으로-낮추는가">Progressive Lowering: 왜 점진적으로 낮추는가?</a></h3>
+<p>**Progressive lowering (점진적 하강)**은 높은 수준 표현을 여러 단계로 낮추는 전략이다:</p>
+<pre><code>FunLang Dialect (highest level, domain-specific)
+    ↓ (FunLangToStandard lowering pass)
+Func + SCF + MemRef (mid-level, general purpose)
+    ↓ (StandardToLLVM lowering pass)
+LLVM Dialect (low-level, machine-oriented)
+    ↓ (MLIR-to-LLVM translation)
+LLVM IR → Machine Code
+</code></pre>
+<p><strong>Before/After 비교:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase 4 (Direct lowering)</th><th>Phase 5 (Progressive lowering)</th></tr>
+</thead>
+<tbody>
+<tr><td>FunLang AST → LLVM Dialect</td><td>FunLang AST → FunLang Dialect</td></tr>
+<tr><td>단일 거대 변환</td><td>→ Func/SCF/MemRef Dialect</td></tr>
+<tr><td>의미론 상실 즉시</td><td>→ LLVM Dialect</td></tr>
+<tr><td>최적화 불가</td><td>각 단계에서 최적화 가능</td></tr>
+<tr><td>디버깅 어려움</td><td>각 단계 독립 검증 가능</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="chapter-14의-목표"><a class="header" href="#chapter-14의-목표">Chapter 14의 목표</a></h3>
+<p>이 장에서 다루는 것:</p>
+<ol>
+<li><strong>MLIR Dialect 아키텍처</strong>: Operation, Type, Attribute의 역할</li>
+<li><strong>Progressive Lowering 철학</strong>: 왜 여러 단계로 낮추는가?</li>
+<li><strong>TableGen ODS</strong>: MLIR operation 정의 DSL</li>
+<li><strong>C API Shim 패턴</strong>: C++ dialect를 F#에 연결</li>
+<li><strong>FunLang Dialect 설계</strong>: 어떤 operation을 만들 것인가?</li>
+</ol>
+<p>이 장을 마치면:</p>
+<ul>
+<li>커스텀 dialect가 왜 필요한지 이해한다</li>
+<li>TableGen ODS 문법을 읽고 쓸 수 있다</li>
+<li>C API shim 패턴으로 F# interop 할 수 있다</li>
+<li>FunLang dialect의 operation과 type을 설계할 수 있다</li>
+<li>Progressive lowering 경로를 계획할 수 있다</li>
+</ul>
+<blockquote>
+<p><strong>Preview:</strong> Chapter 15에서는 실제로 FunLang dialect를 구현하고 lowering pass를 작성한다. Chapter 14는 이론적 기초를 확립한다.</p>
+</blockquote>
+<h2 id="mlir-dialect-아키텍처"><a class="header" href="#mlir-dialect-아키텍처">MLIR Dialect 아키텍처</a></h2>
+<p>MLIR의 핵심 강점은 **extensibility (확장성)**다. 새 dialect를 정의해서 도메인별 개념을 표현할 수 있다.</p>
+<h3 id="dialect-hierarchy-개념"><a class="header" href="#dialect-hierarchy-개념">Dialect Hierarchy 개념</a></h3>
+<p>MLIR 프로그램은 <strong>여러 dialect의 operation이 섞여있다</strong>:</p>
+<pre><code class="language-mlir">func.func @example(%arg: i32) -&gt; i32 {
+    // arith dialect
+    %c1 = arith.constant 1 : i32
+    %sum = arith.addi %arg, %c1 : i32
+
+    // scf dialect
+    %result = scf.if %cond -&gt; i32 {
+        scf.yield %sum : i32
+    } else {
+        scf.yield %arg : i32
+    }
+
+    // func dialect
+    func.return %result : i32
+}
+</code></pre>
+<p>각 operation은 <code>dialect.operation</code> 형식으로 네임스페이스를 가진다:</p>
+<ul>
+<li><code>arith.constant</code>: arith dialect의 constant operation</li>
+<li><code>scf.if</code>: scf dialect의 if operation</li>
+<li><code>func.return</code>: func dialect의 return operation</li>
+</ul>
+<p><strong>Dialect hierarchy (계층 구조):</strong></p>
+<pre><code>┌────────────────────────────────────────┐
+│  FunLang Dialect (highest level)      │
+│  - funlang.closure                     │
+│  - funlang.apply                       │
+│  - funlang.match (Phase 6)             │
+└──────────────┬─────────────────────────┘
+               │ (lowering pass)
+               ↓
+┌────────────────────────────────────────┐
+│  Standard Dialects (mid-level)         │
+│  - func.func, func.call                │
+│  - scf.if, scf.while                   │
+│  - memref.alloc, memref.load           │
+└──────────────┬─────────────────────────┘
+               │ (lowering pass)
+               ↓
+┌────────────────────────────────────────┐
+│  LLVM Dialect (low-level)              │
+│  - llvm.getelementptr                  │
+│  - llvm.load, llvm.store               │
+│  - llvm.call                           │
+└──────────────┬─────────────────────────┘
+               │ (translation)
+               ↓
+┌────────────────────────────────────────┐
+│  LLVM IR                               │
+└────────────────────────────────────────┘
+</code></pre>
+<p><strong>높은 수준일수록:</strong></p>
+<ul>
+<li>도메인 개념 명확 (funlang.closure vs !llvm.ptr)</li>
+<li>최적화 기회 많음 (의미론 활용 가능)</li>
+<li>플랫폼 독립적</li>
+</ul>
+<p><strong>낮은 수준일수록:</strong></p>
+<ul>
+<li>기계 모델에 가까움 (레지스터, 메모리, 포인터)</li>
+<li>구현 세부사항 노출</li>
+<li>플랫폼 특화</li>
+</ul>
+<h3 id="operation-type-attribute의-역할"><a class="header" href="#operation-type-attribute의-역할">Operation, Type, Attribute의 역할</a></h3>
+<p>MLIR dialect는 세 가지 확장 포인트를 제공한다:</p>
+<h4 id="1-operation-연산"><a class="header" href="#1-operation-연산">1. Operation (연산)</a></h4>
+<p><strong>Operation</strong>은 계산 단위다. FunLang dialect operation 예시:</p>
+<pre><code class="language-mlir">// funlang.make_closure operation
+%closure = funlang.make_closure @lambda_func(%n, %m) : !funlang.closure
+
+// funlang.apply operation
+%result = funlang.apply %closure(%x) : (i32) -&gt; i32
+</code></pre>
+<p><strong>Operation 구성 요소:</strong></p>
+<ul>
+<li><strong>Name</strong>: <code>funlang.make_closure</code> (dialect.operation 형식)</li>
+<li><strong>Operands</strong>: <code>@lambda_func</code>, <code>%n</code>, <code>%m</code> (입력 값)</li>
+<li><strong>Results</strong>: <code>%closure</code> (출력 값)</li>
+<li><strong>Types</strong>: <code>!funlang.closure</code>, <code>i32</code> (타입 정보)</li>
+<li><strong>Attributes</strong>: <code>@lambda_func</code> (컴파일 타임 상수)</li>
+<li><strong>Regions</strong>: 중첩 코드 블록 (예: scf.if의 then/else 블록)</li>
+</ul>
+<p><strong>Operation의 역할:</strong></p>
+<ul>
+<li>도메인별 계산 표현 (클로저 생성, 패턴 매칭 등)</li>
+<li>Verifier로 정적 검증 (타입 체크, 불변식)</li>
+<li>Lowering 대상 (다른 dialect operation으로 변환)</li>
+</ul>
+<h4 id="2-type-타입"><a class="header" href="#2-type-타입">2. Type (타입)</a></h4>
+<p><strong>Type</strong>은 값의 종류를 표현한다. FunLang dialect type 예시:</p>
+<pre><code class="language-mlir">// funlang.closure 타입
+%closure : !funlang.closure
+
+// funlang.list 타입 (Phase 6)
+%list : !funlang.list&lt;i32&gt;
+</code></pre>
+<p><strong>빌트인 타입 vs 커스텀 타입:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>빌트인 타입</th><th>커스텀 타입</th></tr>
+</thead>
+<tbody>
+<tr><td><code>i32</code>, <code>i64</code>, <code>f32</code></td><td><code>!funlang.closure</code></td></tr>
+<tr><td><code>!llvm.ptr</code></td><td><code>!funlang.list&lt;i32&gt;</code></td></tr>
+<tr><td><code>tensor&lt;10xf32&gt;</code></td><td><code>!funlang.record&lt;{x:i32, y:i32}&gt;</code></td></tr>
+<tr><td>범용적</td><td>도메인 특화</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>타입의 역할:</strong></p>
+<ul>
+<li>값의 의미론 표현 (closure vs raw pointer)</li>
+<li>타입 체커가 오용 방지</li>
+<li>최적화 hint (closure는 함수 포인터 + 환경)</li>
+</ul>
+<h4 id="3-attribute-속성"><a class="header" href="#3-attribute-속성">3. Attribute (속성)</a></h4>
+<p><strong>Attribute</strong>는 컴파일 타임 상수 값이다:</p>
+<pre><code class="language-mlir">// IntegerAttr
+%c1 = arith.constant 1 : i32
+
+// SymbolRefAttr (함수 이름)
+%fn = func.call @my_function(%arg) : (i32) -&gt; i32
+
+// StringAttr
+%str = llvm.mlir.global "hello"
+
+// ArrayAttr
+#array = [1, 2, 3, 4]
+</code></pre>
+<p>FunLang dialect에서 attribute 사용:</p>
+<pre><code class="language-mlir">// 클로저가 참조하는 함수 (SymbolRefAttr)
+%closure = funlang.make_closure @lambda_func(%n) : !funlang.closure
+
+// 패턴 매칭 케이스 (ArrayAttr)
+%result = funlang.match %value {
+    #funlang.pattern&lt;constructor="Nil"&gt; -&gt; { ... }
+    #funlang.pattern&lt;constructor="Cons"&gt; -&gt; { ... }
+}
+</code></pre>
+<p><strong>Attribute의 역할:</strong></p>
+<ul>
+<li>컴파일 타임 정보 저장 (함수 이름, 상수 등)</li>
+<li>Serialization (MLIR IR을 파일에 저장)</li>
+<li>Lowering 힌트</li>
+</ul>
+<h3 id="region과-block-phase-1-복습"><a class="header" href="#region과-block-phase-1-복습">Region과 Block (Phase 1 복습)</a></h3>
+<p>Chapter 01에서 배운 개념 다시 보기:</p>
+<p><strong>Region</strong>: operation 내부의 코드 영역</p>
+<pre><code class="language-mlir">scf.if %cond -&gt; i32 {
+    // ↑ Region 1 (then block)
+    %result = arith.addi %a, %b : i32
+    scf.yield %result : i32
+} else {
+    // ↑ Region 2 (else block)
+    %result = arith.subi %a, %b : i32
+    scf.yield %result : i32
+}
+</code></pre>
+<p><strong>Block</strong>: region 내부의 명령어 시퀀스</p>
+<pre><code class="language-mlir">func.func @example(%arg: i32) -&gt; i32 {
+^entry:  // ↑ Block label
+    %c1 = arith.constant 1 : i32
+    %sum = arith.addi %arg, %c1 : i32
+    func.return %sum : i32
+}
+</code></pre>
+<p><strong>FunLang dialect에서 region 사용 가능?</strong></p>
+<p>가능하다. 예를 들어 <code>funlang.match</code> operation은 패턴별 region을 가질 수 있다:</p>
+<pre><code class="language-mlir">%result = funlang.match %list : !funlang.list&lt;i32&gt; -&gt; i32 {
+    // Nil case
+    ^nil_case:
+        %zero = arith.constant 0 : i32
+        funlang.yield %zero : i32
+
+    // Cons case
+    ^cons_case(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+        %sum = funlang.apply %f(%head) : (i32) -&gt; i32
+        funlang.yield %sum : i32
+}
+</code></pre>
+<p>각 케이스가 별도 block을 가진다. 이렇게 <strong>structured control flow</strong>를 dialect operation으로 표현할 수 있다.</p>
+<h3 id="symbol-table과-함수-참조"><a class="header" href="#symbol-table과-함수-참조">Symbol Table과 함수 참조</a></h3>
+<p>MLIR은 <strong>symbol table</strong>을 사용해 함수, 전역 변수 등을 참조한다.</p>
+<p><strong>Symbol (심볼):</strong></p>
+<pre><code class="language-mlir">// 함수 정의 - symbol
+func.func @my_function(%arg: i32) -&gt; i32 {
+    func.return %arg : i32
+}
+
+// 함수 참조 - SymbolRefAttr
+%result = func.call @my_function(%x) : (i32) -&gt; i32
+</code></pre>
+<p><code>@my_function</code>은 <strong>SymbolRefAttr</strong>이다:</p>
+<ul>
+<li>컴파일 타임에 해석됨</li>
+<li>타입 체커가 함수 시그니처 검증</li>
+<li>Linker가 심볼 해석</li>
+</ul>
+<p><strong>FunLang dialect에서 symbol 사용:</strong></p>
+<pre><code class="language-mlir">// 람다 함수 정의 (lifted)
+func.func private @lambda_adder(%env: !funlang.env, %x: i32) -&gt; i32 {
+    // ...
+}
+
+// 클로저 생성 - 함수 심볼 참조
+%closure = funlang.make_closure @lambda_adder(%n) : !funlang.closure
+</code></pre>
+<p><code>@lambda_adder</code>가 심볼이다. 클로저는 이 심볼을 참조해서 함수 포인터를 얻는다.</p>
+<p><strong>Symbol vs SSA Value:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Symbol</th><th>SSA Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>@func_name</code></td><td><code>%result</code></td></tr>
+<tr><td>컴파일 타임 상수</td><td>런타임 값</td></tr>
+<tr><td>전역 참조 가능</td><td>로컬 스코프만</td></tr>
+<tr><td>함수, 전역 변수</td><td>operation 결과</td></tr>
+</tbody>
+</table>
+</div>
+<p>Phase 4에서 사용한 <code>llvm.mlir.addressof @lambda_func</code>도 심볼을 사용한다:</p>
+<pre><code class="language-mlir">// 함수 심볼 주소 얻기
+%fn_addr = llvm.mlir.addressof @lambda_func : !llvm.ptr
+</code></pre>
+<h3 id="dialectregistry와-의존성-선언"><a class="header" href="#dialectregistry와-의존성-선언">DialectRegistry와 의존성 선언</a></h3>
+<p><strong>DialectRegistry</strong>는 context에 dialect를 등록하는 메커니즘이다.</p>
+<p><strong>Phase 1-4 코드 (빌트인 dialect 등록):</strong></p>
+<pre><code class="language-fsharp">// MlirHelpers.fs
+let createContextWithDialects() =
+    let ctx = MlirContext.Create()
+
+    // 빌트인 dialect 등록
+    let arithHandle = Mlir.mlirGetDialectHandle__arith__()
+    Mlir.mlirDialectHandleRegisterDialect(arithHandle, ctx.Handle)
+
+    let funcHandle = Mlir.mlirGetDialectHandle__func__()
+    Mlir.mlirDialectHandleRegisterDialect(funcHandle, ctx.Handle)
+
+    // ... scf, llvm 등
+
+    ctx
+</code></pre>
+<p><strong>Phase 5 코드 (커스텀 dialect 추가):</strong></p>
+<pre><code class="language-fsharp">// FunLang dialect 등록
+let ctx = createContextWithDialects()
+
+// C API shim 호출
+FunLangDialect.RegisterDialect(ctx)
+</code></pre>
+<p><strong>의존성 선언:</strong></p>
+<p>FunLang dialect는 다른 dialect를 사용할 수 있다:</p>
+<pre><code class="language-cpp">// FunLang dialect 정의 (C++)
+class FunLangDialect : public Dialect {
+public:
+    FunLangDialect(MLIRContext *context) : ... {
+        // 의존성 선언
+        addDependentDialect&lt;func::FuncDialect&gt;();
+        addDependentDialect&lt;arith::ArithDialect&gt;();
+        addDependentDialect&lt;LLVM::LLVMDialect&gt;();
+    }
+};
+</code></pre>
+<p>이렇게 하면:</p>
+<ul>
+<li>FunLang operation이 func, arith operation을 사용 가능</li>
+<li>Lowering pass에서 func.call, arith.addi 생성 가능</li>
+<li>Context가 필요한 dialect 자동 로드</li>
+</ul>
+<h3 id="funlang-dialect-계층-구조-다이어그램"><a class="header" href="#funlang-dialect-계층-구조-다이어그램">FunLang Dialect 계층 구조 다이어그램</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                    MLIR Context                                 │
+│  (모든 dialect의 컨테이너)                                        │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+        ▼                    ▼                    ▼
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│ FunLang       │   │ BuiltIn       │   │ LLVM          │
+│ Dialect       │   │ Dialect       │   │ Dialect       │
+│               │   │ (func, scf,   │   │               │
+│ - closure     │   │  arith)       │   │ - ptr         │
+│ - apply       │   │               │   │ - call        │
+│ - match       │   │ - func.func   │   │ - gep         │
+└───────┬───────┘   │ - scf.if      │   │ - load/store  │
+        │           │ - arith.addi  │   └───────────────┘
+        │           └───────────────┘
+        │
+        │  (의존성)
+        └──────────────────┐
+                           │
+                ┌──────────┴──────────┐
+                │                     │
+                ▼                     ▼
+        ┌───────────────┐     ┌───────────────┐
+        │ Types         │     │ Operations    │
+        │               │     │               │
+        │ - closure     │     │ - make_closure│
+        │ - list&lt;T&gt;     │     │ - apply       │
+        │ - record&lt;...&gt; │     │ - match       │
+        └───────────────┘     └───────────────┘
+</code></pre>
+<p><strong>Dialect 간 관계:</strong></p>
+<ol>
+<li>
+<p><strong>FunLang Dialect</strong>: 최상위, 도메인 특화</p>
+<ul>
+<li>의존: func, scf, arith, llvm dialect</li>
+<li>제공: funlang.* operation/type</li>
+</ul>
+</li>
+<li>
+<p><strong>BuiltIn Dialects</strong>: 중간 수준, 범용</p>
+<ul>
+<li>의존: 최소 (arith는 독립적)</li>
+<li>제공: func.<em>, scf.</em>, arith.* operation</li>
+</ul>
+</li>
+<li>
+<p><strong>LLVM Dialect</strong>: 최하위, 기계 지향</p>
+<ul>
+<li>의존: 없음 (target-independent LLVM IR)</li>
+<li>제공: llvm.* operation</li>
+</ul>
+</li>
+</ol>
+<p><strong>Lowering 경로:</strong></p>
+<pre><code>funlang.make_closure
+    ↓ (FunLangToFunc lowering)
+func.func + memref.alloc + func.call
+    ↓ (FuncToLLVM lowering)
+llvm.call + llvm.getelementptr + llvm.store
+    ↓ (MLIR-to-LLVM translation)
+LLVM IR: call, getelementptr, store
+</code></pre>
+<h2 id="progressive-lowering-철학"><a class="header" href="#progressive-lowering-철학">Progressive Lowering 철학</a></h2>
+<h3 id="why-not-direct-funlang--llvm-lowering"><a class="header" href="#why-not-direct-funlang--llvm-lowering">Why Not Direct FunLang → LLVM Lowering?</a></h3>
+<p>컴파일러를 설계할 때 유혹이 있다: “FunLang AST를 바로 LLVM dialect로 낮추면 빠르지 않을까?”</p>
+<p><strong>직접 lowering의 문제점:</strong></p>
+<h4 id="1-최적화-기회-상실"><a class="header" href="#1-최적화-기회-상실">1. 최적화 기회 상실</a></h4>
+<p><strong>예시: 클로저 inlining</strong></p>
+<pre><code class="language-fsharp">// FunLang 코드
+let apply f x = f x
+
+let result = apply (fun y -&gt; y + 1) 42
+</code></pre>
+<p><strong>Direct lowering (FunLang → LLVM):</strong></p>
+<pre><code class="language-mlir">// 클로저 생성 (즉시 LLVM dialect)
+%env = llvm.call @GC_malloc(...) : (i64) -&gt; !llvm.ptr
+%fn_ptr = llvm.mlir.addressof @lambda_0 : !llvm.ptr
+%fn_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %fn_ptr, %fn_slot : !llvm.ptr, !llvm.ptr
+// ... (환경 저장)
+
+// 클로저 호출 (간접 호출)
+%fn_ptr_loaded = llvm.load %fn_slot : !llvm.ptr -&gt; !llvm.ptr
+%result = llvm.call %fn_ptr_loaded(%env, %x) : (!llvm.ptr, i32) -&gt; i32
+</code></pre>
+<p>문제: <strong>LLVM 수준에서는 이것이 즉시 사용되는 클로저인지 알 수 없다</strong>. 최적화 pass가 malloc, store, load, call 패턴을 분석해야 하는데, 이미 의미론이 상실됨.</p>
+<p><strong>Progressive lowering (FunLang → Func → LLVM):</strong></p>
+<pre><code class="language-mlir">// Step 1: FunLang dialect (high-level)
+%closure = funlang.make_closure @lambda_0() : !funlang.closure
+%result = funlang.apply %closure(%x) : (i32) -&gt; i32
+
+// Optimization pass: closure inlining (FunLang dialect level)
+// "이 클로저는 즉시 사용되고 탈출하지 않는다" → inline!
+%result = func.call @lambda_0(%x) : (i32) -&gt; i32
+
+// Step 2: Lower to LLVM (이미 최적화됨)
+%result = llvm.call @lambda_0(%x) : (i32) -&gt; i32
+</code></pre>
+<p><strong>높은 수준에서 최적화하면:</strong></p>
+<ul>
+<li>의미론이 명확 (closure + apply = inline candidate)</li>
+<li>패턴 매칭 쉬움 (GEP + load 추적 불필요)</li>
+<li>변환이 안전함 (타입 체커가 검증)</li>
+</ul>
+<h4 id="2-코드-복잡성-폭발"><a class="header" href="#2-코드-복잡성-폭발">2. 코드 복잡성 폭발</a></h4>
+<p><strong>Direct lowering 컴파일러 코드:</strong></p>
+<pre><code class="language-fsharp">// compileLambda: FunLang AST → LLVM dialect
+let rec compileLambda (builder: OpBuilder) (lambda: Expr) =
+    match lambda with
+    | Lambda(param, body) -&gt;
+        // 1. 자유 변수 분석
+        let freeVars = analyzeFreeVars lambda
+
+        // 2. 환경 크기 계산 (수동!)
+        let envSize = 8L + (int64 freeVars.Length) * 4L
+        let sizeConst = builder.CreateI64Const(envSize)
+
+        // 3. GC_malloc 호출
+        let malloc = builder.CreateCall("GC_malloc", [sizeConst])
+
+        // 4. 함수 포인터 저장 (GEP 0)
+        let fnAddr = builder.CreateAddressOf(lambdaName)
+        let fnSlot = builder.CreateGEP(malloc, 0)
+        builder.CreateStore(fnAddr, fnSlot)
+
+        // 5. 변수 저장 (GEP 1, 2, 3...)
+        freeVars |&gt; List.iteri (fun i var -&gt;
+            let value = compileExpr builder var
+            let slot = builder.CreateGEP(malloc, i + 1)
+            builder.CreateStore(value, slot)
+        )
+
+        // 6. 람다 함수 정의 (별도 함수)
+        let lambdaFunc = builder.CreateFunction(lambdaName)
+        // ... (환경 파라미터, body 컴파일, GEP + load for captures)
+
+        malloc
+</code></pre>
+<p><strong>모든 세부사항이 한 함수에 섞여있다:</strong></p>
+<ul>
+<li>메모리 레이아웃 계산</li>
+<li>GEP 인덱스 관리</li>
+<li>타입 변환</li>
+<li>함수 생성</li>
+</ul>
+<p><strong>Progressive lowering 컴파일러 코드:</strong></p>
+<pre><code class="language-fsharp">// Step 1: FunLang AST → FunLang dialect
+let rec compileLambda (builder: OpBuilder) (lambda: Expr) =
+    match lambda with
+    | Lambda(param, body) -&gt;
+        let freeVars = analyzeFreeVars lambda
+        let capturedValues = freeVars |&gt; List.map (compileExpr builder)
+
+        // 간단! dialect operation 호출
+        builder.CreateFunLangClosure(lambdaName, capturedValues)
+
+// Step 2: FunLang dialect → Func dialect (별도 lowering pass)
+// 이 pass에서 malloc, GEP, store 처리
+class FunLangToFuncLowering : public RewritePattern {
+    LogicalResult matchAndRewrite(MakeClosureOp op, ...) {
+        // 여기서 환경 할당, 함수 포인터 저장 등 처리
+        // 재사용 가능한 로직, 독립적 테스트 가능
+    }
+};
+</code></pre>
+<p><strong>코드가 계층화된다:</strong></p>
+<ul>
+<li>AST → Dialect: 의미론 변환 (단순)</li>
+<li>Dialect → Dialect: 구현 세부사항 (재사용 가능)</li>
+<li>Dialect → LLVM: 기계 코드 생성 (표준 패턴)</li>
+</ul>
+<h4 id="3-디버깅-어려움"><a class="header" href="#3-디버깅-어려움">3. 디버깅 어려움</a></h4>
+<p><strong>Direct lowering:</strong></p>
+<pre><code>FunLang AST → [Giant Black Box] → LLVM Dialect
+</code></pre>
+<p>에러가 발생하면:</p>
+<ul>
+<li>LLVM IR에서 segfault 발견</li>
+<li>원인 추적 어려움 (GEP 인덱스? 타입? 메모리?)</li>
+<li>AST와 LLVM IR 사이 gap이 크다</li>
+</ul>
+<p><strong>Progressive lowering:</strong></p>
+<pre><code>FunLang AST → FunLang Dialect → Func Dialect → LLVM Dialect
+               ↑ verify       ↑ verify      ↑ verify
+</code></pre>
+<p>각 단계에서 검증 가능:</p>
+<ol>
+<li>FunLang Dialect: 타입 체크 (<code>!funlang.closure</code> vs <code>i32</code>)</li>
+<li>Func Dialect: 함수 시그니처, region 구조</li>
+<li>LLVM Dialect: 포인터 연산, 메모리 안전성</li>
+</ol>
+<p><strong>에러 메시지 비교:</strong></p>
+<p>Direct lowering:</p>
+<pre><code>error: 'llvm.load' op requires result type '!llvm.ptr' but found 'i32'
+  %value = llvm.load %slot : !llvm.ptr -&gt; i32
+</code></pre>
+<p>“어디서 잘못됐지? GEP 인덱스? 타입 계산?”</p>
+<p>Progressive lowering:</p>
+<pre><code>error: 'funlang.apply' op operand type mismatch
+  expected: !funlang.closure
+  found: i32
+  %result = funlang.apply %x(%y) : (i32) -&gt; i32
+</code></pre>
+<p>“아, 클로저가 아니라 정수를 apply하려고 했구나!”</p>
+<h3 id="progressive-lowering-단계-설계"><a class="header" href="#progressive-lowering-단계-설계">Progressive Lowering 단계 설계</a></h3>
+<p>FunLang 컴파일러의 lowering 경로:</p>
+<pre><code>┌─────────────────────────────────────────┐
+│  FunLang AST (F# data structures)       │
+│  - Lambda(param, body)                  │
+│  - Apply(fn, arg)                       │
+│  - Let(name, value, body)               │
+└───────────────┬─────────────────────────┘
+                │ (AST → Dialect)
+                ↓
+┌─────────────────────────────────────────┐
+│  FunLang Dialect (MLIR IR)              │
+│  - funlang.make_closure                 │
+│  - funlang.apply                        │
+│  - funlang.match                        │
+│                                         │
+│  Optimization:                          │
+│  - Closure inlining                     │
+│  - Dead closure elimination             │
+│  - Escape analysis                      │
+└───────────────┬─────────────────────────┘
+                │ (FunLangToFunc lowering pass)
+                ↓
+┌─────────────────────────────────────────┐
+│  Func + SCF + MemRef (MLIR IR)          │
+│  - func.func, func.call                 │
+│  - scf.if, scf.while                    │
+│  - memref.alloc, memref.load/store      │
+│                                         │
+│  Optimization:                          │
+│  - Inlining                             │
+│  - Dead code elimination                │
+│  - Loop optimization                    │
+└───────────────┬─────────────────────────┘
+                │ (FuncToLLVM lowering pass)
+                ↓
+┌─────────────────────────────────────────┐
+│  LLVM Dialect (MLIR IR)                 │
+│  - llvm.call                            │
+│  - llvm.getelementptr                   │
+│  - llvm.load, llvm.store                │
+│                                         │
+│  Optimization:                          │
+│  - (LLVM's own optimization passes)     │
+└───────────────┬─────────────────────────┘
+                │ (MLIR → LLVM IR translation)
+                ↓
+┌─────────────────────────────────────────┐
+│  LLVM IR                                │
+│  - call, getelementptr, load, store     │
+└───────────────┬─────────────────────────┘
+                │ (LLVM backend)
+                ↓
+┌─────────────────────────────────────────┐
+│  Machine Code (x86, ARM, etc.)          │
+└─────────────────────────────────────────┘
+</code></pre>
+<h3 id="각-단계의-역할"><a class="header" href="#각-단계의-역할">각 단계의 역할</a></h3>
+<h4 id="stage-1-funlang-dialect"><a class="header" href="#stage-1-funlang-dialect">Stage 1: FunLang Dialect</a></h4>
+<p><strong>표현:</strong> 도메인 의미론 (클로저, 패턴 매칭, 리스트)</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-mlir">func.func @make_adder(%n: i32) -&gt; !funlang.closure {
+    %closure = funlang.make_closure @lambda_adder(%n) : !funlang.closure
+    func.return %closure : !funlang.closure
+}
+
+func.func private @lambda_adder(%x: i32, %n: i32) -&gt; i32 {
+    %result = arith.addi %x, %n : i32
+    func.return %result : i32
+}
+</code></pre>
+<p><strong>특징:</strong></p>
+<ul>
+<li><code>!funlang.closure</code> 타입 사용</li>
+<li>구현 세부사항 숨김 (malloc, GEP 없음)</li>
+<li>최적화 가능 (클로저 inlining, escape analysis)</li>
+</ul>
+<p><strong>최적화 예시:</strong></p>
+<pre><code class="language-mlir">// Before optimization
+%closure = funlang.make_closure @lambda_inc() : !funlang.closure
+%result = funlang.apply %closure(%x) : (i32) -&gt; i32
+
+// After closure inlining (FunLang dialect pass)
+%result = func.call @lambda_inc(%x) : (i32) -&gt; i32
+</code></pre>
+<h4 id="stage-2-func--scf--memref-dialect"><a class="header" href="#stage-2-func--scf--memref-dialect">Stage 2: Func + SCF + MemRef Dialect</a></h4>
+<p><strong>표현:</strong> 범용 추상화 (함수, 제어 흐름, 메모리)</p>
+<p><strong>Example (Stage 1 lowering 후):</strong></p>
+<pre><code class="language-mlir">func.func @make_adder(%n: i32) -&gt; !llvm.ptr {
+    // 환경 할당 (memref.alloc)
+    %c2 = arith.constant 2 : index
+    %env = memref.alloc(%c2) : memref&lt;?xi32&gt;
+
+    // 함수 포인터 저장 (conceptual, 실제는 다름)
+    // ... (이 단계에서 여전히 추상적)
+
+    // 캡처된 변수 저장
+    %c1 = arith.constant 1 : index
+    memref.store %n, %env[%c1] : memref&lt;?xi32&gt;
+
+    // 포인터 반환
+    %ptr = memref.cast %env : memref&lt;?xi32&gt; to !llvm.ptr
+    func.return %ptr : !llvm.ptr
+}
+</code></pre>
+<p><strong>특징:</strong></p>
+<ul>
+<li>여전히 플랫폼 독립적</li>
+<li>메모리 연산이 추상적 (memref vs raw pointer)</li>
+<li>구조적 제어 흐름 (scf.if vs cf.br)</li>
+</ul>
+<p><strong>최적화 예시:</strong></p>
+<pre><code class="language-mlir">// Inlining (func dialect level)
+%result = func.call @small_function(%x) : (i32) -&gt; i32
+
+// After inlining
+// (함수 본체 inline됨)
+%result = arith.addi %x, %c1 : i32
+</code></pre>
+<h4 id="stage-3-llvm-dialect"><a class="header" href="#stage-3-llvm-dialect">Stage 3: LLVM Dialect</a></h4>
+<p><strong>표현:</strong> 기계 모델 (포인터, 레지스터, 메모리)</p>
+<p><strong>Example (Stage 2 lowering 후):</strong></p>
+<pre><code class="language-mlir">llvm.func @make_adder(%n: i32) -&gt; !llvm.ptr {
+    // GC_malloc 호출
+    %c12 = llvm.mlir.constant(12 : i64) : i64
+    %env = llvm.call @GC_malloc(%c12) : (i64) -&gt; !llvm.ptr
+
+    // 함수 포인터 저장
+    %fn_addr = llvm.mlir.addressof @lambda_adder : !llvm.ptr
+    %fn_slot = llvm.getelementptr %env[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %fn_addr, %fn_slot : !llvm.ptr, !llvm.ptr
+
+    // 캡처된 변수 저장
+    %n_slot = llvm.getelementptr %env[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %n, %n_slot : i32, !llvm.ptr
+
+    llvm.return %env : !llvm.ptr
+}
+</code></pre>
+<p><strong>특징:</strong></p>
+<ul>
+<li>구현 세부사항 완전 노출 (GEP, malloc, store)</li>
+<li>LLVM IR과 1:1 대응</li>
+<li>플랫폼 특화 최적화 가능 (LLVM backend)</li>
+</ul>
+<h3 id="conversiontarget과-legalillegal-dialects"><a class="header" href="#conversiontarget과-legalillegal-dialects">ConversionTarget과 Legal/Illegal Dialects</a></h3>
+<p><strong>Lowering pass</strong>는 특정 dialect operation을 다른 dialect operation으로 변환한다. MLIR은 <strong>ConversionTarget</strong>으로 이를 제어한다.</p>
+<p><strong>ConversionTarget 개념:</strong></p>
+<p>“이 pass 이후 어떤 operation이 허용되는가?”</p>
+<pre><code class="language-cpp">// FunLangToFunc lowering pass
+class FunLangToFuncLowering : public Pass {
+    void runOnOperation() override {
+        ConversionTarget target(getContext());
+
+        // FunLang dialect operation은 불법 (lowering 대상)
+        target.addIllegalDialect&lt;FunLangDialect&gt;();
+
+        // Func, SCF, Arith dialect operation은 합법
+        target.addLegalDialect&lt;func::FuncDialect&gt;();
+        target.addLegalDialect&lt;scf::SCFDialect&gt;();
+        target.addLegalDialect&lt;arith::ArithDialect&gt;();
+
+        // Lowering 수행
+        if (failed(applyPartialConversion(module, target, patterns)))
+            signalPassFailure();
+    }
+};
+</code></pre>
+<p><strong>Legal vs Illegal:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Legal Operations</th><th>Illegal Operations</th></tr>
+</thead>
+<tbody>
+<tr><td>Pass 후 존재 가능</td><td>Pass 후 제거되어야 함</td></tr>
+<tr><td>변환 불필요</td><td>변환 패턴 필요</td></tr>
+<tr><td>예: func.call</td><td>예: funlang.make_closure</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>예시: FunLangToFunc lowering</strong></p>
+<p>Before (FunLang dialect):</p>
+<pre><code class="language-mlir">%closure = funlang.make_closure @lambda_func(%n) : !funlang.closure
+</code></pre>
+<p>After (Func + MemRef dialect):</p>
+<pre><code class="language-mlir">%env = memref.alloc(...) : memref&lt;?xi32&gt;
+memref.store %n, %env[%c1] : memref&lt;?xi32&gt;
+%ptr = memref.cast %env : memref&lt;?xi32&gt; to !llvm.ptr
+</code></pre>
+<p><strong>ConversionTarget이 보장:</strong></p>
+<ul>
+<li><code>funlang.make_closure</code>는 pass 후 존재하지 않음</li>
+<li><code>memref.alloc</code>, <code>memref.store</code>는 합법</li>
+</ul>
+<h3 id="rewritepatternset-개념"><a class="header" href="#rewritepatternset-개념">RewritePatternSet 개념</a></h3>
+<p><strong>RewritePattern</strong>은 operation 변환 규칙이다.</p>
+<p><strong>구조:</strong></p>
+<pre><code class="language-cpp">struct MakeClosureOpLowering : public OpRewritePattern&lt;MakeClosureOp&gt; {
+    using OpRewritePattern&lt;MakeClosureOp&gt;::OpRewritePattern;
+
+    LogicalResult matchAndRewrite(MakeClosureOp op,
+                                   PatternRewriter &amp;rewriter) const override {
+        // 1. Match: 이 operation을 변환할 수 있는가?
+        // (OpRewritePattern이 자동으로 매칭)
+
+        // 2. Rewrite: 어떻게 변환하는가?
+
+        // 환경 할당
+        Value envSize = rewriter.create&lt;arith::ConstantOp&gt;(...);
+        Value env = rewriter.create&lt;memref::AllocOp&gt;(...);
+
+        // 캡처된 변수 저장
+        for (auto [idx, captured] : enumerate(op.getCapturedValues())) {
+            Value index = rewriter.create&lt;arith::ConstantIndexOp&gt;(idx);
+            rewriter.create&lt;memref::StoreOp&gt;(captured, env, index);
+        }
+
+        // 원래 operation 교체
+        rewriter.replaceOp(op, env);
+        return success();
+    }
+};
+</code></pre>
+<p><strong>RewritePatternSet 사용:</strong></p>
+<pre><code class="language-cpp">void FunLangToFuncPass::runOnOperation() {
+    RewritePatternSet patterns(&amp;getContext());
+
+    // 변환 패턴 등록
+    patterns.add&lt;MakeClosureOpLowering&gt;(&amp;getContext());
+    patterns.add&lt;ApplyOpLowering&gt;(&amp;getContext());
+    patterns.add&lt;MatchOpLowering&gt;(&amp;getContext());
+
+    // Conversion target 설정
+    ConversionTarget target(getContext());
+    target.addIllegalDialect&lt;FunLangDialect&gt;();
+    target.addLegalDialect&lt;func::FuncDialect, memref::MemRefDialect, arith::ArithDialect&gt;();
+
+    // 변환 적용
+    if (failed(applyPartialConversion(getOperation(), target, patterns)))
+        signalPassFailure();
+}
+</code></pre>
+<p><strong>각 pattern이 처리:</strong></p>
+<ul>
+<li><code>MakeClosureOpLowering</code>: <code>funlang.make_closure</code> → <code>memref.alloc</code> + stores</li>
+<li><code>ApplyOpLowering</code>: <code>funlang.apply</code> → <code>func.call</code> (indirect)</li>
+<li><code>MatchOpLowering</code>: <code>funlang.match</code> → <code>scf.if</code> cascade</li>
+</ul>
+<h3 id="실제-lowering-pass-구조-미리보기"><a class="header" href="#실제-lowering-pass-구조-미리보기">실제 Lowering Pass 구조 미리보기</a></h3>
+<p><strong>FunLangToFunc.cpp 구조:</strong></p>
+<pre><code class="language-cpp">// 1. Pattern 정의들
+namespace {
+
+struct MakeClosureOpLowering : public OpRewritePattern&lt;MakeClosureOp&gt; {
+    LogicalResult matchAndRewrite(...) const override {
+        // funlang.make_closure → memref operations
+    }
+};
+
+struct ApplyOpLowering : public OpRewritePattern&lt;ApplyOp&gt; {
+    LogicalResult matchAndRewrite(...) const override {
+        // funlang.apply → func.call (indirect)
+    }
+};
+
+} // namespace
+
+// 2. Pass 정의
+struct FunLangToFuncPass : public PassWrapper&lt;FunLangToFuncPass, OperationPass&lt;ModuleOp&gt;&gt; {
+    void getDependentDialects(DialectRegistry &amp;registry) const override {
+        registry.insert&lt;func::FuncDialect, memref::MemRefDialect, arith::ArithDialect&gt;();
+    }
+
+    void runOnOperation() override {
+        // Pattern set 구성
+        RewritePatternSet patterns(&amp;getContext());
+        patterns.add&lt;MakeClosureOpLowering, ApplyOpLowering&gt;(&amp;getContext());
+
+        // Target 설정
+        ConversionTarget target(getContext());
+        target.addIllegalDialect&lt;FunLangDialect&gt;();
+        target.addLegalDialect&lt;func::FuncDialect, memref::MemRefDialect, arith::ArithDialect&gt;();
+
+        // 변환 실행
+        if (failed(applyPartialConversion(getOperation(), target, patterns)))
+            signalPassFailure();
+    }
+};
+
+// 3. Pass 등록
+std::unique_ptr&lt;Pass&gt; createFunLangToFuncPass() {
+    return std::make_unique&lt;FunLangToFuncPass&gt;();
+}
+</code></pre>
+<p><strong>Pass 실행 순서 (Compiler.fs):</strong></p>
+<pre><code class="language-fsharp">// MLIR pass pipeline
+let runLoweringPasses (module: MlirModule) =
+    let pm = PassManager.Create(module.Context)
+
+    // 1. FunLang dialect → Func/MemRef dialect
+    pm.AddPass(FunLangPasses.CreateFunLangToFuncPass())
+
+    // 2. SCF → CF (structured control flow → control flow)
+    pm.AddPass(Passes.CreateSCFToCFPass())
+
+    // 3. Func/MemRef/Arith → LLVM dialect
+    pm.AddPass(Passes.CreateFuncToLLVMPass())
+    pm.AddPass(Passes.CreateMemRefToLLVMPass())
+    pm.AddPass(Passes.CreateArithToLLVMPass())
+
+    pm.Run(module)
+</code></pre>
+<h2 id="요약"><a class="header" href="#요약">요약</a></h2>
+<p><strong>Chapter 14에서 배운 것:</strong></p>
+<ol>
+<li>
+<p><strong>Phase 4의 문제점</strong>: 저수준 LLVM dialect 직접 사용 시 GEP 패턴 반복, 도메인 의미론 상실, 컴파일러 코드 복잡도 증가</p>
+</li>
+<li>
+<p><strong>Custom Dialect의 이점</strong>: 도메인 의미론 보존, 컴파일러 코드 단순화, 타입 안전성 향상, 최적화 기회 증가</p>
+</li>
+<li>
+<p><strong>MLIR Dialect 아키텍처</strong>: Operation (계산), Type (값 종류), Attribute (컴파일 타임 상수), Region/Block (중첩 코드), Symbol Table (전역 참조)</p>
+</li>
+<li>
+<p><strong>Progressive Lowering 철학</strong>:</p>
+<ul>
+<li>직접 lowering의 문제 (최적화 상실, 복잡도 폭발, 디버깅 어려움)</li>
+<li>단계적 lowering의 이점 (각 단계 최적화, 독립 검증, 명확한 책임)</li>
+<li>FunLang → Func/MemRef → LLVM 경로</li>
+</ul>
+</li>
+<li>
+<p><strong>ConversionTarget과 RewritePattern</strong>: Legal/Illegal dialect 정의, 변환 규칙 작성, pass 구조</p>
+</li>
+</ol>
+<h2 id="tablegen-ods-operation-definition-specification-기초"><a class="header" href="#tablegen-ods-operation-definition-specification-기초">TableGen ODS (Operation Definition Specification) 기초</a></h2>
+<h3 id="tablegen이란"><a class="header" href="#tablegen이란">TableGen이란?</a></h3>
+<p><strong>TableGen</strong>은 LLVM 프로젝트의 **DSL (Domain-Specific Language)**이다. 코드 생성(code generation)을 위한 선언적 언어다.</p>
+<p><strong>Why TableGen?</strong></p>
+<p>MLIR operation을 C++로 직접 정의하면:</p>
+<pre><code class="language-cpp">// C++ 직접 정의 (verbose!)
+class MakeClosureOp : public Op&lt;MakeClosureOp, OpTrait::OneResult, OpTrait::ZeroRegions&gt; {
+public:
+    static StringRef getOperationName() { return "funlang.make_closure"; }
+
+    static void build(OpBuilder &amp;builder, OperationState &amp;state,
+                      FlatSymbolRefAttr funcName, ValueRange capturedValues) {
+        // 복잡한 builder 로직...
+    }
+
+    LogicalResult verify() {
+        // 복잡한 verification 로직...
+    }
+
+    // parser, printer, folders, canonicalizers...
+    // 100+ lines of boilerplate!
+};
+</code></pre>
+<p><strong>문제점:</strong></p>
+<ul>
+<li>Boilerplate 코드 많음 (parser, printer, builder)</li>
+<li>타입 안전성 수동 관리</li>
+<li>일관성 유지 어려움 (operation마다 다른 스타일)</li>
+</ul>
+<p><strong>TableGen 사용:</strong></p>
+<pre><code class="language-tablegen">// TableGen 정의 (concise!)
+def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure", [Pure]&gt; {
+  let summary = "Creates a closure value";
+  let description = [{
+    Creates a closure by capturing values into an environment.
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$funcName,
+                       Variadic&lt;AnyType&gt;:$capturedValues);
+  let results = (outs FunLang_ClosureType:$result);
+
+  let assemblyFormat = "$funcName `(` $capturedValues `)` attr-dict `:` type($result)";
+}
+</code></pre>
+<p><strong>장점:</strong></p>
+<ul>
+<li>선언적 (what, not how)</li>
+<li>코드 자동 생성 (parser, printer, builder, verifier)</li>
+<li>타입 안전성 자동 보장</li>
+<li>일관된 스타일</li>
+</ul>
+<p><strong>TableGen 빌드 프로세스:</strong></p>
+<pre><code>FunLangOps.td (TableGen source)
+    ↓ (mlir-tblgen tool)
+FunLangOps.h.inc (Generated C++ header)
+FunLangOps.cpp.inc (Generated C++ implementation)
+    ↓ (C++ compiler)
+libMLIRFunLangDialect.so (Shared library)
+</code></pre>
+<h3 id="funlang-dialect-정의"><a class="header" href="#funlang-dialect-정의">FunLang Dialect 정의</a></h3>
+<p><strong>FunLangDialect.td:</strong></p>
+<pre><code class="language-tablegen">// FunLang dialect 정의
+def FunLang_Dialect : Dialect {
+  // Dialect 이름 (operation prefix)
+  let name = "funlang";
+
+  // C++ namespace
+  let cppNamespace = "::mlir::funlang";
+
+  // 의존성 선언
+  let dependentDialects = [
+    "func::FuncDialect",
+    "arith::ArithDialect",
+    "LLVM::LLVMDialect"
+  ];
+
+  // Description (documentation)
+  let description = [{
+    The FunLang dialect represents high-level functional programming constructs
+    for the FunLang compiler. It provides operations for closures, pattern matching,
+    and other domain-specific features.
+  }];
+
+  // Extra class declarations (C++ 코드 삽입)
+  let extraClassDeclaration = [{
+    // Custom dialect methods (optional)
+    void registerTypes();
+    void registerOperations();
+  }];
+}
+</code></pre>
+<p><strong>각 필드 의미:</strong></p>
+<ol>
+<li>
+<p><strong><code>name</code></strong>: Dialect 네임스페이스</p>
+<ul>
+<li>Operation: <code>funlang.make_closure</code></li>
+<li>Type: <code>!funlang.closure</code></li>
+</ul>
+</li>
+<li>
+<p><strong><code>cppNamespace</code></strong>: 생성되는 C++ 코드의 네임스페이스</p>
+<ul>
+<li><code>mlir::funlang::MakeClosureOp</code></li>
+<li><code>mlir::funlang::ClosureType</code></li>
+</ul>
+</li>
+<li>
+<p><strong><code>dependentDialects</code></strong>: 이 dialect가 사용하는 다른 dialect</p>
+<ul>
+<li>FunLang operation이 <code>func.func</code>, <code>arith.addi</code> 등 사용 가능</li>
+<li>Context에 자동 로드됨</li>
+</ul>
+</li>
+<li>
+<p><strong><code>description</code></strong>: Documentation (mlir-doc tool이 사용)</p>
+</li>
+<li>
+<p><strong><code>extraClassDeclaration</code></strong>: 추가 C++ 메서드 선언</p>
+</li>
+</ol>
+<h3 id="operation-정의-구조"><a class="header" href="#operation-정의-구조">Operation 정의 구조</a></h3>
+<p><strong>Base class 정의:</strong></p>
+<pre><code class="language-tablegen">// FunLang operation base class
+class FunLang_Op&lt;string mnemonic, list&lt;Trait&gt; traits = []&gt;
+    : Op&lt;FunLang_Dialect, mnemonic, traits&gt;;
+</code></pre>
+<p>모든 FunLang operation이 이 base class를 상속한다.</p>
+<p><strong>Operation 정의 예시: make_closure</strong></p>
+<pre><code class="language-tablegen">def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure", [Pure]&gt; {
+  // 한 줄 요약
+  let summary = "Creates a closure value";
+
+  // 상세 설명 (multi-line string)
+  let description = [{
+    The `funlang.make_closure` operation creates a closure by capturing
+    values into an environment. The closure can later be invoked using
+    `funlang.apply`.
+
+    Example:
+    ```mlir
+    %closure = funlang.make_closure @my_lambda(%x, %y) : !funlang.closure
+    ```
+  }];
+
+  // 입력 인자 (arguments)
+  let arguments = (ins
+    FlatSymbolRefAttr:$funcName,        // 함수 심볼 (@lambda_0)
+    Variadic&lt;AnyType&gt;:$capturedValues   // 캡처된 값들 (%x, %y, ...)
+  );
+
+  // 출력 결과 (results)
+  let results = (outs
+    FunLang_ClosureType:$result         // 클로저 값
+  );
+
+  // Assembly format (parser/printer)
+  let assemblyFormat = [{
+    $funcName `(` $capturedValues `)` attr-dict `:` type($result)
+  }];
+
+  // Traits (operation 특성)
+  // [Pure]: no side effects, result depends only on operands
+}
+</code></pre>
+<p><strong>Arguments (ins):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Name</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FlatSymbolRefAttr</code></td><td><code>funcName</code></td><td>함수 이름 attribute (<code>@lambda_0</code>)</td></tr>
+<tr><td><code>Variadic&lt;AnyType&gt;</code></td><td><code>capturedValues</code></td><td>가변 길이 값 목록 (captured variables)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Results (outs):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Name</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FunLang_ClosureType</code></td><td><code>result</code></td><td>클로저 타입 값</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Assembly Format:</strong></p>
+<ul>
+<li><code>$funcName</code>: <code>@lambda_func</code> 출력</li>
+<li><code>`(`</code>: 리터럴 <code>(</code> 문자</li>
+<li><code>$capturedValues</code>: 캡처된 값들 출력 (<code>%x, %y</code>)</li>
+<li><code>`)`</code>: 리터럴 <code>)</code> 문자</li>
+<li><code>attr-dict</code>: attribute dictionary (선택적)</li>
+<li><code>`:`</code>: 리터럴 <code>:</code> 문자</li>
+<li><code>type($result)</code>: 결과 타입 출력 (<code>!funlang.closure</code>)</li>
+</ul>
+<p>생성되는 IR:</p>
+<pre><code class="language-mlir">%closure = funlang.make_closure @lambda_func(%x, %y) : !funlang.closure
+</code></pre>
+<h3 id="operation-traits"><a class="header" href="#operation-traits">Operation Traits</a></h3>
+<p><strong>Trait</strong>는 operation의 특성을 선언한다. MLIR이 최적화/검증에 사용한다.</p>
+<p><strong>Pure trait:</strong></p>
+<pre><code class="language-tablegen">def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure", [Pure]&gt; {
+  // ...
+}
+</code></pre>
+<p><code>Pure</code> = <strong>순수 함수</strong> (no side effects, deterministic)</p>
+<ul>
+<li>같은 입력 → 같은 출력</li>
+<li>메모리 쓰기 없음, I/O 없음</li>
+<li>최적화 가능: 중복 제거, 재배치</li>
+</ul>
+<p><strong>MemoryEffects trait:</strong></p>
+<pre><code class="language-tablegen">def FunLang_AllocClosureOp : FunLang_Op&lt;"alloc_closure",
+    [MemoryEffects&lt;[MemAlloc]&gt;]&gt; {
+  // Memory allocation operation
+}
+</code></pre>
+<p><code>MemoryEffects&lt;[MemAlloc]&gt;</code> = 메모리 할당만 함 (읽기/쓰기 없음)</p>
+<p><strong>다른 유용한 traits:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>Meaning</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>NoSideEffect</code></td><td>부작용 없음 (Pure와 비슷)</td><td>산술 연산</td></tr>
+<tr><td><code>Terminator</code></td><td>Basic block 종료 operation</td><td><code>func.return</code></td></tr>
+<tr><td><code>IsolatedFromAbove</code></td><td>외부 값 참조 불가</td><td><code>func.func</code></td></tr>
+<tr><td><code>SameOperandsAndResultType</code></td><td>입력과 출력 타입 동일</td><td><code>arith.addi</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="hasverifier-속성"><a class="header" href="#hasverifier-속성">hasVerifier 속성</a></h3>
+<p>Custom verification 로직이 필요하면:</p>
+<pre><code class="language-tablegen">def FunLang_ApplyOp : FunLang_Op&lt;"apply"&gt; {
+  let arguments = (ins FunLang_ClosureType:$closure,
+                       Variadic&lt;AnyType&gt;:$arguments);
+  let results = (outs AnyType:$result);
+
+  // Custom verifier 필요
+  let hasVerifier = 1;
+}
+</code></pre>
+<p>생성된 C++ 코드에 <code>verify()</code> 메서드 선언:</p>
+<pre><code class="language-cpp">// FunLangOps.h.inc에 생성됨
+class ApplyOp : public ... {
+public:
+    LogicalResult verify();  // Custom implementation 필요
+};
+</code></pre>
+<p><strong>Verifier 구현 (FunLangOps.cpp):</strong></p>
+<pre><code class="language-cpp">LogicalResult ApplyOp::verify() {
+    // 클로저 타입 체크
+    if (!getClosure().getType().isa&lt;ClosureType&gt;())
+        return emitError("operand must be a closure type");
+
+    // 인자 개수 체크 (optional, 런타임 체크 가능)
+    // ...
+
+    return success();
+}
+</code></pre>
+<h3 id="type-정의-typedef"><a class="header" href="#type-정의-typedef">Type 정의 (TypeDef)</a></h3>
+<p><strong>FunLang Closure 타입:</strong></p>
+<pre><code class="language-tablegen">def FunLang_ClosureType : TypeDef&lt;FunLang_Dialect, "Closure"&gt; {
+  let mnemonic = "closure";
+
+  let summary = "FunLang closure type";
+
+  let description = [{
+    Represents a closure value (function pointer + captured environment).
+  }];
+
+  // Parameters (타입 파라미터)
+  // Closure는 파라미터 없음 (단순 타입)
+  let parameters = (ins);
+
+  // Assembly format
+  let assemblyFormat = "";
+}
+</code></pre>
+<p><strong>생성되는 C++ 코드:</strong></p>
+<pre><code class="language-cpp">// FunLangTypes.h.inc
+class ClosureType : public Type::TypeBase&lt;ClosureType, Type, TypeStorage&gt; {
+public:
+    static constexpr StringLiteral getMnemonic() { return "closure"; }
+    // ...
+};
+</code></pre>
+<p><strong>사용 예:</strong></p>
+<pre><code class="language-mlir">// MLIR IR
+%closure : !funlang.closure
+
+// F# 코드
+let closureType = FunLangType.GetClosure(ctx)
+</code></pre>
+<h3 id="funlang-타입-설계"><a class="header" href="#funlang-타입-설계">FunLang 타입 설계</a></h3>
+<h4 id="1-closuretype-클로저"><a class="header" href="#1-closuretype-클로저">1. ClosureType (클로저)</a></h4>
+<pre><code class="language-tablegen">def FunLang_ClosureType : TypeDef&lt;FunLang_Dialect, "Closure"&gt; {
+  let mnemonic = "closure";
+  let summary = "Function closure (function pointer + environment)";
+  let parameters = (ins);
+  let assemblyFormat = "";
+}
+</code></pre>
+<p><strong>용도:</strong> 클로저 값 표현</p>
+<pre><code class="language-mlir">%closure = funlang.make_closure @lambda_func(%x) : !funlang.closure
+</code></pre>
+<h4 id="2-listtype-리스트-phase-6-preview"><a class="header" href="#2-listtype-리스트-phase-6-preview">2. ListType (리스트, Phase 6 preview)</a></h4>
+<pre><code class="language-tablegen">def FunLang_ListType : TypeDef&lt;FunLang_Dialect, "List"&gt; {
+  let mnemonic = "list";
+  let summary = "Immutable list of elements";
+
+  // 파라미터: element type
+  let parameters = (ins "Type":$elementType);
+
+  // Assembly format: list&lt;i32&gt;
+  let assemblyFormat = "`&lt;` $elementType `&gt;`";
+}
+</code></pre>
+<p><strong>파라미터화된 타입:</strong></p>
+<ul>
+<li><code>!funlang.list&lt;i32&gt;</code>: 정수 리스트</li>
+<li><code>!funlang.list&lt;!funlang.closure&gt;</code>: 클로저 리스트</li>
+</ul>
+<p><strong>생성된 C++ 코드:</strong></p>
+<pre><code class="language-cpp">class ListType : public Type::TypeBase&lt;...&gt; {
+public:
+    static ListType get(Type elementType);
+    Type getElementType() const;
+};
+</code></pre>
+<p><strong>사용 예:</strong></p>
+<pre><code class="language-mlir">// 빈 리스트
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+
+// Cons (head::tail)
+%list = funlang.cons %head, %tail : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+</code></pre>
+<h4 id="3-recordtype-레코드-phase-7-preview"><a class="header" href="#3-recordtype-레코드-phase-7-preview">3. RecordType (레코드, Phase 7 preview)</a></h4>
+<pre><code class="language-tablegen">def FunLang_RecordType : TypeDef&lt;FunLang_Dialect, "Record"&gt; {
+  let mnemonic = "record";
+  let summary = "Record with named fields";
+
+  // 파라미터: field names + types
+  let parameters = (ins
+    ArrayRefParameter&lt;"StringAttr"&gt;:$fieldNames,
+    ArrayRefParameter&lt;"Type"&gt;:$fieldTypes
+  );
+
+  let assemblyFormat = "`&lt;` `{` $fieldNames `:` $fieldTypes `}` `&gt;`";
+}
+</code></pre>
+<p><strong>사용 예:</strong></p>
+<pre><code class="language-mlir">// {x: i32, y: i32}
+%point : !funlang.record&lt;{x: i32, y: i32}&gt;
+</code></pre>
+<h3 id="funlang-operations-정의-예시"><a class="header" href="#funlang-operations-정의-예시">FunLang Operations 정의 예시</a></h3>
+<h4 id="funlangmake_closure"><a class="header" href="#funlangmake_closure">funlang.make_closure</a></h4>
+<p><strong>TableGen 정의:</strong></p>
+<pre><code class="language-tablegen">def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure", [Pure]&gt; {
+  let summary = "Creates a closure value";
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$funcName,
+    Variadic&lt;AnyType&gt;:$capturedValues
+  );
+
+  let results = (outs FunLang_ClosureType:$result);
+
+  let assemblyFormat = "$funcName `(` $capturedValues `)` attr-dict `:` type($result)";
+
+  let builders = [
+    OpBuilder&lt;(ins "FlatSymbolRefAttr":$funcName,
+                   "ValueRange":$capturedValues), [{
+      build($_builder, $_state, ClosureType::get($_builder.getContext()),
+            funcName, capturedValues);
+    }]&gt;
+  ];
+}
+</code></pre>
+<p><strong>생성된 C++ API:</strong></p>
+<pre><code class="language-cpp">// FunLangOps.h.inc
+class MakeClosureOp : public Op&lt;...&gt; {
+public:
+    static MakeClosureOp create(OpBuilder &amp;builder, Location loc,
+                                FlatSymbolRefAttr funcName,
+                                ValueRange capturedValues);
+
+    FlatSymbolRefAttr getFuncName();
+    OperandRange getCapturedValues();
+    Value getResult();
+};
+</code></pre>
+<h4 id="funlangapply"><a class="header" href="#funlangapply">funlang.apply</a></h4>
+<p><strong>TableGen 정의:</strong></p>
+<pre><code class="language-tablegen">def FunLang_ApplyOp : FunLang_Op&lt;"apply"&gt; {
+  let summary = "Applies a closure to arguments";
+
+  let arguments = (ins
+    FunLang_ClosureType:$closure,
+    Variadic&lt;AnyType&gt;:$arguments
+  );
+
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = [{
+    $closure `(` $arguments `)` attr-dict `:` functional-type($arguments, $result)
+  }];
+
+  let hasVerifier = 1;
+}
+</code></pre>
+<p><strong>사용 예:</strong></p>
+<pre><code class="language-mlir">%result = funlang.apply %closure(%x, %y) : (i32, i32) -&gt; i32
+</code></pre>
+<p><strong>Verifier (FunLangOps.cpp):</strong></p>
+<pre><code class="language-cpp">LogicalResult ApplyOp::verify() {
+    if (!getClosure().getType().isa&lt;ClosureType&gt;())
+        return emitError("first operand must be a closure");
+    return success();
+}
+</code></pre>
+<h3 id="생성되는-c-코드-설명"><a class="header" href="#생성되는-c-코드-설명">생성되는 C++ 코드 설명</a></h3>
+<p><strong>mlir-tblgen 실행:</strong></p>
+<pre><code class="language-bash">mlir-tblgen -gen-op-decls FunLangOps.td &gt; FunLangOps.h.inc
+mlir-tblgen -gen-op-defs FunLangOps.td &gt; FunLangOps.cpp.inc
+mlir-tblgen -gen-typedef-decls FunLangTypes.td &gt; FunLangTypes.h.inc
+mlir-tblgen -gen-typedef-defs FunLangTypes.td &gt; FunLangTypes.cpp.inc
+</code></pre>
+<p><strong>FunLangOps.h.inc (생성된 헤더):</strong></p>
+<pre><code class="language-cpp">class MakeClosureOp : public Op&lt;MakeClosureOp, OpTrait::ZeroRegions,
+                                OpTrait::OneResult, OpTrait::Pure&gt; {
+public:
+    static constexpr StringLiteral getOperationName() {
+        return StringLiteral("funlang.make_closure");
+    }
+
+    // Accessors
+    FlatSymbolRefAttr getFuncName();
+    OperandRange getCapturedValues();
+    Value getResult();
+
+    // Builder
+    static void build(OpBuilder &amp;builder, OperationState &amp;state, ...);
+
+    // Parser/Printer (assemblyFormat에서 생성)
+    static ParseResult parse(OpAsmParser &amp;parser, OperationState &amp;result);
+    void print(OpAsmPrinter &amp;p);
+
+    // Verifier (기본 타입 체크)
+    LogicalResult verify();
+};
+</code></pre>
+<p><strong>사용 (C++ dialect code):</strong></p>
+<pre><code class="language-cpp">// Operation 생성
+auto closureOp = builder.create&lt;MakeClosureOp&gt;(
+    loc,
+    funcNameAttr,
+    capturedValues
+);
+
+// Accessors 사용
+FlatSymbolRefAttr funcName = closureOp.getFuncName();
+Value result = closureOp.getResult();
+</code></pre>
+<p><strong>FunLangTypes.h.inc:</strong></p>
+<pre><code class="language-cpp">class ClosureType : public Type::TypeBase&lt;ClosureType, Type, TypeStorage&gt; {
+public:
+    static constexpr StringLiteral getMnemonic() { return "closure"; }
+
+    static ClosureType get(MLIRContext *ctx) {
+        return Base::get(ctx);
+    }
+
+    // Parser/Printer
+    static ParseResult parse(AsmParser &amp;parser);
+    void print(AsmPrinter &amp;printer) const;
+};
+</code></pre>
+<p><strong>사용:</strong></p>
+<pre><code class="language-cpp">// 타입 생성
+ClosureType closureType = ClosureType::get(ctx);
+
+// 타입 체크
+if (auto ct = value.getType().dyn_cast&lt;ClosureType&gt;()) {
+    // This is a closure!
+}
+</code></pre>
+<h2 id="c-api-shim-패턴-f-interop"><a class="header" href="#c-api-shim-패턴-f-interop">C API Shim 패턴 (F# Interop)</a></h2>
+<h3 id="문제-tablegen은-c-코드-생성-f은-c-api-필요"><a class="header" href="#문제-tablegen은-c-코드-생성-f은-c-api-필요">문제: TableGen은 C++ 코드 생성, F#은 C API 필요</a></h3>
+<p><strong>상황:</strong></p>
+<ol>
+<li>
+<p><strong>TableGen → C++ 코드 생성</strong></p>
+<ul>
+<li><code>MakeClosureOp</code> 클래스 (C++)</li>
+<li><code>ClosureType::get()</code> 메서드 (C++)</li>
+</ul>
+</li>
+<li>
+<p><strong>F#은 C API만 호출 가능</strong></p>
+<ul>
+<li>P/Invoke는 <code>extern "C"</code> 함수만 지원</li>
+<li>C++ 클래스 직접 호출 불가</li>
+</ul>
+</li>
+</ol>
+<p><strong>문제:</strong></p>
+<pre><code class="language-fsharp">// 이런 코드를 쓰고 싶지만...
+let closure = MakeClosureOp.Create(builder, funcName, capturedValues)  // ERROR: C++ class!
+</code></pre>
+<h3 id="해결책-extern-c-wrapper-functions"><a class="header" href="#해결책-extern-c-wrapper-functions">해결책: extern “C” Wrapper Functions</a></h3>
+<p><strong>아키텍처:</strong></p>
+<pre><code>┌─────────────────────────────────────────┐
+│ F# Code (Compiler.fs)                   │
+│                                         │
+│ let closure = FunLang.CreateClosure(...) │
+└────────────────┬────────────────────────┘
+                 │ P/Invoke
+                 ▼
+┌─────────────────────────────────────────┐
+│ C API Shim (FunLangCAPI.h/.cpp)         │
+│                                         │
+│ extern "C" {                            │
+│   MlirOperation mlirFunLangClosure...() │
+│ }                                       │
+└────────────────┬────────────────────────┘
+                 │ Call C++ API
+                 ▼
+┌─────────────────────────────────────────┐
+│ C++ Dialect (FunLangOps.h/.cpp)         │
+│                                         │
+│ class MakeClosureOp { ... }             │
+│ (TableGen generated)                    │
+└─────────────────────────────────────────┘
+</code></pre>
+<h3 id="funlangcapih-구조"><a class="header" href="#funlangcapih-구조">FunLangCAPI.h 구조</a></h3>
+<p><strong>헤더 파일:</strong></p>
+<pre><code class="language-c">// FunLangCAPI.h - C API for FunLang Dialect
+#ifndef FUNLANG_C_API_H
+#define FUNLANG_C_API_H
+
+#include "mlir-c/IR.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//===----------------------------------------------------------------------===//
+// Dialect Registration
+//===----------------------------------------------------------------------===//
+
+/// Register FunLang dialect in the given context
+MLIR_CAPI_EXPORTED void mlirContextRegisterFunLangDialect(MlirContext ctx);
+
+/// Load FunLang dialect into the given context
+MLIR_CAPI_EXPORTED MlirDialect mlirContextLoadFunLangDialect(MlirContext ctx);
+
+//===----------------------------------------------------------------------===//
+// Types
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given type is a FunLang closure type
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFunLangClosure(MlirType type);
+
+/// Creates a FunLang closure type
+MLIR_CAPI_EXPORTED MlirType mlirFunLangClosureTypeGet(MlirContext ctx);
+
+//===----------------------------------------------------------------------===//
+// Operations
+//===----------------------------------------------------------------------===//
+
+/// Creates a funlang.make_closure operation
+MLIR_CAPI_EXPORTED MlirOperation mlirFunLangMakeClosureOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirAttribute funcName,       // FlatSymbolRefAttr
+    intptr_t numCaptured,
+    MlirValue *capturedValues     // Array of values
+);
+
+/// Creates a funlang.apply operation
+MLIR_CAPI_EXPORTED MlirOperation mlirFunLangApplyOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirValue closure,
+    intptr_t numArgs,
+    MlirValue *arguments,
+    MlirType resultType
+);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // FUNLANG_C_API_H
+</code></pre>
+<p><strong>핵심 패턴:</strong></p>
+<ol>
+<li><strong><code>extern "C"</code></strong>: C linkage (name mangling 없음)</li>
+<li><strong>MLIR C API 타입 사용</strong>: <code>MlirContext</code>, <code>MlirOperation</code>, <code>MlirValue</code></li>
+<li><strong>배열 전달</strong>: <code>intptr_t num</code> + <code>MlirValue *array</code> 패턴</li>
+</ol>
+<h3 id="funlangcapicpp-구현-패턴"><a class="header" href="#funlangcapicpp-구현-패턴">FunLangCAPI.cpp 구현 패턴</a></h3>
+<p><strong>구현 파일:</strong></p>
+<pre><code class="language-cpp">// FunLangCAPI.cpp
+#include "FunLangCAPI.h"
+#include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Support.h"
+#include "FunLang/IR/FunLangDialect.h"
+#include "FunLang/IR/FunLangOps.h"
+#include "FunLang/IR/FunLangTypes.h"
+
+using namespace mlir;
+using namespace mlir::funlang;
+
+//===----------------------------------------------------------------------===//
+// Dialect Registration
+//===----------------------------------------------------------------------===//
+
+void mlirContextRegisterFunLangDialect(MlirContext ctx) {
+    // unwrap: C handle → C++ pointer
+    MLIRContext *context = unwrap(ctx);
+
+    // Register dialect
+    DialectRegistry registry;
+    registry.insert&lt;FunLangDialect&gt;();
+    context-&gt;appendDialectRegistry(registry);
+}
+
+MlirDialect mlirContextLoadFunLangDialect(MlirContext ctx) {
+    MLIRContext *context = unwrap(ctx);
+    Dialect *dialect = context-&gt;loadDialect&lt;FunLangDialect&gt;();
+
+    // wrap: C++ pointer → C handle
+    return wrap(dialect);
+}
+
+//===----------------------------------------------------------------------===//
+// Types
+//===----------------------------------------------------------------------===//
+
+bool mlirTypeIsAFunLangClosure(MlirType type) {
+    return unwrap(type).isa&lt;ClosureType&gt;();
+}
+
+MlirType mlirFunLangClosureTypeGet(MlirContext ctx) {
+    MLIRContext *context = unwrap(ctx);
+    Type closureType = ClosureType::get(context);
+    return wrap(closureType);
+}
+
+//===----------------------------------------------------------------------===//
+// Operations
+//===----------------------------------------------------------------------===//
+
+MlirOperation mlirFunLangMakeClosureOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirAttribute funcName,
+    intptr_t numCaptured,
+    MlirValue *capturedValues)
+{
+    // Unwrap C handles
+    MLIRContext *context = unwrap(ctx);
+    Location location = unwrap(loc);
+    FlatSymbolRefAttr funcNameAttr = unwrap(funcName).cast&lt;FlatSymbolRefAttr&gt;();
+
+    // Convert array to ValueRange
+    SmallVector&lt;Value, 4&gt; captured;
+    for (intptr_t i = 0; i &lt; numCaptured; ++i) {
+        captured.push_back(unwrap(capturedValues[i]));
+    }
+
+    // Create operation using OpBuilder
+    OpBuilder builder(context);
+    auto op = builder.create&lt;MakeClosureOp&gt;(location, funcNameAttr, captured);
+
+    // Wrap and return
+    return wrap(op.getOperation());
+}
+
+MlirOperation mlirFunLangApplyOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirValue closure,
+    intptr_t numArgs,
+    MlirValue *arguments,
+    MlirType resultType)
+{
+    MLIRContext *context = unwrap(ctx);
+    Location location = unwrap(loc);
+    Value closureValue = unwrap(closure);
+    Type resType = unwrap(resultType);
+
+    SmallVector&lt;Value, 4&gt; args;
+    for (intptr_t i = 0; i &lt; numArgs; ++i) {
+        args.push_back(unwrap(arguments[i]));
+    }
+
+    OpBuilder builder(context);
+    auto op = builder.create&lt;ApplyOp&gt;(location, resType, closureValue, args);
+
+    return wrap(op.getOperation());
+}
+</code></pre>
+<h4 id="wrapunwrap-헬퍼-사용"><a class="header" href="#wrapunwrap-헬퍼-사용">wrap/unwrap 헬퍼 사용</a></h4>
+<p><strong>MLIR C API convention:</strong></p>
+<ul>
+<li><strong><code>unwrap()</code></strong>: C handle → C++ pointer</li>
+<li><strong><code>wrap()</code></strong>: C++ pointer → C handle</li>
+</ul>
+<pre><code class="language-cpp">// C handle types (opaque)
+typedef struct MlirContext { void *ptr; } MlirContext;
+typedef struct MlirType { void *ptr; } MlirType;
+typedef struct MlirValue { void *ptr; } MlirValue;
+
+// Unwrap/Wrap (MLIR/CAPI/Support.h)
+inline MLIRContext *unwrap(MlirContext ctx) {
+    return static_cast&lt;MLIRContext *&gt;(ctx.ptr);
+}
+
+inline MlirContext wrap(MLIRContext *ctx) {
+    return MlirContext{static_cast&lt;void *&gt;(ctx)};
+}
+</code></pre>
+<p><strong>사용 패턴:</strong></p>
+<pre><code class="language-cpp">// C API function signature (C handles)
+MlirType mlirFunLangClosureTypeGet(MlirContext ctx);
+
+// Implementation (unwrap → use C++ API → wrap)
+MlirType mlirFunLangClosureTypeGet(MlirContext ctx) {
+    MLIRContext *context = unwrap(ctx);           // C → C++
+    Type closureType = ClosureType::get(context); // C++ API
+    return wrap(closureType);                      // C++ → C
+}
+</code></pre>
+<h4 id="opbuilder-활용"><a class="header" href="#opbuilder-활용">OpBuilder 활용</a></h4>
+<p><strong>OpBuilder</strong>는 MLIR operation 생성 헬퍼다:</p>
+<pre><code class="language-cpp">OpBuilder builder(context);
+
+// Operation 생성
+auto op = builder.create&lt;MakeClosureOp&gt;(
+    location,       // Location (source info)
+    funcNameAttr,   // Symbol reference
+    capturedValues  // Operands
+);
+
+// Block에 삽입
+builder.setInsertionPointToEnd(block);
+auto op2 = builder.create&lt;ApplyOp&gt;(...);
+</code></pre>
+<p><strong>C API shim에서:</strong></p>
+<pre><code class="language-cpp">MlirOperation mlirFunLangMakeClosureOpCreate(...) {
+    OpBuilder builder(context);
+    auto op = builder.create&lt;MakeClosureOp&gt;(...);
+    return wrap(op.getOperation());  // Operation* → MlirOperation
+}
+</code></pre>
+<h4 id="타입-생성-및-검증"><a class="header" href="#타입-생성-및-검증">타입 생성 및 검증</a></h4>
+<p><strong>타입 생성:</strong></p>
+<pre><code class="language-cpp">MlirType mlirFunLangClosureTypeGet(MlirContext ctx) {
+    MLIRContext *context = unwrap(ctx);
+    Type closureType = ClosureType::get(context);
+    return wrap(closureType);
+}
+</code></pre>
+<p><strong>타입 검증:</strong></p>
+<pre><code class="language-cpp">bool mlirTypeIsAFunLangClosure(MlirType type) {
+    Type t = unwrap(type);
+    return t.isa&lt;ClosureType&gt;();  // C++ RTTI
+}
+</code></pre>
+<p>F#에서 사용:</p>
+<pre><code class="language-fsharp">// 타입 생성
+let closureType = FunLang.GetClosureType(ctx)
+
+// 타입 체크
+if FunLang.IsClosureType(value.Type) then
+    printfn "This is a closure!"
+</code></pre>
+<h3 id="cmakeliststxt-빌드-설정"><a class="header" href="#cmakeliststxt-빌드-설정">CMakeLists.txt 빌드 설정</a></h3>
+<p><strong>FunLang dialect CMake:</strong></p>
+<pre><code class="language-cmake"># CMakeLists.txt
+add_mlir_dialect_library(MLIRFunLangDialect
+  # TableGen sources
+  FunLangDialect.cpp
+  FunLangOps.cpp
+  FunLangTypes.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${PROJECT_SOURCE_DIR}/include/FunLang
+
+  DEPENDS
+  MLIRFunLangOpsIncGen        # TableGen generated files
+  MLIRFunLangTypesIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRFuncDialect
+  MLIRLLVMDialect
+)
+
+# C API shim
+add_mlir_public_c_api_library(MLIRFunLangCAPI
+  FunLangCAPI.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${PROJECT_SOURCE_DIR}/include/FunLang-c
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRFunLangDialect
+)
+</code></pre>
+<p><strong>빌드 출력:</strong></p>
+<ul>
+<li><code>libMLIRFunLangDialect.so</code>: C++ dialect library</li>
+<li><code>libMLIRFunLangCAPI.so</code>: C API shim library</li>
+</ul>
+<p>F#은 <code>MLIRFunLangCAPI.so</code>를 로드한다.</p>
+<h3 id="f-pinvoke-바인딩-mlirfunlang-모듈"><a class="header" href="#f-pinvoke-바인딩-mlirfunlang-모듈">F# P/Invoke 바인딩 (Mlir.FunLang 모듈)</a></h3>
+<p><strong>FunLangBindings.fs:</strong></p>
+<pre><code class="language-fsharp">module Mlir.FunLang
+
+open System
+open System.Runtime.InteropServices
+
+// P/Invoke declarations
+[&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern void mlirContextRegisterFunLangDialect(MlirContext ctx)
+
+[&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirDialect mlirContextLoadFunLangDialect(MlirContext ctx)
+
+[&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern bool mlirTypeIsAFunLangClosure(MlirType ty)
+
+[&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirType mlirFunLangClosureTypeGet(MlirContext ctx)
+
+[&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirOperation mlirFunLangMakeClosureOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirAttribute funcName,
+    nativeint numCaptured,
+    MlirValue[] capturedValues
+)
+
+[&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirOperation mlirFunLangApplyOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirValue closure,
+    nativeint numArgs,
+    MlirValue[] arguments,
+    MlirType resultType
+)
+
+// High-level F# API
+type FunLangDialect =
+    static member Register(ctx: MlirContext) =
+        mlirContextRegisterFunLangDialect(ctx)
+
+    static member Load(ctx: MlirContext) : MlirDialect =
+        mlirContextLoadFunLangDialect(ctx)
+
+type FunLangType =
+    static member GetClosure(ctx: MlirContext) : MlirType =
+        mlirFunLangClosureTypeGet(ctx)
+
+    static member IsClosure(ty: MlirType) : bool =
+        mlirTypeIsAFunLangClosure(ty)
+
+type FunLangOps =
+    static member CreateMakeClosure(ctx: MlirContext, loc: MlirLocation,
+                                     funcName: MlirAttribute,
+                                     capturedValues: MlirValue[]) : MlirOperation =
+        mlirFunLangMakeClosureOpCreate(ctx, loc, funcName, nativeint capturedValues.Length, capturedValues)
+
+    static member CreateApply(ctx: MlirContext, loc: MlirLocation,
+                               closure: MlirValue, arguments: MlirValue[],
+                               resultType: MlirType) : MlirOperation =
+        mlirFunLangApplyOpCreate(ctx, loc, closure, nativeint arguments.Length, arguments, resultType)
+</code></pre>
+<p><strong>사용 예 (Compiler.fs):</strong></p>
+<pre><code class="language-fsharp">// Dialect 등록
+let ctx = MlirContext.Create()
+FunLangDialect.Register(ctx)
+FunLangDialect.Load(ctx)
+
+// 클로저 타입 얻기
+let closureType = FunLangType.GetClosure(ctx)
+
+// make_closure operation 생성
+let funcNameAttr = ... // SymbolRefAttr
+let capturedValues = [| %x; %y |]
+let makeClosureOp = FunLangOps.CreateMakeClosure(ctx, loc, funcNameAttr, capturedValues)
+
+// apply operation 생성
+let closureValue = ... // %closure
+let arguments = [| %arg1; %arg2 |]
+let resultType = ... // i32
+let applyOp = FunLangOps.CreateApply(ctx, loc, closureValue, arguments, resultType)
+</code></pre>
+<h3 id="전체-아키텍처-다이어그램"><a class="header" href="#전체-아키텍처-다이어그램">전체 아키텍처 다이어그램</a></h3>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│                        F# Compiler                               │
+│                                                                  │
+│  let closure = FunLangOps.CreateMakeClosure(...)                │
+│  let result = FunLangOps.CreateApply(...)                       │
+└─────────────────────────┬────────────────────────────────────────┘
+                          │ P/Invoke
+                          │ (CallingConvention.Cdecl)
+                          ↓
+┌──────────────────────────────────────────────────────────────────┐
+│              C API Shim (FunLangCAPI.h/.cpp)                     │
+│                                                                  │
+│  extern "C" {                                                    │
+│    MlirOperation mlirFunLangMakeClosureOpCreate(...) {          │
+│      MLIRContext *ctx = unwrap(ctxHandle);                      │
+│      OpBuilder builder(ctx);                                     │
+│      auto op = builder.create&lt;MakeClosureOp&gt;(...);              │
+│      return wrap(op.getOperation());                             │
+│    }                                                             │
+│  }                                                               │
+└─────────────────────────┬────────────────────────────────────────┘
+                          │ Call C++ API
+                          ↓
+┌──────────────────────────────────────────────────────────────────┐
+│         C++ Dialect (FunLangOps.h/.cpp, TableGen generated)      │
+│                                                                  │
+│  class MakeClosureOp : public Op&lt;...&gt; {                         │
+│    // Generated by TableGen                                      │
+│    static void build(OpBuilder &amp;, OperationState &amp;, ...);       │
+│    LogicalResult verify();                                       │
+│  };                                                              │
+└─────────────────────────┬────────────────────────────────────────┘
+                          │ Uses MLIR Core API
+                          ↓
+┌──────────────────────────────────────────────────────────────────┐
+│                      MLIR Core (C++)                             │
+│                                                                  │
+│  - Operation, Type, Attribute classes                            │
+│  - OpBuilder, PatternRewriter                                    │
+│  - Dialect, DialectRegistry                                      │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>데이터 흐름:</strong></p>
+<ol>
+<li>
+<p><strong>F# → C API</strong>: P/Invoke로 C 함수 호출</p>
+<ul>
+<li><code>MlirContext</code>, <code>MlirValue</code> 등 opaque handle 전달</li>
+<li>배열은 <code>nativeint len</code> + <code>array</code> 패턴</li>
+</ul>
+</li>
+<li>
+<p><strong>C API → C++</strong>: unwrap으로 handle → pointer 변환</p>
+<ul>
+<li><code>unwrap(MlirContext)</code> → <code>MLIRContext*</code></li>
+<li><code>OpBuilder.create&lt;Op&gt;(...)</code> 호출</li>
+</ul>
+</li>
+<li>
+<p><strong>C++ → MLIR Core</strong>: TableGen 생성 코드 사용</p>
+<ul>
+<li><code>MakeClosureOp::build()</code> 호출</li>
+<li>Operation 생성, 타입 체크</li>
+</ul>
+</li>
+<li>
+<p><strong>C++ → C API</strong>: wrap으로 pointer → handle 변환</p>
+<ul>
+<li><code>wrap(Operation*)</code> → <code>MlirOperation</code></li>
+<li>F#에 반환</li>
+</ul>
+</li>
+</ol>
+<h2 id="funlang-dialect-operations-preview"><a class="header" href="#funlang-dialect-operations-preview">FunLang Dialect Operations Preview</a></h2>
+<p>Phase 5-6에서 구현할 operations 목록:</p>
+<h3 id="1-funlangmake_closure"><a class="header" href="#1-funlangmake_closure">1. funlang.make_closure</a></h3>
+<p><strong>의미:</strong> 클로저 생성 (함수 포인터 + 캡처된 변수)</p>
+<p><strong>시그니처:</strong></p>
+<pre><code class="language-tablegen">def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure", [Pure]&gt; {
+  let arguments = (ins FlatSymbolRefAttr:$funcName,
+                       Variadic&lt;AnyType&gt;:$capturedValues);
+  let results = (outs FunLang_ClosureType:$result);
+}
+</code></pre>
+<p><strong>사용 예:</strong></p>
+<pre><code class="language-mlir">%closure = funlang.make_closure @lambda_adder(%n, %m) : !funlang.closure
+</code></pre>
+<p><strong>Lowering (Phase 5):</strong></p>
+<pre><code class="language-mlir">// FunLang dialect
+%closure = funlang.make_closure @lambda_adder(%n, %m) : !funlang.closure
+
+// ↓ Lower to Func + MemRef
+
+// 환경 할당
+%c3 = arith.constant 3 : index
+%env = memref.alloc(%c3) : memref&lt;?xi32&gt;
+
+// 함수 포인터 저장 (slot 0)
+// ... (conceptual)
+
+// 변수 저장 (slot 1, 2)
+%c1 = arith.constant 1 : index
+memref.store %n, %env[%c1] : memref&lt;?xi32&gt;
+%c2 = arith.constant 2 : index
+memref.store %m, %env[%c2] : memref&lt;?xi32&gt;
+
+// 포인터 반환
+%closure_ptr = memref.cast %env : memref&lt;?xi32&gt; to !llvm.ptr
+</code></pre>
+<h3 id="2-funlangapply"><a class="header" href="#2-funlangapply">2. funlang.apply</a></h3>
+<p><strong>의미:</strong> 클로저 호출 (간접 함수 호출)</p>
+<p><strong>시그니처:</strong></p>
+<pre><code class="language-tablegen">def FunLang_ApplyOp : FunLang_Op&lt;"apply"&gt; {
+  let arguments = (ins FunLang_ClosureType:$closure,
+                       Variadic&lt;AnyType&gt;:$arguments);
+  let results = (outs AnyType:$result);
+}
+</code></pre>
+<p><strong>사용 예:</strong></p>
+<pre><code class="language-mlir">%result = funlang.apply %closure(%x, %y) : (i32, i32) -&gt; i32
+</code></pre>
+<p><strong>Lowering:</strong></p>
+<pre><code class="language-mlir">// FunLang dialect
+%result = funlang.apply %closure(%x, %y) : (i32, i32) -&gt; i32
+
+// ↓ Lower to Func + LLVM
+
+// 환경에서 함수 포인터 로드
+%fn_slot = llvm.getelementptr %closure[0] : (!llvm.ptr) -&gt; !llvm.ptr
+%fn_ptr = llvm.load %fn_slot : !llvm.ptr -&gt; !llvm.ptr
+
+// 간접 호출 (환경 + 인자들)
+%result = llvm.call %fn_ptr(%closure, %x, %y) : (!llvm.ptr, i32, i32) -&gt; i32
+</code></pre>
+<h3 id="3-funlangmatch-phase-6"><a class="header" href="#3-funlangmatch-phase-6">3. funlang.match (Phase 6)</a></h3>
+<p><strong>의미:</strong> 패턴 매칭 (리스트, ADT)</p>
+<p><strong>시그니처:</strong></p>
+<pre><code class="language-tablegen">def FunLang_MatchOp : FunLang_Op&lt;"match", [RecursiveSideEffect]&gt; {
+  let arguments = (ins AnyType:$scrutinee);
+  let results = (outs AnyType:$result);
+  let regions = (region VariadicRegion&lt;AnyRegion&gt;:$cases);
+}
+</code></pre>
+<p><strong>사용 예:</strong></p>
+<pre><code class="language-mlir">%result = funlang.match %list : !funlang.list&lt;i32&gt; -&gt; i32 {
+^nil_case:
+    %zero = arith.constant 0 : i32
+    funlang.yield %zero : i32
+
+^cons_case(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+    // ... (재귀 호출)
+    funlang.yield %sum : i32
+}
+</code></pre>
+<p><strong>Lowering:</strong></p>
+<pre><code class="language-mlir">// FunLang dialect
+%result = funlang.match %list { ... }
+
+// ↓ Lower to SCF (structured control flow)
+
+// 리스트 태그 확인
+%tag = llvm.load %list[0] : !llvm.ptr -&gt; i32
+
+// if (tag == NIL)
+%is_nil = arith.cmpi eq, %tag, %c0 : i32
+%result = scf.if %is_nil -&gt; i32 {
+    // Nil case
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+} else {
+    // Cons case - head/tail 추출
+    %head = llvm.load %list[1] : !llvm.ptr -&gt; i32
+    %tail = llvm.load %list[2] : !llvm.ptr -&gt; !llvm.ptr
+    // ... (body)
+    scf.yield %sum : i32
+}
+</code></pre>
+<h3 id="4-funlangnil--funlangcons-phase-6"><a class="header" href="#4-funlangnil--funlangcons-phase-6">4. funlang.nil / funlang.cons (Phase 6)</a></h3>
+<p><strong>리스트 생성:</strong></p>
+<pre><code class="language-tablegen">def FunLang_NilOp : FunLang_Op&lt;"nil", [Pure]&gt; {
+  let arguments = (ins);
+  let results = (outs FunLang_ListType:$result);
+}
+
+def FunLang_ConsOp : FunLang_Op&lt;"cons", [Pure]&gt; {
+  let arguments = (ins AnyType:$head, FunLang_ListType:$tail);
+  let results = (outs FunLang_ListType:$result);
+}
+</code></pre>
+<p><strong>사용 예:</strong></p>
+<pre><code class="language-mlir">%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%list1 = funlang.cons %c1, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+%list2 = funlang.cons %c2, %list1 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+// list2 = [2, 1]
+</code></pre>
+<h3 id="chapter-15에서-구현할-내용"><a class="header" href="#chapter-15에서-구현할-내용">Chapter 15에서 구현할 내용</a></h3>
+<p><strong>Phase 5 (Chapter 15-16):</strong></p>
+<ol>
+<li>
+<p><strong>TableGen 정의</strong></p>
+<ul>
+<li><code>FunLangDialect.td</code></li>
+<li><code>FunLangOps.td</code> (make_closure, apply)</li>
+<li><code>FunLangTypes.td</code> (closure)</li>
+</ul>
+</li>
+<li>
+<p><strong>C API Shim</strong></p>
+<ul>
+<li><code>FunLangCAPI.h</code></li>
+<li><code>FunLangCAPI.cpp</code></li>
+</ul>
+</li>
+<li>
+<p><strong>F# Bindings</strong></p>
+<ul>
+<li><code>FunLangBindings.fs</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Lowering Pass</strong></p>
+<ul>
+<li><code>FunLangToFunc.cpp</code> (make_closure → memref.alloc)</li>
+<li>Pattern: <code>MakeClosureOpLowering</code>, <code>ApplyOpLowering</code></li>
+</ul>
+</li>
+<li>
+<p><strong>컴파일러 통합</strong></p>
+<ul>
+<li><code>Compiler.fs</code> 수정: FunLang dialect operations 생성</li>
+<li>Pass pipeline: <code>FunLangToFunc → FuncToLLVM</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>Phase 6 (Chapter 17-18):</strong></p>
+<ul>
+<li><code>funlang.match</code>, <code>funlang.nil</code>, <code>funlang.cons</code></li>
+<li><code>ListType</code> 구현</li>
+<li>Pattern matching lowering</li>
+</ul>
+<h2 id="common-pitfalls-흔한-실수들"><a class="header" href="#common-pitfalls-흔한-실수들">Common Pitfalls (흔한 실수들)</a></h2>
+<h3 id="pitfall-1-불완전한-타입-시스템-anytype-남용"><a class="header" href="#pitfall-1-불완전한-타입-시스템-anytype-남용">Pitfall 1: 불완전한 타입 시스템 (AnyType 남용)</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-tablegen">// 잘못된 설계 - 모든 것이 AnyType
+def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure"&gt; {
+  let arguments = (ins AnyType:$func, Variadic&lt;AnyType&gt;:$captured);
+  let results = (outs AnyType:$result);  // ERROR: 타입 안전성 없음!
+}
+</code></pre>
+<p><strong>왜 문제인가?</strong></p>
+<ul>
+<li><code>AnyType</code>은 컴파일 타임 체크 불가</li>
+<li>정수를 클로저로 사용 가능 (버그!)</li>
+<li>최적화 pass가 타입 정보 활용 불가</li>
+</ul>
+<p><strong>해결:</strong></p>
+<pre><code class="language-tablegen">// 올바른 설계 - 명확한 타입
+def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure", [Pure]&gt; {
+  let arguments = (ins FlatSymbolRefAttr:$funcName,  // 함수 심볼
+                       Variadic&lt;AnyType&gt;:$captured);  // 캡처된 값 (다양한 타입)
+  let results = (outs FunLang_ClosureType:$result);  // GOOD: 명확한 타입!
+}
+</code></pre>
+<p><strong>원칙:</strong></p>
+<ul>
+<li>도메인 타입 (closure, list)은 커스텀 타입 사용</li>
+<li>범용 값 (캡처된 변수)은 <code>AnyType</code> 허용</li>
+</ul>
+<h3 id="pitfall-2-missing-operation-traits-pure-memoryeffects"><a class="header" href="#pitfall-2-missing-operation-traits-pure-memoryeffects">Pitfall 2: Missing Operation Traits (Pure, MemoryEffects)</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-tablegen">// Trait 없는 operation
+def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure"&gt; {
+  // No traits specified!
+}
+</code></pre>
+<p><strong>왜 문제인가?</strong></p>
+<ul>
+<li>MLIR이 side effect 가정 (보수적 최적화)</li>
+<li>CSE (Common Subexpression Elimination) 불가</li>
+<li>Dead code elimination 불가</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-mlir">// 중복 클로저 생성
+%closure1 = funlang.make_closure @lambda(%x) : !funlang.closure
+%closure2 = funlang.make_closure @lambda(%x) : !funlang.closure
+// Trait 없으면: 둘 다 유지 (side effect 가능성 가정)
+// Pure trait 있으면: %closure2 = %closure1 (CSE 적용)
+</code></pre>
+<p><strong>해결:</strong></p>
+<pre><code class="language-tablegen">// 올바른 설계 - Trait 명시
+def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure", [Pure]&gt; {
+  // Pure = no side effects, deterministic
+}
+
+def FunLang_AllocEnvOp : FunLang_Op&lt;"alloc_env", [MemoryEffects&lt;[MemAlloc]&gt;]&gt; {
+  // MemAlloc = allocates memory (but no read/write side effects)
+}
+</code></pre>
+<p><strong>자주 사용하는 traits:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trait</th><th>의미</th><th>예시</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Pure</code></td><td>부작용 없음</td><td><code>arith.addi</code>, <code>funlang.make_closure</code></td></tr>
+<tr><td><code>MemoryEffects&lt;[MemRead]&gt;</code></td><td>메모리 읽기만</td><td><code>memref.load</code></td></tr>
+<tr><td><code>MemoryEffects&lt;[MemWrite]&gt;</code></td><td>메모리 쓰기만</td><td><code>memref.store</code></td></tr>
+<tr><td><code>MemoryEffects&lt;[MemAlloc]&gt;</code></td><td>메모리 할당만</td><td><code>memref.alloc</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="pitfall-3-symbol-table-미사용-string-함수-참조"><a class="header" href="#pitfall-3-symbol-table-미사용-string-함수-참조">Pitfall 3: Symbol Table 미사용 (String 함수 참조)</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-tablegen">// 잘못된 설계 - 함수 이름을 문자열로
+def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure"&gt; {
+  let arguments = (ins StrAttr:$funcName);  // ERROR: 타입 체크 불가!
+}
+</code></pre>
+<p><strong>왜 문제인가?</strong></p>
+<ul>
+<li>함수 존재 여부 체크 불가 (컴파일 타임)</li>
+<li>함수 시그니처 검증 불가</li>
+<li>Linker가 심볼 해석 불가</li>
+</ul>
+<p><strong>예시:</strong></p>
+<pre><code class="language-mlir">// 문자열 사용 - 에러 발견 안 됨!
+%closure = funlang.make_closure "typo_func"  // 함수 없어도 pass!
+</code></pre>
+<p><strong>해결:</strong></p>
+<pre><code class="language-tablegen">// 올바른 설계 - SymbolRefAttr 사용
+def FunLang_MakeClosureOp : FunLang_Op&lt;"make_closure", [Pure]&gt; {
+  let arguments = (ins FlatSymbolRefAttr:$funcName);  // GOOD: 심볼 참조
+}
+</code></pre>
+<p><strong>사용:</strong></p>
+<pre><code class="language-mlir">// 심볼 참조 - 컴파일 타임 체크!
+%closure = funlang.make_closure @lambda_func  // 함수 없으면 에러!
+
+// 함수 정의 필요
+func.func private @lambda_func(%env: !llvm.ptr, %x: i32) -&gt; i32 {
+  // ...
+}
+</code></pre>
+<p><strong>SymbolRefAttr의 이점:</strong></p>
+<ul>
+<li>컴파일 타임 심볼 해석</li>
+<li>함수 시그니처 체크 가능</li>
+<li>IDE 지원 (jump to definition)</li>
+</ul>
+<h3 id="pitfall-4-c-api-메모리-관리-혼동"><a class="header" href="#pitfall-4-c-api-메모리-관리-혼동">Pitfall 4: C API 메모리 관리 혼동</a></h3>
+<p><strong>문제:</strong></p>
+<pre><code class="language-cpp">// 잘못된 C API - 포인터 반환
+extern "C" {
+    MlirValue* mlirFunLangGetCapturedValues(MlirOperation op) {
+        auto makeClosureOp = cast&lt;MakeClosureOp&gt;(unwrap(op));
+        auto captured = makeClosureOp.getCapturedValues();
+
+        // ERROR: SmallVector 로컬 변수!
+        SmallVector&lt;MlirValue, 4&gt; result;
+        for (Value v : captured) {
+            result.push_back(wrap(v));
+        }
+
+        // DANGER: 댕글링 포인터! (result는 스택)
+        return result.data();
+    }
+}
+</code></pre>
+<p><strong>왜 문제인가?</strong></p>
+<ul>
+<li>C API는 ownership 명확히 해야 함</li>
+<li>스택 메모리 반환 → use-after-free</li>
+<li>F#은 언제 메모리 해제할지 모름</li>
+</ul>
+<p><strong>해결 1: 호출자가 버퍼 제공</strong></p>
+<pre><code class="language-cpp">extern "C" {
+    intptr_t mlirFunLangGetCapturedValuesInto(MlirOperation op,
+                                               MlirValue *buffer,
+                                               intptr_t bufferSize) {
+        auto makeClosureOp = cast&lt;MakeClosureOp&gt;(unwrap(op));
+        auto captured = makeClosureOp.getCapturedValues();
+
+        intptr_t numCaptured = captured.size();
+        if (numCaptured &gt; bufferSize)
+            return -1;  // Buffer too small
+
+        for (intptr_t i = 0; i &lt; numCaptured; ++i) {
+            buffer[i] = wrap(captured[i]);
+        }
+
+        return numCaptured;
+    }
+}
+</code></pre>
+<p>F#에서:</p>
+<pre><code class="language-fsharp">let buffer = Array.zeroCreate&lt;MlirValue&gt; 10
+let count = mlirFunLangGetCapturedValuesInto(op, buffer, 10n)
+let capturedValues = buffer.[0..int count - 1]
+</code></pre>
+<p><strong>해결 2: Iterator 패턴</strong></p>
+<pre><code class="language-cpp">extern "C" {
+    void mlirFunLangMakeClosureForEachCaptured(MlirOperation op,
+                                                 void (*callback)(MlirValue, void*),
+                                                 void *userData) {
+        auto makeClosureOp = cast&lt;MakeClosureOp&gt;(unwrap(op));
+        for (Value v : makeClosureOp.getCapturedValues()) {
+            callback(wrap(v), userData);
+        }
+    }
+}
+</code></pre>
+<p><strong>원칙:</strong></p>
+<ul>
+<li>C API는 ownership 명확히 (caller owns? callee owns?)</li>
+<li>배열 반환: caller-provided buffer 또는 callback</li>
+<li>문서화: “caller must free” vs “MLIR owns”</li>
+</ul>
+<h2 id="요약-1"><a class="header" href="#요약-1">요약</a></h2>
+<p><strong>Chapter 14에서 배운 것:</strong></p>
+<ol>
+<li>
+<p><strong>Progressive Lowering의 필요성</strong>: Phase 4 직접 lowering의 문제 (복잡도, 최적화 상실, 디버깅 어려움)</p>
+</li>
+<li>
+<p><strong>MLIR Dialect 아키텍처</strong>: Operation (계산), Type (값), Attribute (상수), Region/Block (제어 흐름), Symbol Table (전역 참조)</p>
+</li>
+<li>
+<p><strong>TableGen ODS 기초</strong>:</p>
+<ul>
+<li>Dialect 정의 (<code>FunLang_Dialect</code>)</li>
+<li>Operation 정의 (arguments, results, traits, assemblyFormat)</li>
+<li>Type 정의 (<code>ClosureType</code>, <code>ListType</code>)</li>
+<li>생성된 C++ 코드 (parser, printer, builder, verifier)</li>
+</ul>
+</li>
+<li>
+<p><strong>C API Shim 패턴</strong>:</p>
+<ul>
+<li>문제: TableGen → C++, F# → C API</li>
+<li>해결: <code>extern "C"</code> wrapper (FunLangCAPI.h/.cpp)</li>
+<li>wrap/unwrap helpers (C ↔ C++ 변환)</li>
+<li>OpBuilder 활용 (operation 생성)</li>
+<li>F# P/Invoke bindings</li>
+</ul>
+</li>
+<li>
+<p><strong>FunLang Operations 설계</strong>:</p>
+<ul>
+<li><code>funlang.make_closure</code>: 클로저 생성</li>
+<li><code>funlang.apply</code>: 클로저 호출</li>
+<li><code>funlang.match</code>: 패턴 매칭 (Phase 6)</li>
+<li>Lowering 전략 (FunLang → Func/MemRef → LLVM)</li>
+</ul>
+</li>
+<li>
+<p><strong>Common Pitfalls</strong>:</p>
+<ul>
+<li>AnyType 남용 → 커스텀 타입 사용</li>
+<li>Trait 누락 → Pure, MemoryEffects 명시</li>
+<li>문자열 함수 참조 → SymbolRefAttr 사용</li>
+<li>C API 메모리 관리 → ownership 명확히</li>
+</ul>
+</li>
+</ol>
+<p><strong>다음 장 (Chapter 15) Preview:</strong></p>
+<p>Chapter 15에서는:</p>
+<ul>
+<li>FunLang dialect 실제 구현 (C++ 코드 작성)</li>
+<li>TableGen 파일 작성 (FunLangOps.td, FunLangTypes.td)</li>
+<li>C API shim 구현 (FunLangCAPI.cpp)</li>
+<li>F# bindings 작성 (FunLangBindings.fs)</li>
+<li>Lowering pass 구현 (FunLangToFunc.cpp)</li>
+<li>컴파일러 통합 (Compiler.fs 수정)</li>
+<li>전체 빌드 시스템 (CMakeLists.txt)</li>
+</ul>
+<p>이론적 기초를 확립했으므로, 실제 구현으로 넘어갈 준비가 됐다.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="13-higher-order-functions.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="15-custom-operations.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="13-higher-order-functions.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="15-custom-operations.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
