@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 3 of 7 (Functions & Recursion)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-06 — Completed 03-01-PLAN.md (Functions and func Dialect)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-06 — Completed 03-02-PLAN.md (Recursion and Tail Call Optimization)
 
-Progress: [████████░░] 80% (8/10 estimated total plans)
+Progress: [█████████░] 90% (9/10 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 5 min
-- Total execution time: 0.67 hours
+- Total plans completed: 9
+- Average duration: 6 min
+- Total execution time: 0.82 hours
 
 **By Phase:**
 
@@ -29,15 +29,15 @@ Progress: [████████░░] 80% (8/10 estimated total plans)
 |-------|-------|-------|----------|
 | 1 - Foundation & Interop | 3/3 | 16 min | 5 min |
 | 2 - Core Language Basics | 4/4 | 19 min | 5 min |
-| 3 - Functions & Recursion | 1/2 | 8 min | 8 min |
+| 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
 
 **Recent Trend:**
-- Last plan: 03-01 (8 min)
+- Last plan: 03-02 (9 min)
+- Previous: 03-01 (8 min)
 - Previous: 02-04 (6 min)
 - Previous: 02-03 (5 min)
 - Previous: 02-02 (4 min)
-- Previous: 02-01 (4 min)
-- Trend: Chapter length correlates with duration (2590 lines = 8 min)
+- Trend: Chapter length correlates with duration (2513 lines = 9 min)
 
 *Updated after each plan completion*
 
@@ -101,6 +101,10 @@ Recent decisions affecting current work:
 - [03-01]: C calling convention (System V ABI) handled automatically by LLVM
 - [03-01]: Phase 3 scope: Top-level named functions only (no closures/lambdas until Phase 4)
 - [03-01]: funlang_main entry point called by runtime.c main
+- [03-02]: Recursive calls via symbol references (func.call @self works naturally)
+- [03-02]: Mutual recursion via lazy verification (order-independent compilation)
+- [03-02]: TCO not guaranteed in Phase 3 (LLVM may optimize, Phase 7 for explicit support)
+- [03-02]: Accumulator pattern for tail recursion (factorial_tail n acc)
 
 ### Pending Todos
 
@@ -115,12 +119,12 @@ None yet.
 - PHASE COMPLETE! All 4 plans finished (arithmetic, let bindings, control flow, memory management)
 
 **Phase 3 - Functions & Recursion:**
-- Plan 03-01 complete: Function definitions, calls, func dialect, calling conventions
-- Next: Plan 03-02 (Recursion and tail call optimization)
+- PHASE COMPLETE! All 2 plans finished (functions, recursion)
+- Ready for Phase 4 (Closures and higher-order functions)
 
 ## Session Continuity
 
-Last session: 2026-02-06T01:28:18Z
-Stopped at: Completed 03-01-PLAN.md (Functions and func Dialect)
+Last session: 2026-02-06T01:38:43Z
+Stopped at: Completed 03-02-PLAN.md (Recursion and Tail Call Optimization)
 Resume file: None
-Next: Plan 03-02 (Recursion and Tail Call Optimization)
+Next: Phase 4 planning (Closures and Higher-Order Functions)
