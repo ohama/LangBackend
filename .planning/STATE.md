@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 5 of 7 (Custom MLIR Dialect)
-Plan: 1 of 2 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-06 — Completed 05-01-PLAN.md (Custom Dialect Design)
+Last activity: 2026-02-06 — Completed 05-02-PLAN.md (Custom Operations)
 
-Progress: [████████████] 100% (12/12 estimated total plans)
+Progress: [████████████▓] 108% (13/12 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: 6 min
-- Total execution time: 1.2 hours
+- Total execution time: 1.4 hours
 
 **By Phase:**
 
@@ -31,15 +31,15 @@ Progress: [████████████] 100% (12/12 estimated total pla
 | 2 - Core Language Basics | 4/4 | 19 min | 5 min |
 | 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
 | 4 - Closures & Higher-Order | 2/2 | 11 min | 6 min |
-| 5 - Custom MLIR Dialect | 1/2 | 9 min | 9 min |
+| 5 - Custom MLIR Dialect | 2/3 | 21 min | 11 min |
 
 **Recent Trend:**
-- Last plan: 05-01 (9 min)
+- Last plan: 05-02 (12 min)
+- Previous: 05-01 (9 min)
 - Previous: 04-02 (6 min)
 - Previous: 04-01 (5 min)
 - Previous: 03-02 (9 min)
-- Previous: 03-01 (8 min)
-- Trend: Documentation plans ~9min, implementation plans ~5-6min
+- Trend: Documentation plans ~10min, implementation plans ~5-6min
 
 *Updated after each plan completion*
 
@@ -123,6 +123,12 @@ Recent decisions affecting current work:
 - [05-01]: FunLang dialect operations: Phase 5 (make_closure, apply), Phase 6 (match, nil, cons)
 - [05-01]: !funlang.closure opaque type (no parameters, internal representation in lowering)
 - [05-01]: C API shim pattern with wrap/unwrap helpers for F# interop with C++ dialect
+- [05-02]: funlang.closure has Pure trait (dialect-level semantic, lowering adds side effects)
+- [05-02]: funlang.apply has no Pure trait (indirect call can have side effects)
+- [05-02]: !funlang.closure opaque type (simpler than parameterized for Phase 5)
+- [05-02]: !funlang.list<T> parameterized type (required for type safety in pattern matching)
+- [05-02]: Builder pattern dual API: CreateXxxOp (returns operation) and CreateXxx (returns value)
+- [05-02]: OpBuilder extensions for FunLang operations (CreateFunLangClosure/Apply)
 
 ### Pending Todos
 
@@ -146,12 +152,15 @@ None yet.
 
 **Phase 5 - Custom MLIR Dialect:**
 - Plan 05-01 COMPLETE: Custom dialect design theory (Chapter 14 - 2682 lines)
-- Next: Plan 05-02 (FunLang dialect implementation)
-- Theoretical foundation established for progressive lowering strategy
+- Plan 05-02 COMPLETE: Custom operations implementation (Chapter 15 - 3642 lines)
+- Operations: funlang.closure, funlang.apply, funlang.match (preview)
+- Complete F# integration: Mlir.FunLang module with 3-layer API
+- Code reduction: 50% compiler code, 40-70% generated MLIR
+- Next: Plan 05-03 (Lowering passes)
 
 ## Session Continuity
 
-Last session: 2026-02-06T03:23:39Z
-Stopped at: Completed 05-01-PLAN.md (Custom Dialect Design)
+Last session: 2026-02-06T03:40:36Z
+Stopped at: Completed 05-02-PLAN.md (Custom Operations)
 Resume file: None
-Next: Plan 05-02 - FunLang dialect implementation (TableGen, C++ dialect, C API shim, F# bindings, lowering pass)
+Next: Plan 05-03 - Lowering passes (FunLangToLLVM pass implementation)
