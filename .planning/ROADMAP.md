@@ -85,10 +85,11 @@ Plans:
   3. Reader can compile higher-order functions (functions as arguments and return values)
   4. Reader understands closure conversion strategy (environment passing, heap allocation)
   5. Reader can compile programs with closures and lists without memory leaks using GC
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD during planning
+- [ ] 04-01-PLAN.md — Chapter 12: Closures (theory, free variable analysis, closure conversion, heap allocation)
+- [ ] 04-02-PLAN.md — Chapter 13: Higher-Order Functions (functions as arguments, return values, indirect calls)
 
 ### Phase 5: Custom MLIR Dialect
 **Goal**: Reader can define a custom FunLang dialect with operations, types, and lowering passes
@@ -147,7 +148,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Foundation & Interop | 3/3 | Complete | 2026-02-06 |
 | 2. Core Language Basics | 4/4 | Complete | 2026-02-06 |
 | 3. Functions & Recursion | 2/2 | Complete | 2026-02-06 |
-| 4. Closures & Higher-Order Functions | 0/TBD | Not started | - |
+| 4. Closures & Higher-Order Functions | 0/2 | Planned | - |
 | 5. Custom MLIR Dialect | 0/TBD | Not started | - |
 | 6. Pattern Matching & Data Structures | 0/TBD | Not started | - |
 | 7. Optimization & Polish | 0/TBD | Not started | - |
