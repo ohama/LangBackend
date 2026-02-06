@@ -69,10 +69,11 @@ Plans:
   3. Reader can compile recursive functions (e.g., factorial, fibonacci)
   4. Reader can compile mutually recursive functions with correct forward references
   5. Reader understands stack frame management and function lowering to LLVM dialect
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD during planning
+- [ ] 03-01-PLAN.md — Chapter 10: Functions (definitions, calls, func dialect, calling conventions)
+- [ ] 03-02-PLAN.md — Chapter 11: Recursion (factorial, fibonacci, mutual recursion, stack frames, tail calls)
 
 ### Phase 4: Closures & Higher-Order Functions
 **Goal**: Reader can compile closures with captured variables and higher-order functions
