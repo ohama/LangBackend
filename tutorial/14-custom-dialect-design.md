@@ -1127,12 +1127,1556 @@ let runLoweringPasses (module: MlirModule) =
 
 5. **ConversionTarget과 RewritePattern**: Legal/Illegal dialect 정의, 변환 규칙 작성, pass 구조
 
+## TableGen ODS (Operation Definition Specification) 기초
+
+### TableGen이란?
+
+**TableGen**은 LLVM 프로젝트의 **DSL (Domain-Specific Language)**이다. 코드 생성(code generation)을 위한 선언적 언어다.
+
+**Why TableGen?**
+
+MLIR operation을 C++로 직접 정의하면:
+
+```cpp
+// C++ 직접 정의 (verbose!)
+class MakeClosureOp : public Op<MakeClosureOp, OpTrait::OneResult, OpTrait::ZeroRegions> {
+public:
+    static StringRef getOperationName() { return "funlang.make_closure"; }
+
+    static void build(OpBuilder &builder, OperationState &state,
+                      FlatSymbolRefAttr funcName, ValueRange capturedValues) {
+        // 복잡한 builder 로직...
+    }
+
+    LogicalResult verify() {
+        // 복잡한 verification 로직...
+    }
+
+    // parser, printer, folders, canonicalizers...
+    // 100+ lines of boilerplate!
+};
+```
+
+**문제점:**
+- Boilerplate 코드 많음 (parser, printer, builder)
+- 타입 안전성 수동 관리
+- 일관성 유지 어려움 (operation마다 다른 스타일)
+
+**TableGen 사용:**
+
+```tablegen
+// TableGen 정의 (concise!)
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure", [Pure]> {
+  let summary = "Creates a closure value";
+  let description = [{
+    Creates a closure by capturing values into an environment.
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$funcName,
+                       Variadic<AnyType>:$capturedValues);
+  let results = (outs FunLang_ClosureType:$result);
+
+  let assemblyFormat = "$funcName `(` $capturedValues `)` attr-dict `:` type($result)";
+}
+```
+
+**장점:**
+- 선언적 (what, not how)
+- 코드 자동 생성 (parser, printer, builder, verifier)
+- 타입 안전성 자동 보장
+- 일관된 스타일
+
+**TableGen 빌드 프로세스:**
+
+```
+FunLangOps.td (TableGen source)
+    ↓ (mlir-tblgen tool)
+FunLangOps.h.inc (Generated C++ header)
+FunLangOps.cpp.inc (Generated C++ implementation)
+    ↓ (C++ compiler)
+libMLIRFunLangDialect.so (Shared library)
+```
+
+### FunLang Dialect 정의
+
+**FunLangDialect.td:**
+
+```tablegen
+// FunLang dialect 정의
+def FunLang_Dialect : Dialect {
+  // Dialect 이름 (operation prefix)
+  let name = "funlang";
+
+  // C++ namespace
+  let cppNamespace = "::mlir::funlang";
+
+  // 의존성 선언
+  let dependentDialects = [
+    "func::FuncDialect",
+    "arith::ArithDialect",
+    "LLVM::LLVMDialect"
+  ];
+
+  // Description (documentation)
+  let description = [{
+    The FunLang dialect represents high-level functional programming constructs
+    for the FunLang compiler. It provides operations for closures, pattern matching,
+    and other domain-specific features.
+  }];
+
+  // Extra class declarations (C++ 코드 삽입)
+  let extraClassDeclaration = [{
+    // Custom dialect methods (optional)
+    void registerTypes();
+    void registerOperations();
+  }];
+}
+```
+
+**각 필드 의미:**
+
+1. **`name`**: Dialect 네임스페이스
+   - Operation: `funlang.make_closure`
+   - Type: `!funlang.closure`
+
+2. **`cppNamespace`**: 생성되는 C++ 코드의 네임스페이스
+   - `mlir::funlang::MakeClosureOp`
+   - `mlir::funlang::ClosureType`
+
+3. **`dependentDialects`**: 이 dialect가 사용하는 다른 dialect
+   - FunLang operation이 `func.func`, `arith.addi` 등 사용 가능
+   - Context에 자동 로드됨
+
+4. **`description`**: Documentation (mlir-doc tool이 사용)
+
+5. **`extraClassDeclaration`**: 추가 C++ 메서드 선언
+
+### Operation 정의 구조
+
+**Base class 정의:**
+
+```tablegen
+// FunLang operation base class
+class FunLang_Op<string mnemonic, list<Trait> traits = []>
+    : Op<FunLang_Dialect, mnemonic, traits>;
+```
+
+모든 FunLang operation이 이 base class를 상속한다.
+
+**Operation 정의 예시: make_closure**
+
+```tablegen
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure", [Pure]> {
+  // 한 줄 요약
+  let summary = "Creates a closure value";
+
+  // 상세 설명 (multi-line string)
+  let description = [{
+    The `funlang.make_closure` operation creates a closure by capturing
+    values into an environment. The closure can later be invoked using
+    `funlang.apply`.
+
+    Example:
+    ```mlir
+    %closure = funlang.make_closure @my_lambda(%x, %y) : !funlang.closure
+    ```
+  }];
+
+  // 입력 인자 (arguments)
+  let arguments = (ins
+    FlatSymbolRefAttr:$funcName,        // 함수 심볼 (@lambda_0)
+    Variadic<AnyType>:$capturedValues   // 캡처된 값들 (%x, %y, ...)
+  );
+
+  // 출력 결과 (results)
+  let results = (outs
+    FunLang_ClosureType:$result         // 클로저 값
+  );
+
+  // Assembly format (parser/printer)
+  let assemblyFormat = [{
+    $funcName `(` $capturedValues `)` attr-dict `:` type($result)
+  }];
+
+  // Traits (operation 특성)
+  // [Pure]: no side effects, result depends only on operands
+}
+```
+
+**Arguments (ins):**
+
+| Type | Name | Meaning |
+|------|------|---------|
+| `FlatSymbolRefAttr` | `funcName` | 함수 이름 attribute (`@lambda_0`) |
+| `Variadic<AnyType>` | `capturedValues` | 가변 길이 값 목록 (captured variables) |
+
+**Results (outs):**
+
+| Type | Name | Meaning |
+|------|------|---------|
+| `FunLang_ClosureType` | `result` | 클로저 타입 값 |
+
+**Assembly Format:**
+
+- `$funcName`: `@lambda_func` 출력
+- `` `(` ``: 리터럴 `(` 문자
+- `$capturedValues`: 캡처된 값들 출력 (`%x, %y`)
+- `` `)` ``: 리터럴 `)` 문자
+- `attr-dict`: attribute dictionary (선택적)
+- `` `:` ``: 리터럴 `:` 문자
+- `type($result)`: 결과 타입 출력 (`!funlang.closure`)
+
+생성되는 IR:
+```mlir
+%closure = funlang.make_closure @lambda_func(%x, %y) : !funlang.closure
+```
+
+### Operation Traits
+
+**Trait**는 operation의 특성을 선언한다. MLIR이 최적화/검증에 사용한다.
+
+**Pure trait:**
+
+```tablegen
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure", [Pure]> {
+  // ...
+}
+```
+
+`Pure` = **순수 함수** (no side effects, deterministic)
+- 같은 입력 → 같은 출력
+- 메모리 쓰기 없음, I/O 없음
+- 최적화 가능: 중복 제거, 재배치
+
+**MemoryEffects trait:**
+
+```tablegen
+def FunLang_AllocClosureOp : FunLang_Op<"alloc_closure",
+    [MemoryEffects<[MemAlloc]>]> {
+  // Memory allocation operation
+}
+```
+
+`MemoryEffects<[MemAlloc]>` = 메모리 할당만 함 (읽기/쓰기 없음)
+
+**다른 유용한 traits:**
+
+| Trait | Meaning | Example |
+|-------|---------|---------|
+| `NoSideEffect` | 부작용 없음 (Pure와 비슷) | 산술 연산 |
+| `Terminator` | Basic block 종료 operation | `func.return` |
+| `IsolatedFromAbove` | 외부 값 참조 불가 | `func.func` |
+| `SameOperandsAndResultType` | 입력과 출력 타입 동일 | `arith.addi` |
+
+### hasVerifier 속성
+
+Custom verification 로직이 필요하면:
+
+```tablegen
+def FunLang_ApplyOp : FunLang_Op<"apply"> {
+  let arguments = (ins FunLang_ClosureType:$closure,
+                       Variadic<AnyType>:$arguments);
+  let results = (outs AnyType:$result);
+
+  // Custom verifier 필요
+  let hasVerifier = 1;
+}
+```
+
+생성된 C++ 코드에 `verify()` 메서드 선언:
+
+```cpp
+// FunLangOps.h.inc에 생성됨
+class ApplyOp : public ... {
+public:
+    LogicalResult verify();  // Custom implementation 필요
+};
+```
+
+**Verifier 구현 (FunLangOps.cpp):**
+
+```cpp
+LogicalResult ApplyOp::verify() {
+    // 클로저 타입 체크
+    if (!getClosure().getType().isa<ClosureType>())
+        return emitError("operand must be a closure type");
+
+    // 인자 개수 체크 (optional, 런타임 체크 가능)
+    // ...
+
+    return success();
+}
+```
+
+### Type 정의 (TypeDef)
+
+**FunLang Closure 타입:**
+
+```tablegen
+def FunLang_ClosureType : TypeDef<FunLang_Dialect, "Closure"> {
+  let mnemonic = "closure";
+
+  let summary = "FunLang closure type";
+
+  let description = [{
+    Represents a closure value (function pointer + captured environment).
+  }];
+
+  // Parameters (타입 파라미터)
+  // Closure는 파라미터 없음 (단순 타입)
+  let parameters = (ins);
+
+  // Assembly format
+  let assemblyFormat = "";
+}
+```
+
+**생성되는 C++ 코드:**
+
+```cpp
+// FunLangTypes.h.inc
+class ClosureType : public Type::TypeBase<ClosureType, Type, TypeStorage> {
+public:
+    static constexpr StringLiteral getMnemonic() { return "closure"; }
+    // ...
+};
+```
+
+**사용 예:**
+
+```mlir
+// MLIR IR
+%closure : !funlang.closure
+
+// F# 코드
+let closureType = FunLangType.GetClosure(ctx)
+```
+
+### FunLang 타입 설계
+
+#### 1. ClosureType (클로저)
+
+```tablegen
+def FunLang_ClosureType : TypeDef<FunLang_Dialect, "Closure"> {
+  let mnemonic = "closure";
+  let summary = "Function closure (function pointer + environment)";
+  let parameters = (ins);
+  let assemblyFormat = "";
+}
+```
+
+**용도:** 클로저 값 표현
+
+```mlir
+%closure = funlang.make_closure @lambda_func(%x) : !funlang.closure
+```
+
+#### 2. ListType (리스트, Phase 6 preview)
+
+```tablegen
+def FunLang_ListType : TypeDef<FunLang_Dialect, "List"> {
+  let mnemonic = "list";
+  let summary = "Immutable list of elements";
+
+  // 파라미터: element type
+  let parameters = (ins "Type":$elementType);
+
+  // Assembly format: list<i32>
+  let assemblyFormat = "`<` $elementType `>`";
+}
+```
+
+**파라미터화된 타입:**
+- `!funlang.list<i32>`: 정수 리스트
+- `!funlang.list<!funlang.closure>`: 클로저 리스트
+
+**생성된 C++ 코드:**
+
+```cpp
+class ListType : public Type::TypeBase<...> {
+public:
+    static ListType get(Type elementType);
+    Type getElementType() const;
+};
+```
+
+**사용 예:**
+
+```mlir
+// 빈 리스트
+%nil = funlang.nil : !funlang.list<i32>
+
+// Cons (head::tail)
+%list = funlang.cons %head, %tail : (i32, !funlang.list<i32>) -> !funlang.list<i32>
+```
+
+#### 3. RecordType (레코드, Phase 7 preview)
+
+```tablegen
+def FunLang_RecordType : TypeDef<FunLang_Dialect, "Record"> {
+  let mnemonic = "record";
+  let summary = "Record with named fields";
+
+  // 파라미터: field names + types
+  let parameters = (ins
+    ArrayRefParameter<"StringAttr">:$fieldNames,
+    ArrayRefParameter<"Type">:$fieldTypes
+  );
+
+  let assemblyFormat = "`<` `{` $fieldNames `:` $fieldTypes `}` `>`";
+}
+```
+
+**사용 예:**
+
+```mlir
+// {x: i32, y: i32}
+%point : !funlang.record<{x: i32, y: i32}>
+```
+
+### FunLang Operations 정의 예시
+
+#### funlang.make_closure
+
+**TableGen 정의:**
+
+```tablegen
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure", [Pure]> {
+  let summary = "Creates a closure value";
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$funcName,
+    Variadic<AnyType>:$capturedValues
+  );
+
+  let results = (outs FunLang_ClosureType:$result);
+
+  let assemblyFormat = "$funcName `(` $capturedValues `)` attr-dict `:` type($result)";
+
+  let builders = [
+    OpBuilder<(ins "FlatSymbolRefAttr":$funcName,
+                   "ValueRange":$capturedValues), [{
+      build($_builder, $_state, ClosureType::get($_builder.getContext()),
+            funcName, capturedValues);
+    }]>
+  ];
+}
+```
+
+**생성된 C++ API:**
+
+```cpp
+// FunLangOps.h.inc
+class MakeClosureOp : public Op<...> {
+public:
+    static MakeClosureOp create(OpBuilder &builder, Location loc,
+                                FlatSymbolRefAttr funcName,
+                                ValueRange capturedValues);
+
+    FlatSymbolRefAttr getFuncName();
+    OperandRange getCapturedValues();
+    Value getResult();
+};
+```
+
+#### funlang.apply
+
+**TableGen 정의:**
+
+```tablegen
+def FunLang_ApplyOp : FunLang_Op<"apply"> {
+  let summary = "Applies a closure to arguments";
+
+  let arguments = (ins
+    FunLang_ClosureType:$closure,
+    Variadic<AnyType>:$arguments
+  );
+
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = [{
+    $closure `(` $arguments `)` attr-dict `:` functional-type($arguments, $result)
+  }];
+
+  let hasVerifier = 1;
+}
+```
+
+**사용 예:**
+
+```mlir
+%result = funlang.apply %closure(%x, %y) : (i32, i32) -> i32
+```
+
+**Verifier (FunLangOps.cpp):**
+
+```cpp
+LogicalResult ApplyOp::verify() {
+    if (!getClosure().getType().isa<ClosureType>())
+        return emitError("first operand must be a closure");
+    return success();
+}
+```
+
+### 생성되는 C++ 코드 설명
+
+**mlir-tblgen 실행:**
+
+```bash
+mlir-tblgen -gen-op-decls FunLangOps.td > FunLangOps.h.inc
+mlir-tblgen -gen-op-defs FunLangOps.td > FunLangOps.cpp.inc
+mlir-tblgen -gen-typedef-decls FunLangTypes.td > FunLangTypes.h.inc
+mlir-tblgen -gen-typedef-defs FunLangTypes.td > FunLangTypes.cpp.inc
+```
+
+**FunLangOps.h.inc (생성된 헤더):**
+
+```cpp
+class MakeClosureOp : public Op<MakeClosureOp, OpTrait::ZeroRegions,
+                                OpTrait::OneResult, OpTrait::Pure> {
+public:
+    static constexpr StringLiteral getOperationName() {
+        return StringLiteral("funlang.make_closure");
+    }
+
+    // Accessors
+    FlatSymbolRefAttr getFuncName();
+    OperandRange getCapturedValues();
+    Value getResult();
+
+    // Builder
+    static void build(OpBuilder &builder, OperationState &state, ...);
+
+    // Parser/Printer (assemblyFormat에서 생성)
+    static ParseResult parse(OpAsmParser &parser, OperationState &result);
+    void print(OpAsmPrinter &p);
+
+    // Verifier (기본 타입 체크)
+    LogicalResult verify();
+};
+```
+
+**사용 (C++ dialect code):**
+
+```cpp
+// Operation 생성
+auto closureOp = builder.create<MakeClosureOp>(
+    loc,
+    funcNameAttr,
+    capturedValues
+);
+
+// Accessors 사용
+FlatSymbolRefAttr funcName = closureOp.getFuncName();
+Value result = closureOp.getResult();
+```
+
+**FunLangTypes.h.inc:**
+
+```cpp
+class ClosureType : public Type::TypeBase<ClosureType, Type, TypeStorage> {
+public:
+    static constexpr StringLiteral getMnemonic() { return "closure"; }
+
+    static ClosureType get(MLIRContext *ctx) {
+        return Base::get(ctx);
+    }
+
+    // Parser/Printer
+    static ParseResult parse(AsmParser &parser);
+    void print(AsmPrinter &printer) const;
+};
+```
+
+**사용:**
+
+```cpp
+// 타입 생성
+ClosureType closureType = ClosureType::get(ctx);
+
+// 타입 체크
+if (auto ct = value.getType().dyn_cast<ClosureType>()) {
+    // This is a closure!
+}
+```
+
+## C API Shim 패턴 (F# Interop)
+
+### 문제: TableGen은 C++ 코드 생성, F#은 C API 필요
+
+**상황:**
+
+1. **TableGen → C++ 코드 생성**
+   - `MakeClosureOp` 클래스 (C++)
+   - `ClosureType::get()` 메서드 (C++)
+
+2. **F#은 C API만 호출 가능**
+   - P/Invoke는 `extern "C"` 함수만 지원
+   - C++ 클래스 직접 호출 불가
+
+**문제:**
+
+```fsharp
+// 이런 코드를 쓰고 싶지만...
+let closure = MakeClosureOp.Create(builder, funcName, capturedValues)  // ERROR: C++ class!
+```
+
+### 해결책: extern "C" Wrapper Functions
+
+**아키텍처:**
+
+```
+┌─────────────────────────────────────────┐
+│ F# Code (Compiler.fs)                   │
+│                                         │
+│ let closure = FunLang.CreateClosure(...) │
+└────────────────┬────────────────────────┘
+                 │ P/Invoke
+                 ▼
+┌─────────────────────────────────────────┐
+│ C API Shim (FunLangCAPI.h/.cpp)         │
+│                                         │
+│ extern "C" {                            │
+│   MlirOperation mlirFunLangClosure...() │
+│ }                                       │
+└────────────────┬────────────────────────┘
+                 │ Call C++ API
+                 ▼
+┌─────────────────────────────────────────┐
+│ C++ Dialect (FunLangOps.h/.cpp)         │
+│                                         │
+│ class MakeClosureOp { ... }             │
+│ (TableGen generated)                    │
+└─────────────────────────────────────────┘
+```
+
+### FunLangCAPI.h 구조
+
+**헤더 파일:**
+
+```c
+// FunLangCAPI.h - C API for FunLang Dialect
+#ifndef FUNLANG_C_API_H
+#define FUNLANG_C_API_H
+
+#include "mlir-c/IR.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//===----------------------------------------------------------------------===//
+// Dialect Registration
+//===----------------------------------------------------------------------===//
+
+/// Register FunLang dialect in the given context
+MLIR_CAPI_EXPORTED void mlirContextRegisterFunLangDialect(MlirContext ctx);
+
+/// Load FunLang dialect into the given context
+MLIR_CAPI_EXPORTED MlirDialect mlirContextLoadFunLangDialect(MlirContext ctx);
+
+//===----------------------------------------------------------------------===//
+// Types
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given type is a FunLang closure type
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFunLangClosure(MlirType type);
+
+/// Creates a FunLang closure type
+MLIR_CAPI_EXPORTED MlirType mlirFunLangClosureTypeGet(MlirContext ctx);
+
+//===----------------------------------------------------------------------===//
+// Operations
+//===----------------------------------------------------------------------===//
+
+/// Creates a funlang.make_closure operation
+MLIR_CAPI_EXPORTED MlirOperation mlirFunLangMakeClosureOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirAttribute funcName,       // FlatSymbolRefAttr
+    intptr_t numCaptured,
+    MlirValue *capturedValues     // Array of values
+);
+
+/// Creates a funlang.apply operation
+MLIR_CAPI_EXPORTED MlirOperation mlirFunLangApplyOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirValue closure,
+    intptr_t numArgs,
+    MlirValue *arguments,
+    MlirType resultType
+);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // FUNLANG_C_API_H
+```
+
+**핵심 패턴:**
+
+1. **`extern "C"`**: C linkage (name mangling 없음)
+2. **MLIR C API 타입 사용**: `MlirContext`, `MlirOperation`, `MlirValue`
+3. **배열 전달**: `intptr_t num` + `MlirValue *array` 패턴
+
+### FunLangCAPI.cpp 구현 패턴
+
+**구현 파일:**
+
+```cpp
+// FunLangCAPI.cpp
+#include "FunLangCAPI.h"
+#include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Support.h"
+#include "FunLang/IR/FunLangDialect.h"
+#include "FunLang/IR/FunLangOps.h"
+#include "FunLang/IR/FunLangTypes.h"
+
+using namespace mlir;
+using namespace mlir::funlang;
+
+//===----------------------------------------------------------------------===//
+// Dialect Registration
+//===----------------------------------------------------------------------===//
+
+void mlirContextRegisterFunLangDialect(MlirContext ctx) {
+    // unwrap: C handle → C++ pointer
+    MLIRContext *context = unwrap(ctx);
+
+    // Register dialect
+    DialectRegistry registry;
+    registry.insert<FunLangDialect>();
+    context->appendDialectRegistry(registry);
+}
+
+MlirDialect mlirContextLoadFunLangDialect(MlirContext ctx) {
+    MLIRContext *context = unwrap(ctx);
+    Dialect *dialect = context->loadDialect<FunLangDialect>();
+
+    // wrap: C++ pointer → C handle
+    return wrap(dialect);
+}
+
+//===----------------------------------------------------------------------===//
+// Types
+//===----------------------------------------------------------------------===//
+
+bool mlirTypeIsAFunLangClosure(MlirType type) {
+    return unwrap(type).isa<ClosureType>();
+}
+
+MlirType mlirFunLangClosureTypeGet(MlirContext ctx) {
+    MLIRContext *context = unwrap(ctx);
+    Type closureType = ClosureType::get(context);
+    return wrap(closureType);
+}
+
+//===----------------------------------------------------------------------===//
+// Operations
+//===----------------------------------------------------------------------===//
+
+MlirOperation mlirFunLangMakeClosureOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirAttribute funcName,
+    intptr_t numCaptured,
+    MlirValue *capturedValues)
+{
+    // Unwrap C handles
+    MLIRContext *context = unwrap(ctx);
+    Location location = unwrap(loc);
+    FlatSymbolRefAttr funcNameAttr = unwrap(funcName).cast<FlatSymbolRefAttr>();
+
+    // Convert array to ValueRange
+    SmallVector<Value, 4> captured;
+    for (intptr_t i = 0; i < numCaptured; ++i) {
+        captured.push_back(unwrap(capturedValues[i]));
+    }
+
+    // Create operation using OpBuilder
+    OpBuilder builder(context);
+    auto op = builder.create<MakeClosureOp>(location, funcNameAttr, captured);
+
+    // Wrap and return
+    return wrap(op.getOperation());
+}
+
+MlirOperation mlirFunLangApplyOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirValue closure,
+    intptr_t numArgs,
+    MlirValue *arguments,
+    MlirType resultType)
+{
+    MLIRContext *context = unwrap(ctx);
+    Location location = unwrap(loc);
+    Value closureValue = unwrap(closure);
+    Type resType = unwrap(resultType);
+
+    SmallVector<Value, 4> args;
+    for (intptr_t i = 0; i < numArgs; ++i) {
+        args.push_back(unwrap(arguments[i]));
+    }
+
+    OpBuilder builder(context);
+    auto op = builder.create<ApplyOp>(location, resType, closureValue, args);
+
+    return wrap(op.getOperation());
+}
+```
+
+#### wrap/unwrap 헬퍼 사용
+
+**MLIR C API convention:**
+
+- **`unwrap()`**: C handle → C++ pointer
+- **`wrap()`**: C++ pointer → C handle
+
+```cpp
+// C handle types (opaque)
+typedef struct MlirContext { void *ptr; } MlirContext;
+typedef struct MlirType { void *ptr; } MlirType;
+typedef struct MlirValue { void *ptr; } MlirValue;
+
+// Unwrap/Wrap (MLIR/CAPI/Support.h)
+inline MLIRContext *unwrap(MlirContext ctx) {
+    return static_cast<MLIRContext *>(ctx.ptr);
+}
+
+inline MlirContext wrap(MLIRContext *ctx) {
+    return MlirContext{static_cast<void *>(ctx)};
+}
+```
+
+**사용 패턴:**
+
+```cpp
+// C API function signature (C handles)
+MlirType mlirFunLangClosureTypeGet(MlirContext ctx);
+
+// Implementation (unwrap → use C++ API → wrap)
+MlirType mlirFunLangClosureTypeGet(MlirContext ctx) {
+    MLIRContext *context = unwrap(ctx);           // C → C++
+    Type closureType = ClosureType::get(context); // C++ API
+    return wrap(closureType);                      // C++ → C
+}
+```
+
+#### OpBuilder 활용
+
+**OpBuilder**는 MLIR operation 생성 헬퍼다:
+
+```cpp
+OpBuilder builder(context);
+
+// Operation 생성
+auto op = builder.create<MakeClosureOp>(
+    location,       // Location (source info)
+    funcNameAttr,   // Symbol reference
+    capturedValues  // Operands
+);
+
+// Block에 삽입
+builder.setInsertionPointToEnd(block);
+auto op2 = builder.create<ApplyOp>(...);
+```
+
+**C API shim에서:**
+
+```cpp
+MlirOperation mlirFunLangMakeClosureOpCreate(...) {
+    OpBuilder builder(context);
+    auto op = builder.create<MakeClosureOp>(...);
+    return wrap(op.getOperation());  // Operation* → MlirOperation
+}
+```
+
+#### 타입 생성 및 검증
+
+**타입 생성:**
+
+```cpp
+MlirType mlirFunLangClosureTypeGet(MlirContext ctx) {
+    MLIRContext *context = unwrap(ctx);
+    Type closureType = ClosureType::get(context);
+    return wrap(closureType);
+}
+```
+
+**타입 검증:**
+
+```cpp
+bool mlirTypeIsAFunLangClosure(MlirType type) {
+    Type t = unwrap(type);
+    return t.isa<ClosureType>();  // C++ RTTI
+}
+```
+
+F#에서 사용:
+
+```fsharp
+// 타입 생성
+let closureType = FunLang.GetClosureType(ctx)
+
+// 타입 체크
+if FunLang.IsClosureType(value.Type) then
+    printfn "This is a closure!"
+```
+
+### CMakeLists.txt 빌드 설정
+
+**FunLang dialect CMake:**
+
+```cmake
+# CMakeLists.txt
+add_mlir_dialect_library(MLIRFunLangDialect
+  # TableGen sources
+  FunLangDialect.cpp
+  FunLangOps.cpp
+  FunLangTypes.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${PROJECT_SOURCE_DIR}/include/FunLang
+
+  DEPENDS
+  MLIRFunLangOpsIncGen        # TableGen generated files
+  MLIRFunLangTypesIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRFuncDialect
+  MLIRLLVMDialect
+)
+
+# C API shim
+add_mlir_public_c_api_library(MLIRFunLangCAPI
+  FunLangCAPI.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${PROJECT_SOURCE_DIR}/include/FunLang-c
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRFunLangDialect
+)
+```
+
+**빌드 출력:**
+
+- `libMLIRFunLangDialect.so`: C++ dialect library
+- `libMLIRFunLangCAPI.so`: C API shim library
+
+F#은 `MLIRFunLangCAPI.so`를 로드한다.
+
+### F# P/Invoke 바인딩 (Mlir.FunLang 모듈)
+
+**FunLangBindings.fs:**
+
+```fsharp
+module Mlir.FunLang
+
+open System
+open System.Runtime.InteropServices
+
+// P/Invoke declarations
+[<DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)>]
+extern void mlirContextRegisterFunLangDialect(MlirContext ctx)
+
+[<DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)>]
+extern MlirDialect mlirContextLoadFunLangDialect(MlirContext ctx)
+
+[<DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)>]
+extern bool mlirTypeIsAFunLangClosure(MlirType ty)
+
+[<DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)>]
+extern MlirType mlirFunLangClosureTypeGet(MlirContext ctx)
+
+[<DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)>]
+extern MlirOperation mlirFunLangMakeClosureOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirAttribute funcName,
+    nativeint numCaptured,
+    MlirValue[] capturedValues
+)
+
+[<DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)>]
+extern MlirOperation mlirFunLangApplyOpCreate(
+    MlirContext ctx,
+    MlirLocation loc,
+    MlirValue closure,
+    nativeint numArgs,
+    MlirValue[] arguments,
+    MlirType resultType
+)
+
+// High-level F# API
+type FunLangDialect =
+    static member Register(ctx: MlirContext) =
+        mlirContextRegisterFunLangDialect(ctx)
+
+    static member Load(ctx: MlirContext) : MlirDialect =
+        mlirContextLoadFunLangDialect(ctx)
+
+type FunLangType =
+    static member GetClosure(ctx: MlirContext) : MlirType =
+        mlirFunLangClosureTypeGet(ctx)
+
+    static member IsClosure(ty: MlirType) : bool =
+        mlirTypeIsAFunLangClosure(ty)
+
+type FunLangOps =
+    static member CreateMakeClosure(ctx: MlirContext, loc: MlirLocation,
+                                     funcName: MlirAttribute,
+                                     capturedValues: MlirValue[]) : MlirOperation =
+        mlirFunLangMakeClosureOpCreate(ctx, loc, funcName, nativeint capturedValues.Length, capturedValues)
+
+    static member CreateApply(ctx: MlirContext, loc: MlirLocation,
+                               closure: MlirValue, arguments: MlirValue[],
+                               resultType: MlirType) : MlirOperation =
+        mlirFunLangApplyOpCreate(ctx, loc, closure, nativeint arguments.Length, arguments, resultType)
+```
+
+**사용 예 (Compiler.fs):**
+
+```fsharp
+// Dialect 등록
+let ctx = MlirContext.Create()
+FunLangDialect.Register(ctx)
+FunLangDialect.Load(ctx)
+
+// 클로저 타입 얻기
+let closureType = FunLangType.GetClosure(ctx)
+
+// make_closure operation 생성
+let funcNameAttr = ... // SymbolRefAttr
+let capturedValues = [| %x; %y |]
+let makeClosureOp = FunLangOps.CreateMakeClosure(ctx, loc, funcNameAttr, capturedValues)
+
+// apply operation 생성
+let closureValue = ... // %closure
+let arguments = [| %arg1; %arg2 |]
+let resultType = ... // i32
+let applyOp = FunLangOps.CreateApply(ctx, loc, closureValue, arguments, resultType)
+```
+
+### 전체 아키텍처 다이어그램
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        F# Compiler                               │
+│                                                                  │
+│  let closure = FunLangOps.CreateMakeClosure(...)                │
+│  let result = FunLangOps.CreateApply(...)                       │
+└─────────────────────────┬────────────────────────────────────────┘
+                          │ P/Invoke
+                          │ (CallingConvention.Cdecl)
+                          ↓
+┌──────────────────────────────────────────────────────────────────┐
+│              C API Shim (FunLangCAPI.h/.cpp)                     │
+│                                                                  │
+│  extern "C" {                                                    │
+│    MlirOperation mlirFunLangMakeClosureOpCreate(...) {          │
+│      MLIRContext *ctx = unwrap(ctxHandle);                      │
+│      OpBuilder builder(ctx);                                     │
+│      auto op = builder.create<MakeClosureOp>(...);              │
+│      return wrap(op.getOperation());                             │
+│    }                                                             │
+│  }                                                               │
+└─────────────────────────┬────────────────────────────────────────┘
+                          │ Call C++ API
+                          ↓
+┌──────────────────────────────────────────────────────────────────┐
+│         C++ Dialect (FunLangOps.h/.cpp, TableGen generated)      │
+│                                                                  │
+│  class MakeClosureOp : public Op<...> {                         │
+│    // Generated by TableGen                                      │
+│    static void build(OpBuilder &, OperationState &, ...);       │
+│    LogicalResult verify();                                       │
+│  };                                                              │
+└─────────────────────────┬────────────────────────────────────────┘
+                          │ Uses MLIR Core API
+                          ↓
+┌──────────────────────────────────────────────────────────────────┐
+│                      MLIR Core (C++)                             │
+│                                                                  │
+│  - Operation, Type, Attribute classes                            │
+│  - OpBuilder, PatternRewriter                                    │
+│  - Dialect, DialectRegistry                                      │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**데이터 흐름:**
+
+1. **F# → C API**: P/Invoke로 C 함수 호출
+   - `MlirContext`, `MlirValue` 등 opaque handle 전달
+   - 배열은 `nativeint len` + `array` 패턴
+
+2. **C API → C++**: unwrap으로 handle → pointer 변환
+   - `unwrap(MlirContext)` → `MLIRContext*`
+   - `OpBuilder.create<Op>(...)` 호출
+
+3. **C++ → MLIR Core**: TableGen 생성 코드 사용
+   - `MakeClosureOp::build()` 호출
+   - Operation 생성, 타입 체크
+
+4. **C++ → C API**: wrap으로 pointer → handle 변환
+   - `wrap(Operation*)` → `MlirOperation`
+   - F#에 반환
+
+## FunLang Dialect Operations Preview
+
+Phase 5-6에서 구현할 operations 목록:
+
+### 1. funlang.make_closure
+
+**의미:** 클로저 생성 (함수 포인터 + 캡처된 변수)
+
+**시그니처:**
+
+```tablegen
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure", [Pure]> {
+  let arguments = (ins FlatSymbolRefAttr:$funcName,
+                       Variadic<AnyType>:$capturedValues);
+  let results = (outs FunLang_ClosureType:$result);
+}
+```
+
+**사용 예:**
+
+```mlir
+%closure = funlang.make_closure @lambda_adder(%n, %m) : !funlang.closure
+```
+
+**Lowering (Phase 5):**
+
+```mlir
+// FunLang dialect
+%closure = funlang.make_closure @lambda_adder(%n, %m) : !funlang.closure
+
+// ↓ Lower to Func + MemRef
+
+// 환경 할당
+%c3 = arith.constant 3 : index
+%env = memref.alloc(%c3) : memref<?xi32>
+
+// 함수 포인터 저장 (slot 0)
+// ... (conceptual)
+
+// 변수 저장 (slot 1, 2)
+%c1 = arith.constant 1 : index
+memref.store %n, %env[%c1] : memref<?xi32>
+%c2 = arith.constant 2 : index
+memref.store %m, %env[%c2] : memref<?xi32>
+
+// 포인터 반환
+%closure_ptr = memref.cast %env : memref<?xi32> to !llvm.ptr
+```
+
+### 2. funlang.apply
+
+**의미:** 클로저 호출 (간접 함수 호출)
+
+**시그니처:**
+
+```tablegen
+def FunLang_ApplyOp : FunLang_Op<"apply"> {
+  let arguments = (ins FunLang_ClosureType:$closure,
+                       Variadic<AnyType>:$arguments);
+  let results = (outs AnyType:$result);
+}
+```
+
+**사용 예:**
+
+```mlir
+%result = funlang.apply %closure(%x, %y) : (i32, i32) -> i32
+```
+
+**Lowering:**
+
+```mlir
+// FunLang dialect
+%result = funlang.apply %closure(%x, %y) : (i32, i32) -> i32
+
+// ↓ Lower to Func + LLVM
+
+// 환경에서 함수 포인터 로드
+%fn_slot = llvm.getelementptr %closure[0] : (!llvm.ptr) -> !llvm.ptr
+%fn_ptr = llvm.load %fn_slot : !llvm.ptr -> !llvm.ptr
+
+// 간접 호출 (환경 + 인자들)
+%result = llvm.call %fn_ptr(%closure, %x, %y) : (!llvm.ptr, i32, i32) -> i32
+```
+
+### 3. funlang.match (Phase 6)
+
+**의미:** 패턴 매칭 (리스트, ADT)
+
+**시그니처:**
+
+```tablegen
+def FunLang_MatchOp : FunLang_Op<"match", [RecursiveSideEffect]> {
+  let arguments = (ins AnyType:$scrutinee);
+  let results = (outs AnyType:$result);
+  let regions = (region VariadicRegion<AnyRegion>:$cases);
+}
+```
+
+**사용 예:**
+
+```mlir
+%result = funlang.match %list : !funlang.list<i32> -> i32 {
+^nil_case:
+    %zero = arith.constant 0 : i32
+    funlang.yield %zero : i32
+
+^cons_case(%head: i32, %tail: !funlang.list<i32>):
+    // ... (재귀 호출)
+    funlang.yield %sum : i32
+}
+```
+
+**Lowering:**
+
+```mlir
+// FunLang dialect
+%result = funlang.match %list { ... }
+
+// ↓ Lower to SCF (structured control flow)
+
+// 리스트 태그 확인
+%tag = llvm.load %list[0] : !llvm.ptr -> i32
+
+// if (tag == NIL)
+%is_nil = arith.cmpi eq, %tag, %c0 : i32
+%result = scf.if %is_nil -> i32 {
+    // Nil case
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+} else {
+    // Cons case - head/tail 추출
+    %head = llvm.load %list[1] : !llvm.ptr -> i32
+    %tail = llvm.load %list[2] : !llvm.ptr -> !llvm.ptr
+    // ... (body)
+    scf.yield %sum : i32
+}
+```
+
+### 4. funlang.nil / funlang.cons (Phase 6)
+
+**리스트 생성:**
+
+```tablegen
+def FunLang_NilOp : FunLang_Op<"nil", [Pure]> {
+  let arguments = (ins);
+  let results = (outs FunLang_ListType:$result);
+}
+
+def FunLang_ConsOp : FunLang_Op<"cons", [Pure]> {
+  let arguments = (ins AnyType:$head, FunLang_ListType:$tail);
+  let results = (outs FunLang_ListType:$result);
+}
+```
+
+**사용 예:**
+
+```mlir
+%nil = funlang.nil : !funlang.list<i32>
+%list1 = funlang.cons %c1, %nil : (i32, !funlang.list<i32>) -> !funlang.list<i32>
+%list2 = funlang.cons %c2, %list1 : (i32, !funlang.list<i32>) -> !funlang.list<i32>
+// list2 = [2, 1]
+```
+
+### Chapter 15에서 구현할 내용
+
+**Phase 5 (Chapter 15-16):**
+
+1. **TableGen 정의**
+   - `FunLangDialect.td`
+   - `FunLangOps.td` (make_closure, apply)
+   - `FunLangTypes.td` (closure)
+
+2. **C API Shim**
+   - `FunLangCAPI.h`
+   - `FunLangCAPI.cpp`
+
+3. **F# Bindings**
+   - `FunLangBindings.fs`
+
+4. **Lowering Pass**
+   - `FunLangToFunc.cpp` (make_closure → memref.alloc)
+   - Pattern: `MakeClosureOpLowering`, `ApplyOpLowering`
+
+5. **컴파일러 통합**
+   - `Compiler.fs` 수정: FunLang dialect operations 생성
+   - Pass pipeline: `FunLangToFunc → FuncToLLVM`
+
+**Phase 6 (Chapter 17-18):**
+
+- `funlang.match`, `funlang.nil`, `funlang.cons`
+- `ListType` 구현
+- Pattern matching lowering
+
+## Common Pitfalls (흔한 실수들)
+
+### Pitfall 1: 불완전한 타입 시스템 (AnyType 남용)
+
+**문제:**
+
+```tablegen
+// 잘못된 설계 - 모든 것이 AnyType
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure"> {
+  let arguments = (ins AnyType:$func, Variadic<AnyType>:$captured);
+  let results = (outs AnyType:$result);  // ERROR: 타입 안전성 없음!
+}
+```
+
+**왜 문제인가?**
+
+- `AnyType`은 컴파일 타임 체크 불가
+- 정수를 클로저로 사용 가능 (버그!)
+- 최적화 pass가 타입 정보 활용 불가
+
+**해결:**
+
+```tablegen
+// 올바른 설계 - 명확한 타입
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure", [Pure]> {
+  let arguments = (ins FlatSymbolRefAttr:$funcName,  // 함수 심볼
+                       Variadic<AnyType>:$captured);  // 캡처된 값 (다양한 타입)
+  let results = (outs FunLang_ClosureType:$result);  // GOOD: 명확한 타입!
+}
+```
+
+**원칙:**
+- 도메인 타입 (closure, list)은 커스텀 타입 사용
+- 범용 값 (캡처된 변수)은 `AnyType` 허용
+
+### Pitfall 2: Missing Operation Traits (Pure, MemoryEffects)
+
+**문제:**
+
+```tablegen
+// Trait 없는 operation
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure"> {
+  // No traits specified!
+}
+```
+
+**왜 문제인가?**
+
+- MLIR이 side effect 가정 (보수적 최적화)
+- CSE (Common Subexpression Elimination) 불가
+- Dead code elimination 불가
+
+**예시:**
+
+```mlir
+// 중복 클로저 생성
+%closure1 = funlang.make_closure @lambda(%x) : !funlang.closure
+%closure2 = funlang.make_closure @lambda(%x) : !funlang.closure
+// Trait 없으면: 둘 다 유지 (side effect 가능성 가정)
+// Pure trait 있으면: %closure2 = %closure1 (CSE 적용)
+```
+
+**해결:**
+
+```tablegen
+// 올바른 설계 - Trait 명시
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure", [Pure]> {
+  // Pure = no side effects, deterministic
+}
+
+def FunLang_AllocEnvOp : FunLang_Op<"alloc_env", [MemoryEffects<[MemAlloc]>]> {
+  // MemAlloc = allocates memory (but no read/write side effects)
+}
+```
+
+**자주 사용하는 traits:**
+
+| Trait | 의미 | 예시 |
+|-------|------|------|
+| `Pure` | 부작용 없음 | `arith.addi`, `funlang.make_closure` |
+| `MemoryEffects<[MemRead]>` | 메모리 읽기만 | `memref.load` |
+| `MemoryEffects<[MemWrite]>` | 메모리 쓰기만 | `memref.store` |
+| `MemoryEffects<[MemAlloc]>` | 메모리 할당만 | `memref.alloc` |
+
+### Pitfall 3: Symbol Table 미사용 (String 함수 참조)
+
+**문제:**
+
+```tablegen
+// 잘못된 설계 - 함수 이름을 문자열로
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure"> {
+  let arguments = (ins StrAttr:$funcName);  // ERROR: 타입 체크 불가!
+}
+```
+
+**왜 문제인가?**
+
+- 함수 존재 여부 체크 불가 (컴파일 타임)
+- 함수 시그니처 검증 불가
+- Linker가 심볼 해석 불가
+
+**예시:**
+
+```mlir
+// 문자열 사용 - 에러 발견 안 됨!
+%closure = funlang.make_closure "typo_func"  // 함수 없어도 pass!
+```
+
+**해결:**
+
+```tablegen
+// 올바른 설계 - SymbolRefAttr 사용
+def FunLang_MakeClosureOp : FunLang_Op<"make_closure", [Pure]> {
+  let arguments = (ins FlatSymbolRefAttr:$funcName);  // GOOD: 심볼 참조
+}
+```
+
+**사용:**
+
+```mlir
+// 심볼 참조 - 컴파일 타임 체크!
+%closure = funlang.make_closure @lambda_func  // 함수 없으면 에러!
+
+// 함수 정의 필요
+func.func private @lambda_func(%env: !llvm.ptr, %x: i32) -> i32 {
+  // ...
+}
+```
+
+**SymbolRefAttr의 이점:**
+- 컴파일 타임 심볼 해석
+- 함수 시그니처 체크 가능
+- IDE 지원 (jump to definition)
+
+### Pitfall 4: C API 메모리 관리 혼동
+
+**문제:**
+
+```cpp
+// 잘못된 C API - 포인터 반환
+extern "C" {
+    MlirValue* mlirFunLangGetCapturedValues(MlirOperation op) {
+        auto makeClosureOp = cast<MakeClosureOp>(unwrap(op));
+        auto captured = makeClosureOp.getCapturedValues();
+
+        // ERROR: SmallVector 로컬 변수!
+        SmallVector<MlirValue, 4> result;
+        for (Value v : captured) {
+            result.push_back(wrap(v));
+        }
+
+        // DANGER: 댕글링 포인터! (result는 스택)
+        return result.data();
+    }
+}
+```
+
+**왜 문제인가?**
+
+- C API는 ownership 명확히 해야 함
+- 스택 메모리 반환 → use-after-free
+- F#은 언제 메모리 해제할지 모름
+
+**해결 1: 호출자가 버퍼 제공**
+
+```cpp
+extern "C" {
+    intptr_t mlirFunLangGetCapturedValuesInto(MlirOperation op,
+                                               MlirValue *buffer,
+                                               intptr_t bufferSize) {
+        auto makeClosureOp = cast<MakeClosureOp>(unwrap(op));
+        auto captured = makeClosureOp.getCapturedValues();
+
+        intptr_t numCaptured = captured.size();
+        if (numCaptured > bufferSize)
+            return -1;  // Buffer too small
+
+        for (intptr_t i = 0; i < numCaptured; ++i) {
+            buffer[i] = wrap(captured[i]);
+        }
+
+        return numCaptured;
+    }
+}
+```
+
+F#에서:
+
+```fsharp
+let buffer = Array.zeroCreate<MlirValue> 10
+let count = mlirFunLangGetCapturedValuesInto(op, buffer, 10n)
+let capturedValues = buffer.[0..int count - 1]
+```
+
+**해결 2: Iterator 패턴**
+
+```cpp
+extern "C" {
+    void mlirFunLangMakeClosureForEachCaptured(MlirOperation op,
+                                                 void (*callback)(MlirValue, void*),
+                                                 void *userData) {
+        auto makeClosureOp = cast<MakeClosureOp>(unwrap(op));
+        for (Value v : makeClosureOp.getCapturedValues()) {
+            callback(wrap(v), userData);
+        }
+    }
+}
+```
+
+**원칙:**
+- C API는 ownership 명확히 (caller owns? callee owns?)
+- 배열 반환: caller-provided buffer 또는 callback
+- 문서화: "caller must free" vs "MLIR owns"
+
+## 요약
+
+**Chapter 14에서 배운 것:**
+
+1. **Progressive Lowering의 필요성**: Phase 4 직접 lowering의 문제 (복잡도, 최적화 상실, 디버깅 어려움)
+
+2. **MLIR Dialect 아키텍처**: Operation (계산), Type (값), Attribute (상수), Region/Block (제어 흐름), Symbol Table (전역 참조)
+
+3. **TableGen ODS 기초**:
+   - Dialect 정의 (`FunLang_Dialect`)
+   - Operation 정의 (arguments, results, traits, assemblyFormat)
+   - Type 정의 (`ClosureType`, `ListType`)
+   - 생성된 C++ 코드 (parser, printer, builder, verifier)
+
+4. **C API Shim 패턴**:
+   - 문제: TableGen → C++, F# → C API
+   - 해결: `extern "C"` wrapper (FunLangCAPI.h/.cpp)
+   - wrap/unwrap helpers (C ↔ C++ 변환)
+   - OpBuilder 활용 (operation 생성)
+   - F# P/Invoke bindings
+
+5. **FunLang Operations 설계**:
+   - `funlang.make_closure`: 클로저 생성
+   - `funlang.apply`: 클로저 호출
+   - `funlang.match`: 패턴 매칭 (Phase 6)
+   - Lowering 전략 (FunLang → Func/MemRef → LLVM)
+
+6. **Common Pitfalls**:
+   - AnyType 남용 → 커스텀 타입 사용
+   - Trait 누락 → Pure, MemoryEffects 명시
+   - 문자열 함수 참조 → SymbolRefAttr 사용
+   - C API 메모리 관리 → ownership 명확히
+
 **다음 장 (Chapter 15) Preview:**
 
 Chapter 15에서는:
-- TableGen ODS로 FunLang operation 정의
-- C API shim 작성 (F# interop)
-- Lowering pass 구현 (FunLangToFunc)
-- 전체 컴파일 파이프라인 구축
+- FunLang dialect 실제 구현 (C++ 코드 작성)
+- TableGen 파일 작성 (FunLangOps.td, FunLangTypes.td)
+- C API shim 구현 (FunLangCAPI.cpp)
+- F# bindings 작성 (FunLangBindings.fs)
+- Lowering pass 구현 (FunLangToFunc.cpp)
+- 컴파일러 통합 (Compiler.fs 수정)
+- 전체 빌드 시스템 (CMakeLists.txt)
 
 이론적 기초를 확립했으므로, 실제 구현으로 넘어갈 준비가 됐다.

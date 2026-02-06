@@ -18,6 +18,7 @@
 - [Chapter 11: 재귀](11-recursion.md)
 - [Chapter 12: 클로저](12-closures.md)
 - [Chapter 13: 고차 함수](13-higher-order-functions.md)
+- [Chapter 14: 커스텀 Dialect 설계](14-custom-dialect-design.md)
 
 # 부록
 
