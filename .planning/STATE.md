@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 4 of 7 (Closures & Higher-Order Functions)
-Plan: 1 of 1 in current phase
+Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-02-06 — Completed 04-01-PLAN.md (Closures)
+Last activity: 2026-02-06 — Completed 04-02-PLAN.md (Higher-Order Functions)
 
-Progress: [██████████] 100% (10/10 estimated total plans)
+Progress: [███████████] 100% (11/11 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 5 min
-- Total execution time: 0.90 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -30,15 +30,15 @@ Progress: [██████████] 100% (10/10 estimated total plans)
 | 1 - Foundation & Interop | 3/3 | 16 min | 5 min |
 | 2 - Core Language Basics | 4/4 | 19 min | 5 min |
 | 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
-| 4 - Closures & Higher-Order | 1/1 | 5 min | 5 min |
+| 4 - Closures & Higher-Order | 2/2 | 11 min | 6 min |
 
 **Recent Trend:**
-- Last plan: 04-01 (5 min)
+- Last plan: 04-02 (6 min)
+- Previous: 04-01 (5 min)
 - Previous: 03-02 (9 min)
 - Previous: 03-01 (8 min)
 - Previous: 02-04 (6 min)
-- Previous: 02-03 (5 min)
-- Trend: Consistent 5min average, larger chapters take longer
+- Trend: Consistent 5-6min average, larger chapters take longer
 
 *Updated after each plan completion*
 
@@ -114,6 +114,10 @@ Recent decisions affecting current work:
 - [04-01]: Closure conversion: implicit capture → explicit environment operations
 - [04-01]: Lifted functions receive environment as first parameter (%env: !llvm.ptr)
 - [04-01]: All closures heap-allocated via GC_malloc (escape their creation context)
+- [04-02]: Uniform closure representation for all functions (named and lambda, both as fn_ptr+env)
+- [04-02]: Indirect call pattern via llvm.call with function pointer (enables runtime function selection)
+- [04-02]: Heap allocation mandatory for returned closures (solves upward funarg problem)
+- [04-02]: Currying pattern: multi-argument functions as nested single-argument closures
 
 ### Pending Todos
 
@@ -131,13 +135,14 @@ None yet.
 - PHASE COMPLETE! All 2 plans finished (functions, recursion)
 
 **Phase 4 - Closures & Higher-Order Functions:**
-- PHASE COMPLETE! 1 plan finished (closures)
-- Tutorial complete: all 10 core chapters written
-- Ready for implementation and testing
+- PHASE COMPLETE! All 2 plans finished (closures, higher-order functions)
+- Tutorial chapters: 12 (Closures - 1518 lines), 13 (Higher-Order Functions - 1618 lines)
+- Total Phase 4 content: 3136 lines covering complete functional programming core
+- Ready for Phase 5 (Custom MLIR Dialect)
 
 ## Session Continuity
 
-Last session: 2026-02-06T02:42:08Z
-Stopped at: Completed 04-01-PLAN.md (Closures)
+Last session: 2026-02-06T02:50:44Z
+Stopped at: Completed 04-02-PLAN.md (Higher-Order Functions)
 Resume file: None
-Next: Tutorial complete! All 10 core chapters written. Ready for compiler implementation.
+Next: Phase 4 complete! Tutorial has 13 chapters (00-13). Phase 5: Custom MLIR Dialect design and implementation.
