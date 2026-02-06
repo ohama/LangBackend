@@ -102,10 +102,12 @@ Plans:
   4. Reader can implement lowering passes from FunLang dialect to standard dialects
   5. Reader can implement pattern-based rewrites using MLIR's rewrite infrastructure
   6. Reader can refactor earlier chapters to use custom dialect operations
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: TBD during planning
+- [ ] 05-01-PLAN.md — Chapter 14: Custom Dialect Design (theory, TableGen ODS, C API shim pattern, progressive lowering)
+- [ ] 05-02-PLAN.md — Chapter 15: Custom Operations (funlang.closure, funlang.apply, funlang.match with F# integration)
+- [ ] 05-03-PLAN.md — Chapter 16: Lowering Passes (ConversionPattern, TypeConverter, DRR patterns, complete pipeline)
 
 ### Phase 6: Pattern Matching & Data Structures
 **Goal**: Reader can compile pattern matching on lists and tuples using decision tree compilation
@@ -149,6 +151,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 2. Core Language Basics | 4/4 | Complete | 2026-02-06 |
 | 3. Functions & Recursion | 2/2 | Complete | 2026-02-06 |
 | 4. Closures & Higher-Order Functions | 2/2 | Complete | 2026-02-06 |
-| 5. Custom MLIR Dialect | 0/TBD | Not started | - |
+| 5. Custom MLIR Dialect | 0/3 | Planned | - |
 | 6. Pattern Matching & Data Structures | 0/TBD | Not started | - |
 | 7. Optimization & Polish | 0/TBD | Not started | - |
