@@ -10,33 +10,33 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 2 of 7 (Core Language Basics)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-06 — Completed 02-03-PLAN.md (Control Flow with scf.if and block arguments)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-06 — Completed 02-04-PLAN.md (Memory Management and Boehm GC integration)
 
-Progress: [██████░░░░] 60% (6/10 estimated total plans)
+Progress: [███████░░░] 70% (7/10 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 4 min
-- Total execution time: 0.43 hours
+- Total plans completed: 7
+- Average duration: 5 min
+- Total execution time: 0.53 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 - Foundation & Interop | 3/3 | 16 min | 5 min |
-| 2 - Core Language Basics | 3/4 | 13 min | 4 min |
+| 2 - Core Language Basics | 4/4 | 19 min | 5 min |
 
 **Recent Trend:**
-- Last plan: 02-03 (5 min)
+- Last plan: 02-04 (6 min)
+- Previous: 02-03 (5 min)
 - Previous: 02-02 (4 min)
 - Previous: 02-01 (4 min)
 - Previous: 01-03 (6 min)
-- Previous: 01-02 (6 min)
-- Trend: Consistent 4-5 minute execution for Phase 2
+- Trend: Consistent 4-6 minute execution for Phase 2
 
 *Updated after each plan completion*
 
@@ -86,6 +86,13 @@ Recent decisions affecting current work:
 - [02-03]: Region-based compilation: separate blocks for then/else with environment passing
 - [02-03]: SCF→CF lowering pass first in pipeline (before arith/func conversion)
 - [02-03]: Progressive lowering: scf.if → cf.cond_br + block arguments → llvm
+- [02-04]: Stack allocation for function-local values (automatic, fast, LIFO)
+- [02-04]: Heap allocation for escaping values (closures, data structures, flexible lifetime)
+- [02-04]: Boehm GC for automatic memory management (conservative, battle-tested, minimal compiler complexity)
+- [02-04]: Phase 2 uses SSA registers only (no memory operations), heap begins in Phase 3
+- [02-04]: GC_INIT() before GC_malloc(), runtime.c provides funlang_init wrapper
+- [02-04]: Link with -lgc, RPATH preferred over LD_LIBRARY_PATH
+- [02-04]: memref dialect for future heap allocation (alloca, alloc, load, store)
 - [Project]: Tutorial 본문은 한글로 작성 (코드, API명, 기술 용어는 원문 유지)
 - [Project]: Plain Korean style (~이다/~한다) not polite style (~입니다/~합니다) for tutorial text
 
@@ -99,11 +106,12 @@ None yet.
 - ~~MLIR C API completeness for custom dialects is unverified~~ **RESOLVED**: Confirmed C API cannot define custom dialects; C++ wrapper pattern established in Appendix (01-03)
 
 **Phase 2 - Core Language Basics:**
-- None identified; Chapter 08 (Control Flow) complete, ready for Chapter 09 (Memory Management)
+- PHASE COMPLETE! All 4 plans finished (arithmetic, let bindings, control flow, memory management)
+- Ready for Phase 3: Functions and First-Class Closures
 
 ## Session Continuity
 
-Last session: 2026-02-06T00:37:03Z
-Stopped at: Completed 02-03-PLAN.md (Control Flow)
+Last session: 2026-02-06T00:46:59Z
+Stopped at: Completed 02-04-PLAN.md (Memory Management)
 Resume file: None
-Next: Plan 02-04 - Memory Management (Boehm GC integration)
+Next: Phase 3 - Functions and First-Class Closures (to be planned)
