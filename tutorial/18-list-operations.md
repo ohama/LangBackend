@@ -1833,3 +1833,1745 @@ func.func @map(
 - NilOpLowering pattern
 - ConsOpLowering pattern
 - Complete lowering pass integration
+
+---
+
+## TypeConverter for List Types
+
+Chapter 16에서 우리는 **TypeConverter**를 배웠다. FunLang types를 LLVM types로 변환하는 규칙을 정의한다.
+
+### Chapter 16 복습: TypeConverter란?
+
+**TypeConverter의 역할:**
+
+```cpp
+// Type conversion rules
+!funlang.closure → !llvm.ptr
+!funlang.list<T> → !llvm.struct<(i32, ptr)>
+i32 → i32 (identity)
+```
+
+**왜 필요한가?**
+
+- Operations를 lowering할 때 operand/result types도 변환해야 함
+- Type consistency 유지 필요
+- DialectConversion framework가 자동으로 type materialization 수행
+
+### FunLangTypeConverter 확장
+
+Chapter 16에서 closure type 변환만 구현했다. 이제 list type 변환을 추가한다.
+
+**파일: `mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp`**
+
+```cpp
+class FunLangTypeConverter : public TypeConverter {
+public:
+  FunLangTypeConverter(MLIRContext *ctx) {
+    // Identity conversion for built-in types
+    addConversion([](Type type) { return type; });
+
+    // !funlang.closure → !llvm.ptr (Chapter 16)
+    addConversion([](funlang::FunLangClosureType type) {
+      return LLVM::LLVMPointerType::get(type.getContext());
+    });
+
+    // !funlang.list<T> → !llvm.struct<(i32, ptr)> (Chapter 18)
+    addConversion([](funlang::FunLangListType type) {
+      auto ctx = type.getContext();
+      auto i32Type = IntegerType::get(ctx, 32);
+      auto ptrType = LLVM::LLVMPointerType::get(ctx);
+      return LLVM::LLVMStructType::getLiteral(ctx, {i32Type, ptrType});
+    });
+
+    // Materialization for unconverted types
+    addSourceMaterialization([&](OpBuilder &builder, Type type,
+                                  ValueRange inputs, Location loc) -> Value {
+      if (inputs.size() != 1)
+        return nullptr;
+      return inputs[0];
+    });
+
+    addTargetMaterialization([&](OpBuilder &builder, Type type,
+                                  ValueRange inputs, Location loc) -> Value {
+      if (inputs.size() != 1)
+        return nullptr;
+      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+          .getResult(0);
+    });
+  }
+};
+```
+
+**핵심 포인트:**
+
+1. **List type conversion**:
+   ```cpp
+   !funlang.list<T> → !llvm.struct<(i32, ptr)>
+   ```
+   - Element type `T`는 버려짐 (runtime representation에 불필요)
+   - Tagged union: tag (i32) + data (ptr)
+
+2. **Type parameter 무시**:
+   ```cpp
+   !funlang.list<i32> → !llvm.struct<(i32, ptr)>
+   !funlang.list<f64> → !llvm.struct<(i32, ptr)>
+   !funlang.list<!funlang.closure> → !llvm.struct<(i32, ptr)>
+   // 모두 동일한 LLVM type!
+   ```
+
+3. **Opaque pointer**:
+   - Cons cell은 `!llvm.ptr`로 표현 (opaque)
+   - Element type 정보는 컴파일 타임에만 존재
+
+### Element Type은 어디로?
+
+**질문:** Element type `T`를 버려도 괜찮은가?
+
+**답:** 네, 컴파일 타임에만 필요하기 때문입니다.
+
+**Element type의 용도:**
+
+1. **Type checking** (compile time):
+   ```mlir
+   %cons = funlang.cons %head, %tail : !funlang.list<i32>
+   // Verifier checks: %head must be i32
+   ```
+
+2. **Pattern matching** (compile time):
+   ```mlir
+   %result = funlang.match %list : !funlang.list<i32> -> i32 {
+     ^cons(%head: i32, %tail: !funlang.list<i32>):
+       // %head type inferred from list element type
+   }
+   ```
+
+3. **Lowering** (code generation):
+   ```cpp
+   // ConsOpLowering::matchAndRewrite
+   Type elemType = consOp.getElementType();  // Get T from !funlang.list<T>
+   uint64_t elemSize = dataLayout.getTypeSize(elemType);  // Calculate cell size
+   ```
+
+**Runtime에는 불필요:**
+
+- Runtime에는 tag만 확인 (0=Nil, 1=Cons)
+- Cons cell에서 데이터 로드할 때 타입 정보 불필요 (opaque pointer)
+- GC가 타입 정보 없이도 메모리 관리 가능
+
+**비유:**
+
+```cpp
+// C++ template (compile time)
+template<typename T>
+struct List {
+    int tag;
+    void* data;
+};
+
+List<int> intList;      // Compile time: T = int
+List<double> doubleList;  // Compile time: T = double
+
+// Runtime: sizeof(List<int>) == sizeof(List<double>)
+// Runtime에는 T 정보 사라짐 (type erasure)
+```
+
+### Recursive List Types
+
+**중첩 리스트:**
+
+```mlir
+!funlang.list<!funlang.list<i32>>
+```
+
+**TypeConverter가 자동으로 처리:**
+
+```cpp
+// Step 1: Convert inner list
+!funlang.list<i32> → !llvm.struct<(i32, ptr)>
+
+// Step 2: Convert outer list (element type = inner list)
+!funlang.list<!funlang.list<i32>>
+  → !funlang.list<!llvm.struct<(i32, ptr)>>  // Inner converted
+  → !llvm.struct<(i32, ptr)>                 // Outer converted
+
+// Result: Same as flat list!
+```
+
+**이것도 type erasure:**
+
+- Cons cell에는 element가 `!llvm.struct<(i32, ptr)>`로 저장됨
+- 하지만 outer list의 표현은 여전히 `!llvm.struct<(i32, ptr)>`
+
+### Type Materialization
+
+**Materialization이란?**
+
+Type conversion 중 intermediate values가 필요할 때 자동으로 생성되는 operations.
+
+**예제:**
+
+```mlir
+// Before lowering
+func.func @foo(%lst: !funlang.list<i32>) -> i32 {
+    // %lst uses: !funlang.list<i32>
+}
+
+// After lowering
+func.func @foo(%arg: !llvm.struct<(i32, ptr)>) -> i32 {
+    // But some operations might still reference old type temporarily
+    // Materialization creates cast operations
+}
+```
+
+**FunLangTypeConverter에서:**
+
+```cpp
+// Source materialization: LLVM type → FunLang type (usually no-op)
+addSourceMaterialization([&](OpBuilder &builder, Type type,
+                              ValueRange inputs, Location loc) -> Value {
+  if (inputs.size() != 1)
+    return nullptr;
+  return inputs[0];  // Identity cast
+});
+
+// Target materialization: FunLang type → LLVM type
+addTargetMaterialization([&](OpBuilder &builder, Type type,
+                              ValueRange inputs, Location loc) -> Value {
+  if (inputs.size() != 1)
+    return nullptr;
+  return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      .getResult(0);
+});
+```
+
+**UnrealizedConversionCastOp:**
+
+- Temporary operation for type conversion
+- Should be removed by complete conversion
+- If it remains after pass, conversion failed (verification error)
+
+### Complete FunLangTypeConverter
+
+**전체 TypeConverter (Closure + List):**
+
+```cpp
+// mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp
+
+class FunLangTypeConverter : public TypeConverter {
+public:
+  FunLangTypeConverter(MLIRContext *ctx, const DataLayout &dataLayout)
+      : dataLayout(dataLayout) {
+    // Keep identity conversions (i32, f64, etc.)
+    addConversion([](Type type) { return type; });
+
+    // Closure type conversion (Phase 5)
+    addConversion([](funlang::FunLangClosureType type) {
+      return LLVM::LLVMPointerType::get(type.getContext());
+    });
+
+    // List type conversion (Phase 6)
+    addConversion([](funlang::FunLangListType type) {
+      auto ctx = type.getContext();
+      auto i32Type = IntegerType::get(ctx, 32);
+      auto ptrType = LLVM::LLVMPointerType::get(ctx);
+      // Tagged union: {i32 tag, ptr data}
+      return LLVM::LLVMStructType::getLiteral(ctx, {i32Type, ptrType});
+    });
+
+    // Function type conversion
+    addConversion([this](FunctionType type) {
+      return convertFunctionType(type);
+    });
+
+    // Materialization hooks
+    addSourceMaterialization(materializeSource);
+    addTargetMaterialization(materializeTarget);
+    addArgumentMaterialization(materializeSource);
+  }
+
+  // Get element type from list type (helper for lowering patterns)
+  Type getListElementType(funlang::FunLangListType listType) const {
+    return listType.getElementType();
+  }
+
+  // Calculate cons cell size for element type
+  uint64_t getConsCellSize(Type elementType) const {
+    uint64_t elemSize = dataLayout.getTypeSize(elementType);
+    uint64_t tailSize = 16;  // sizeof(struct<(i32, ptr)>) with alignment
+    uint64_t totalSize = elemSize + tailSize;
+    // Align to 8 bytes
+    return (totalSize + 7) & ~7;
+  }
+
+private:
+  const DataLayout &dataLayout;
+
+  FunctionType convertFunctionType(FunctionType type) {
+    SmallVector<Type> inputs;
+    SmallVector<Type> results;
+
+    if (failed(convertTypes(type.getInputs(), inputs)) ||
+        failed(convertTypes(type.getResults(), results)))
+      return nullptr;
+
+    return FunctionType::get(type.getContext(), inputs, results);
+  }
+
+  static Value materializeSource(OpBuilder &builder, Type type,
+                                   ValueRange inputs, Location loc) {
+    if (inputs.size() != 1)
+      return nullptr;
+    return inputs[0];
+  }
+
+  static Value materializeTarget(OpBuilder &builder, Type type,
+                                   ValueRange inputs, Location loc) {
+    if (inputs.size() != 1)
+      return nullptr;
+    return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+        .getResult(0);
+  }
+};
+```
+
+### TypeConverter in Lowering Pass
+
+**Pass에서 TypeConverter 사용:**
+
+```cpp
+struct FunLangToLLVMPass : public PassWrapper<FunLangToLLVMPass, OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    auto module = getOperation();
+    auto *ctx = &getContext();
+
+    // Get data layout from module
+    auto dataLayout = DataLayout(module);
+
+    // Create type converter
+    FunLangTypeConverter typeConverter(ctx, dataLayout);
+
+    // Setup conversion target
+    ConversionTarget target(*ctx);
+    target.addLegalDialect<LLVM::LLVMDialect, arith::ArithDialect>();
+    target.addIllegalDialect<funlang::FunLangDialect>();
+
+    // Populate rewrite patterns
+    RewritePatternSet patterns(ctx);
+    patterns.add<ClosureOpLowering>(typeConverter, ctx);
+    patterns.add<ApplyOpLowering>(typeConverter, ctx);
+    patterns.add<NilOpLowering>(typeConverter, ctx);     // New!
+    patterns.add<ConsOpLowering>(typeConverter, ctx);    // New!
+
+    // Run conversion
+    if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+```
+
+**ConversionPattern에서 typeConverter 사용:**
+
+```cpp
+class NilOpLowering : public OpConversionPattern<funlang::NilOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      funlang::NilOp op,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+
+    // Get converted result type: !llvm.struct<(i32, ptr)>
+    Type convertedType = typeConverter->convertType(op.getType());
+
+    // Build Nil representation: {0, null}
+    // ...
+  }
+};
+```
+
+### Summary: TypeConverter for List Types
+
+**구현 완료:**
+
+- [x] `!funlang.list<T>` → `!llvm.struct<(i32, ptr)>` conversion
+- [x] Element type handling (compile-time only)
+- [x] Recursive list types (automatic handling)
+- [x] Type materialization hooks
+- [x] Helper methods for lowering patterns (`getConsCellSize`)
+
+**핵심 통찰:**
+
+- Element type은 컴파일 타임 정보만
+- Runtime representation은 모든 list types에 대해 uniform
+- Type erasure로 효율적인 메모리 사용
+
+**다음 섹션:**
+
+- NilOpLowering pattern으로 empty list 생성
+
+---
+
+## NilOp Lowering Pattern
+
+이제 `funlang.nil`을 LLVM dialect로 lowering하는 pattern을 작성한다.
+
+### Lowering Strategy
+
+**Before:**
+
+```mlir
+%nil = funlang.nil : !funlang.list<i32>
+```
+
+**After:**
+
+```mlir
+// Build struct {0, null}
+%tag = arith.constant 0 : i32
+%null = llvm.mlir.zero : !llvm.ptr
+%undef = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct<(i32, ptr)>
+%nil = llvm.insertvalue %null, %s1[1] : !llvm.struct<(i32, ptr)>
+```
+
+**핵심 LLVM operations:**
+
+1. **arith.constant**: Create tag value (0 for Nil)
+2. **llvm.mlir.zero**: Create null pointer
+3. **llvm.mlir.undef**: Create undefined struct (placeholder)
+4. **llvm.insertvalue**: Insert values into struct fields
+
+### ConversionPattern Structure
+
+```cpp
+class NilOpLowering : public OpConversionPattern<funlang::NilOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      funlang::NilOp op,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override;
+};
+```
+
+**OpConversionPattern vs OpRewritePattern:**
+
+| Aspect | OpConversionPattern | OpRewritePattern |
+|--------|---------------------|------------------|
+| Framework | DialectConversion | Greedy rewriter |
+| Type conversion | Automatic (TypeConverter) | Manual |
+| Adaptor | Yes (adaptor.getOperands()) | No (op.getOperands()) |
+| Use case | Dialect lowering | Optimization |
+
+**OpAdaptor:**
+
+- Provides **converted operands** (types already converted by TypeConverter)
+- Example: `adaptor.getTail()` returns tail with LLVM type, not FunLang type
+
+### Implementation
+
+**파일: `mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp`**
+
+```cpp
+//===----------------------------------------------------------------------===//
+// NilOpLowering
+//===----------------------------------------------------------------------===//
+
+class NilOpLowering : public OpConversionPattern<funlang::NilOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      funlang::NilOp op,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+    auto ctx = op.getContext();
+
+    // Get converted result type: !llvm.struct<(i32, ptr)>
+    Type convertedType = typeConverter->convertType(op.getType());
+    auto structType = convertedType.cast<LLVM::LLVMStructType>();
+
+    // Step 1: Create tag value (0 for Nil)
+    auto i32Type = IntegerType::get(ctx, 32);
+    auto tagValue = rewriter.create<arith::ConstantIntOp>(loc, 0, i32Type);
+
+    // Step 2: Create null pointer
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
+    auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, ptrType);
+
+    // Step 3: Create undefined struct (placeholder)
+    auto undefStruct = rewriter.create<LLVM::UndefOp>(loc, structType);
+
+    // Step 4: Insert tag into struct at index 0
+    auto withTag = rewriter.create<LLVM::InsertValueOp>(
+        loc, undefStruct, tagValue, ArrayRef<int64_t>{0});
+
+    // Step 5: Insert null pointer into struct at index 1
+    auto nilValue = rewriter.create<LLVM::InsertValueOp>(
+        loc, withTag, nullPtr, ArrayRef<int64_t>{1});
+
+    // Replace funlang.nil with constructed struct
+    rewriter.replaceOp(op, nilValue.getResult());
+
+    return success();
+  }
+};
+```
+
+### Step-by-Step Explanation
+
+**Step 1: Tag value (0)**
+
+```cpp
+auto tagValue = rewriter.create<arith::ConstantIntOp>(loc, 0, i32Type);
+```
+
+생성되는 MLIR:
+```mlir
+%tag = arith.constant 0 : i32
+```
+
+**Step 2: Null pointer**
+
+```cpp
+auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, ptrType);
+```
+
+생성되는 MLIR:
+```mlir
+%null = llvm.mlir.zero : !llvm.ptr
+```
+
+**llvm.mlir.zero vs llvm.null:**
+
+- `llvm.mlir.zero`: MLIR의 zero initializer (opaque pointers)
+- Old LLVM: `llvm.null` (deprecated with opaque pointers)
+
+**Step 3: Undefined struct**
+
+```cpp
+auto undefStruct = rewriter.create<LLVM::UndefOp>(loc, structType);
+```
+
+생성되는 MLIR:
+```mlir
+%undef = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+```
+
+**왜 undef부터 시작?**
+
+- LLVM structs는 immutable (SSA form)
+- `insertvalue`로 필드를 하나씩 채워 나감
+- 초기값은 undefined (나중에 덮어씀)
+
+**Step 4-5: Insert values**
+
+```cpp
+auto withTag = rewriter.create<LLVM::InsertValueOp>(
+    loc, undefStruct, tagValue, ArrayRef<int64_t>{0});
+auto nilValue = rewriter.create<LLVM::InsertValueOp>(
+    loc, withTag, nullPtr, ArrayRef<int64_t>{1});
+```
+
+생성되는 MLIR:
+```mlir
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct<(i32, ptr)>
+%nil = llvm.insertvalue %null, %s1[1] : !llvm.struct<(i32, ptr)>
+```
+
+**InsertValueOp syntax:**
+
+- `llvm.insertvalue %value, %struct[index]`
+- index: struct field index (0 = tag, 1 = data)
+- Returns new struct with field updated
+
+**Step 6: Replace operation**
+
+```cpp
+rewriter.replaceOp(op, nilValue.getResult());
+```
+
+- Remove original `funlang.nil` operation
+- Replace all uses with new struct value
+- `nilValue.getResult()`: Extract Value from Operation
+
+### No Memory Allocation
+
+**중요한 최적화:**
+
+- NilOp lowering은 **pure computation** (no side effects)
+- Stack-only operations (constant, undef, insertvalue)
+- **No GC_malloc call** (unlike ConsOp)
+
+**LLVM optimization 기회:**
+
+```mlir
+// Multiple nil operations
+%nil1 = funlang.nil : !funlang.list<i32>
+%nil2 = funlang.nil : !funlang.list<i32>
+
+// After lowering:
+%tag = arith.constant 0 : i32
+%null = llvm.mlir.zero : !llvm.ptr
+%undef = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct<(i32, ptr)>
+%nil = llvm.insertvalue %null, %s1[1] : !llvm.struct<(i32, ptr)>
+// LLVM CSE: %nil1 and %nil2 → same %nil!
+```
+
+**Advanced optimization (Phase 7):**
+
+- Global constant for empty list
+- All nil operations → load from constant
+- Zero runtime cost
+
+### C API Shim (if needed)
+
+NilOpLowering은 C++에서만 사용되므로 C API shim 불필요. 하지만 testing을 위해 제공 가능:
+
+```cpp
+// For testing lowering pass from F#
+void mlirFunLangRegisterNilOpLowering(MlirRewritePatternSet patterns) {
+  auto *ctx = unwrap(patterns)->getContext();
+  FunLangTypeConverter typeConverter(ctx, /* dataLayout */);
+  unwrap(patterns)->add<NilOpLowering>(typeConverter, ctx);
+}
+```
+
+### Complete Example
+
+**Input MLIR (FunLang dialect):**
+
+```mlir
+func.func @test_nil() -> !funlang.list<i32> {
+    %nil = funlang.nil : !funlang.list<i32>
+    func.return %nil : !funlang.list<i32>
+}
+```
+
+**After NilOpLowering (LLVM dialect):**
+
+```mlir
+func.func @test_nil() -> !llvm.struct<(i32, ptr)> {
+    %c0 = arith.constant 0 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %0 = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+    %1 = llvm.insertvalue %c0, %0[0] : !llvm.struct<(i32, ptr)>
+    %nil = llvm.insertvalue %null, %1[1] : !llvm.struct<(i32, ptr)>
+    func.return %nil : !llvm.struct<(i32, ptr)>
+}
+```
+
+**After LLVM optimization:**
+
+```llvm
+define { i32, ptr } @test_nil() {
+  ; Constant struct {0, null} directly
+  ret { i32, ptr } { i32 0, ptr null }
+}
+```
+
+### Summary: NilOp Lowering Pattern
+
+**구현 완료:**
+
+- [x] OpConversionPattern for funlang.nil
+- [x] Tagged union construction: {tag: 0, data: null}
+- [x] No memory allocation (pure computation)
+- [x] LLVM optimization friendly
+
+**핵심 패턴:**
+
+1. Undefined struct as starting point
+2. InsertValueOp for field-by-field construction
+3. replaceOp to complete rewriting
+
+**다음 섹션:**
+
+- ConsOpLowering pattern으로 cons cell allocation
+
+---
+
+## ConsOp Lowering Pattern
+
+이제 `funlang.cons`를 LLVM dialect로 lowering한다. NilOp보다 복잡하다 - **memory allocation**이 필요하기 때문이다.
+
+### Lowering Strategy
+
+**Before:**
+
+```mlir
+%lst = funlang.cons %head, %tail : !funlang.list<i32>
+```
+
+**After:**
+
+```mlir
+// 1. Allocate cons cell
+%cell_size = arith.constant 16 : i64
+%cell_ptr = llvm.call @GC_malloc(%cell_size) : (i64) -> !llvm.ptr
+
+// 2. Store head element
+%head_ptr = llvm.getelementptr %cell_ptr[0] : (!llvm.ptr) -> !llvm.ptr
+llvm.store %head, %head_ptr : i32, !llvm.ptr
+
+// 3. Store tail list
+%tail_ptr = llvm.getelementptr %cell_ptr[1] : (!llvm.ptr) -> !llvm.ptr
+llvm.store %tail, %tail_ptr : !llvm.struct<(i32, ptr)>, !llvm.ptr
+
+// 4. Build tagged union {1, cell_ptr}
+%tag = arith.constant 1 : i32
+%undef = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct<(i32, ptr)>
+%lst = llvm.insertvalue %cell_ptr, %s1[1] : !llvm.struct<(i32, ptr)>
+```
+
+**핵심 작업:**
+
+1. **GC_malloc**: Heap에 cons cell 할당
+2. **GEP (GetElementPtr)**: Struct field 주소 계산
+3. **Store**: Head와 tail을 cell에 저장
+4. **InsertValue**: Tagged union 구성
+
+### Memory Layout Recap
+
+**Cons cell structure:**
+
+```
+struct ConsCell {
+    T element;                    // Offset 0
+    TaggedUnion tail;             // Offset sizeof(T)
+}
+
+TaggedUnion = struct {
+    i32 tag;                      // 4 bytes
+    ptr data;                     // 8 bytes
+}
+```
+
+**예제: `!funlang.list<i32>`**
+
+```
+ConsCell<i32> = {
+    i32 element;        // 4 bytes at offset 0
+    struct {            // 16 bytes at offset 4 (aligned to 8)
+        i32 tag;        // 4 bytes
+        ptr data;       // 8 bytes
+    } tail;
+}
+
+Total size: 4 + 16 = 20 bytes → aligned to 24 bytes
+```
+
+### Implementation
+
+**파일: `mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp`**
+
+```cpp
+//===----------------------------------------------------------------------===//
+// ConsOpLowering
+//===----------------------------------------------------------------------===//
+
+class ConsOpLowering : public OpConversionPattern<funlang::ConsOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      funlang::ConsOp op,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+    auto ctx = op.getContext();
+
+    // Get converted types
+    Type convertedResultType = typeConverter->convertType(op.getType());
+    auto structType = convertedResultType.cast<LLVM::LLVMStructType>();
+
+    // Get element type (from original FunLang type)
+    Type elementType = op.getElementType();
+
+    // Get converted operands (TypeConverter already converted them)
+    Value headValue = adaptor.getHead();
+    Value tailValue = adaptor.getTail();
+
+    // Step 1: Calculate cons cell size
+    auto cellSize = calculateCellSize(rewriter, loc, elementType);
+
+    // Step 2: Allocate cons cell via GC_malloc
+    auto cellPtr = allocateConsCell(rewriter, loc, cellSize);
+
+    // Step 3: Store head element
+    storeHead(rewriter, loc, cellPtr, headValue, elementType);
+
+    // Step 4: Store tail list
+    storeTail(rewriter, loc, cellPtr, tailValue, elementType);
+
+    // Step 5: Build tagged union {1, cellPtr}
+    auto consValue = buildTaggedUnion(rewriter, loc, structType, cellPtr);
+
+    // Replace funlang.cons with constructed value
+    rewriter.replaceOp(op, consValue);
+
+    return success();
+  }
+
+private:
+  // Calculate cons cell size: sizeof(element) + sizeof(TaggedUnion)
+  Value calculateCellSize(
+      OpBuilder &builder, Location loc, Type elementType) const {
+
+    auto *typeConverter = getTypeConverter();
+    auto dataLayout = DataLayout::closest(loc.getParentModule());
+
+    // Get element size
+    uint64_t elemSize = dataLayout.getTypeSize(elementType);
+
+    // TaggedUnion size: struct<(i32, ptr)> = 4 + 8 = 12, aligned to 16
+    uint64_t tailSize = 16;
+
+    uint64_t totalSize = elemSize + tailSize;
+
+    // Align to 8 bytes
+    totalSize = (totalSize + 7) & ~7;
+
+    auto i64Type = builder.getI64Type();
+    return builder.create<arith::ConstantIntOp>(loc, totalSize, i64Type);
+  }
+
+  // Allocate cons cell via GC_malloc
+  Value allocateConsCell(
+      OpBuilder &builder, Location loc, Value size) const {
+
+    auto ctx = builder.getContext();
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
+    auto i64Type = builder.getI64Type();
+
+    // Get or declare GC_malloc
+    auto module = loc->getParentOfType<ModuleOp>();
+    auto gcMalloc = module.lookupSymbol<LLVM::LLVMFuncOp>("GC_malloc");
+    if (!gcMalloc) {
+      OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToStart(module.getBody());
+
+      auto funcType = LLVM::LLVMFunctionType::get(ptrType, {i64Type});
+      gcMalloc = builder.create<LLVM::LLVMFuncOp>(
+          loc, "GC_malloc", funcType);
+    }
+
+    // Call GC_malloc
+    auto callOp = builder.create<LLVM::CallOp>(
+        loc, gcMalloc, ValueRange{size});
+
+    return callOp.getResult();
+  }
+
+  // Store head element at offset 0
+  void storeHead(
+      OpBuilder &builder, Location loc, Value cellPtr,
+      Value headValue, Type elementType) const {
+
+    // GEP to head field: cell[0]
+    auto headPtr = builder.create<LLVM::GEPOp>(
+        loc, cellPtr.getType(), cellPtr,
+        ArrayRef<LLVM::GEPArg>{0},
+        elementType);
+
+    // Store head
+    builder.create<LLVM::StoreOp>(loc, headValue, headPtr);
+  }
+
+  // Store tail list at offset sizeof(element)
+  void storeTail(
+      OpBuilder &builder, Location loc, Value cellPtr,
+      Value tailValue, Type elementType) const {
+
+    auto ctx = builder.getContext();
+    auto dataLayout = DataLayout::closest(loc.getParentModule());
+
+    // Calculate tail offset
+    uint64_t elemSize = dataLayout.getTypeSize(elementType);
+    uint64_t tailOffset = (elemSize + 7) & ~7;  // Align to 8 bytes
+
+    // GEP to tail field: cell + tailOffset bytes
+    auto tailPtr = builder.create<LLVM::GEPOp>(
+        loc, cellPtr.getType(), cellPtr,
+        ArrayRef<LLVM::GEPArg>{static_cast<int32_t>(tailOffset)},
+        builder.getI8Type());
+
+    // Store tail
+    builder.create<LLVM::StoreOp>(loc, tailValue, tailPtr);
+  }
+
+  // Build tagged union: {tag: 1, data: cellPtr}
+  Value buildTaggedUnion(
+      OpBuilder &builder, Location loc,
+      LLVM::LLVMStructType structType, Value cellPtr) const {
+
+    auto ctx = builder.getContext();
+    auto i32Type = builder.getI32Type();
+
+    // Tag = 1 (Cons)
+    auto tagValue = builder.create<arith::ConstantIntOp>(loc, 1, i32Type);
+
+    // Start with undefined struct
+    auto undefStruct = builder.create<LLVM::UndefOp>(loc, structType);
+
+    // Insert tag
+    auto withTag = builder.create<LLVM::InsertValueOp>(
+        loc, undefStruct, tagValue, ArrayRef<int64_t>{0});
+
+    // Insert cell pointer
+    auto withData = builder.create<LLVM::InsertValueOp>(
+        loc, withTag, cellPtr, ArrayRef<int64_t>{1});
+
+    return withData.getResult();
+  }
+};
+```
+
+### Detailed Breakdown
+
+**Step 1: Cell size calculation**
+
+```cpp
+uint64_t elemSize = dataLayout.getTypeSize(elementType);
+uint64_t tailSize = 16;  // struct<(i32, ptr)> aligned
+uint64_t totalSize = elemSize + tailSize;
+totalSize = (totalSize + 7) & ~7;  // Align to 8 bytes
+```
+
+**Examples:**
+
+```
+i32: 4 + 16 = 20 → 24 bytes
+f64: 8 + 16 = 24 → 24 bytes
+!funlang.closure (ptr): 8 + 16 = 24 → 24 bytes
+```
+
+**Step 2: GC_malloc call**
+
+```cpp
+auto gcMalloc = module.lookupSymbol<LLVM::LLVMFuncOp>("GC_malloc");
+if (!gcMalloc) {
+  // Declare if not exists
+  auto funcType = LLVM::LLVMFunctionType::get(ptrType, {i64Type});
+  gcMalloc = builder.create<LLVM::LLVMFuncOp>(loc, "GC_malloc", funcType);
+}
+auto callOp = builder.create<LLVM::CallOp>(loc, gcMalloc, ValueRange{size});
+```
+
+생성되는 MLIR:
+```mlir
+llvm.func @GC_malloc(i64) -> !llvm.ptr
+%cell_ptr = llvm.call @GC_malloc(%cell_size) : (i64) -> !llvm.ptr
+```
+
+**Step 3: Store head**
+
+```cpp
+auto headPtr = builder.create<LLVM::GEPOp>(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef<LLVM::GEPArg>{0}, elementType);
+builder.create<LLVM::StoreOp>(loc, headValue, headPtr);
+```
+
+생성되는 MLIR:
+```mlir
+%head_ptr = llvm.getelementptr %cell_ptr[0] : (!llvm.ptr) -> !llvm.ptr, i32
+llvm.store %head, %head_ptr : i32, !llvm.ptr
+```
+
+**GEPOp (GetElementPtr):**
+
+- Opaque pointers 시대의 GEP
+- Type hint: `elementType` (i32, f64, etc.)
+- Offset: `[0]` (first field)
+
+**Step 4: Store tail**
+
+```cpp
+uint64_t tailOffset = (elemSize + 7) & ~7;  // Aligned offset
+auto tailPtr = builder.create<LLVM::GEPOp>(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef<LLVM::GEPArg>{static_cast<int32_t>(tailOffset)},
+    builder.getI8Type());
+builder.create<LLVM::StoreOp>(loc, tailValue, tailPtr);
+```
+
+생성되는 MLIR:
+```mlir
+%tail_ptr = llvm.getelementptr %cell_ptr[8] : (!llvm.ptr) -> !llvm.ptr, i8
+llvm.store %tail, %tail_ptr : !llvm.struct<(i32, ptr)>, !llvm.ptr
+```
+
+**Byte-offset GEP:**
+
+- Type hint: `i8` (byte-addressable)
+- Offset: `[8]` (after 4-byte i32, aligned to 8)
+
+**Step 5: Tagged union**
+
+```cpp
+auto tagValue = builder.create<arith::ConstantIntOp>(loc, 1, i32Type);
+auto undefStruct = builder.create<LLVM::UndefOp>(loc, structType);
+auto withTag = builder.create<LLVM::InsertValueOp>(
+    loc, undefStruct, tagValue, ArrayRef<int64_t>{0});
+auto withData = builder.create<LLVM::InsertValueOp>(
+    loc, withTag, cellPtr, ArrayRef<int64_t>{1});
+```
+
+생성되는 MLIR:
+```mlir
+%tag = arith.constant 1 : i32
+%undef = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct<(i32, ptr)>
+%cons = llvm.insertvalue %cell_ptr, %s1[1] : !llvm.struct<(i32, ptr)>
+```
+
+### OpAdaptor Usage
+
+**OpAdaptor가 중요한 이유:**
+
+```cpp
+Value headValue = adaptor.getHead();  // Converted type!
+Value tailValue = adaptor.getTail();  // Converted type!
+```
+
+**Type conversion 자동 처리:**
+
+```mlir
+// Before lowering
+%cons = funlang.cons %head, %tail : !funlang.list<i32>
+// %head: i32
+// %tail: !funlang.list<i32>
+
+// During lowering (via OpAdaptor)
+// adaptor.getHead(): i32 (unchanged)
+// adaptor.getTail(): !llvm.struct<(i32, ptr)> (converted!)
+```
+
+**이미 TypeConverter가 처리함:**
+
+- OpAdaptor는 TypeConverter가 변환한 operands 제공
+- Pattern 코드는 converted types로 작업
+- 수동 type conversion 불필요
+
+### Complete Example
+
+**Input MLIR (FunLang dialect):**
+
+```mlir
+func.func @build_list() -> !funlang.list<i32> {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+
+    %nil = funlang.nil : !funlang.list<i32>
+    %lst1 = funlang.cons %c3, %nil : !funlang.list<i32>
+    %lst2 = funlang.cons %c2, %lst1 : !funlang.list<i32>
+    %lst3 = funlang.cons %c1, %lst2 : !funlang.list<i32>
+
+    func.return %lst3 : !funlang.list<i32>
+}
+```
+
+**After lowering (LLVM dialect):**
+
+```mlir
+func.func @build_list() -> !llvm.struct<(i32, ptr)> {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+
+    // Nil
+    %c0_tag = arith.constant 0 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %nil_undef = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+    %nil_1 = llvm.insertvalue %c0_tag, %nil_undef[0] : !llvm.struct<(i32, ptr)>
+    %nil = llvm.insertvalue %null, %nil_1[1] : !llvm.struct<(i32, ptr)>
+
+    // Cons %c3, %nil
+    %size1 = arith.constant 24 : i64
+    %cell1 = llvm.call @GC_malloc(%size1) : (i64) -> !llvm.ptr
+    %head1_ptr = llvm.getelementptr %cell1[0] : (!llvm.ptr) -> !llvm.ptr, i32
+    llvm.store %c3, %head1_ptr : i32, !llvm.ptr
+    %tail1_ptr = llvm.getelementptr %cell1[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %nil, %tail1_ptr : !llvm.struct<(i32, ptr)>, !llvm.ptr
+    %c1_tag = arith.constant 1 : i32
+    %lst1_undef = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+    %lst1_1 = llvm.insertvalue %c1_tag, %lst1_undef[0] : !llvm.struct<(i32, ptr)>
+    %lst1 = llvm.insertvalue %cell1, %lst1_1[1] : !llvm.struct<(i32, ptr)>
+
+    // Cons %c2, %lst1
+    %size2 = arith.constant 24 : i64
+    %cell2 = llvm.call @GC_malloc(%size2) : (i64) -> !llvm.ptr
+    %head2_ptr = llvm.getelementptr %cell2[0] : (!llvm.ptr) -> !llvm.ptr, i32
+    llvm.store %c2, %head2_ptr : i32, !llvm.ptr
+    %tail2_ptr = llvm.getelementptr %cell2[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %lst1, %tail2_ptr : !llvm.struct<(i32, ptr)>, !llvm.ptr
+    %lst2_1 = llvm.insertvalue %c1_tag, %lst1_undef[0] : !llvm.struct<(i32, ptr)>
+    %lst2 = llvm.insertvalue %cell2, %lst2_1[1] : !llvm.struct<(i32, ptr)>
+
+    // Cons %c1, %lst2
+    %size3 = arith.constant 24 : i64
+    %cell3 = llvm.call @GC_malloc(%size3) : (i64) -> !llvm.ptr
+    %head3_ptr = llvm.getelementptr %cell3[0] : (!llvm.ptr) -> !llvm.ptr, i32
+    llvm.store %c1, %head3_ptr : i32, !llvm.ptr
+    %tail3_ptr = llvm.getelementptr %cell3[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %lst2, %tail3_ptr : !llvm.struct<(i32, ptr)>, !llvm.ptr
+    %lst3_1 = llvm.insertvalue %c1_tag, %lst1_undef[0] : !llvm.struct<(i32, ptr)>
+    %lst3 = llvm.insertvalue %cell3, %lst3_1[1] : !llvm.struct<(i32, ptr)>
+
+    func.return %lst3 : !llvm.struct<(i32, ptr)>
+}
+```
+
+### Summary: ConsOp Lowering Pattern
+
+**구현 완료:**
+
+- [x] OpConversionPattern for funlang.cons
+- [x] GC_malloc call for cons cell allocation
+- [x] GEP + Store for head and tail
+- [x] Tagged union construction with tag=1
+- [x] OpAdaptor for converted operands
+
+**핵심 패턴:**
+
+1. Calculate cell size from element type
+2. Allocate via GC_malloc
+3. Store head and tail with GEP
+4. Build tagged union with InsertValueOp
+
+**다음 섹션:**
+
+- Complete lowering pass integration
+- Common errors and debugging
+
+---
+
+## Complete Lowering Pass Update
+
+이제 NilOpLowering과 ConsOpLowering을 FunLangToLLVM pass에 등록한다.
+
+### FunLangToLLVM Pass Structure
+
+**파일: `mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp`**
+
+```cpp
+//===----------------------------------------------------------------------===//
+// FunLangToLLVM Pass
+//===----------------------------------------------------------------------===//
+
+struct FunLangToLLVMPass
+    : public PassWrapper<FunLangToLLVMPass, OperationPass<ModuleOp>> {
+
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FunLangToLLVMPass)
+
+  StringRef getArgument() const final { return "convert-funlang-to-llvm"; }
+  StringRef getDescription() const final {
+    return "Convert FunLang dialect to LLVM dialect";
+  }
+
+  void runOnOperation() override {
+    auto module = getOperation();
+    auto *ctx = &getContext();
+
+    // Get data layout from module
+    auto dataLayout = DataLayout::closest(module);
+
+    // Create type converter
+    FunLangTypeConverter typeConverter(ctx, dataLayout);
+
+    // Setup conversion target
+    ConversionTarget target(*ctx);
+
+    // Legal dialects (after conversion)
+    target.addLegalDialect<LLVM::LLVMDialect>();
+    target.addLegalDialect<arith::ArithDialect>();
+    target.addLegalDialect<func::FuncDialect>();
+
+    // Illegal dialects (must be converted)
+    target.addIllegalDialect<funlang::FunLangDialect>();
+
+    // Function signatures must be converted
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
+      return typeConverter.isSignatureLegal(op.getFunctionType());
+    });
+
+    // Populate rewrite patterns
+    RewritePatternSet patterns(ctx);
+
+    // Phase 5 patterns (Chapter 16)
+    patterns.add<ClosureOpLowering>(typeConverter, ctx);
+    patterns.add<ApplyOpLowering>(typeConverter, ctx);
+
+    // Phase 6 patterns (Chapter 18)
+    patterns.add<NilOpLowering>(typeConverter, ctx);
+    patterns.add<ConsOpLowering>(typeConverter, ctx);
+
+    // Function signature conversion
+    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+        patterns, typeConverter);
+
+    // Run partial conversion
+    if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+
+// Register pass
+void registerFunLangToLLVMPass() {
+  PassRegistration<FunLangToLLVMPass>();
+}
+```
+
+### Pattern Registration Order
+
+**순서가 중요한가?**
+
+일반적으로 **순서 무관**하다. DialectConversion framework가 모든 patterns를 시도한다.
+
+**하지만 성능 최적화를 위해:**
+
+- 자주 매칭되는 patterns를 먼저 등록
+- 복잡한 patterns를 나중에 등록 (matching cost 고려)
+
+**FunLang의 경우:**
+
+```cpp
+// Frequency: ClosureOp > ApplyOp > ConsOp > NilOp (typical functional code)
+patterns.add<ClosureOpLowering>(typeConverter, ctx);    // Most frequent
+patterns.add<ApplyOpLowering>(typeConverter, ctx);
+patterns.add<ConsOpLowering>(typeConverter, ctx);
+patterns.add<NilOpLowering>(typeConverter, ctx);        // Least frequent
+```
+
+하지만 **실용적으로는 로직 순서**로 배치:
+
+```cpp
+// Logical grouping
+// Phase 5 operations
+patterns.add<ClosureOpLowering>(typeConverter, ctx);
+patterns.add<ApplyOpLowering>(typeConverter, ctx);
+
+// Phase 6 operations
+patterns.add<NilOpLowering>(typeConverter, ctx);
+patterns.add<ConsOpLowering>(typeConverter, ctx);
+```
+
+### Pass Manager Integration
+
+**F# compiler pipeline:**
+
+```fsharp
+// FunLang.Compiler/Compiler.fs
+let lowerToLLVM (mlirModule: MlirModule) =
+    let pm = PassManager(mlirModule.Context)
+
+    // Phase 5-6: FunLang → LLVM
+    pm.AddPass("convert-funlang-to-llvm")
+
+    // Standard MLIR lowering
+    pm.AddPass("convert-func-to-llvm")
+    pm.AddPass("convert-arith-to-llvm")
+    pm.AddPass("reconcile-unrealized-casts")
+
+    pm.Run(mlirModule)
+```
+
+**Pass order:**
+
+1. **convert-funlang-to-llvm**: FunLang ops → LLVM ops
+2. **convert-func-to-llvm**: func.func → llvm.func
+3. **convert-arith-to-llvm**: arith ops → llvm ops
+4. **reconcile-unrealized-casts**: Remove UnrealizedConversionCastOps
+
+### Testing List Construction
+
+**Test case:**
+
+```fsharp
+// F# source
+let test_list = [1; 2; 3]
+```
+
+**Compiled MLIR (FunLang dialect):**
+
+```mlir
+module {
+  func.func @test_list() -> !funlang.list<i32> {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+
+    %nil = funlang.nil : !funlang.list<i32>
+    %lst1 = funlang.cons %c3, %nil : !funlang.list<i32>
+    %lst2 = funlang.cons %c2, %lst1 : !funlang.list<i32>
+    %lst3 = funlang.cons %c1, %lst2 : !funlang.list<i32>
+
+    func.return %lst3 : !funlang.list<i32>
+  }
+}
+```
+
+**After lowering:**
+
+```bash
+mlir-opt test.mlir \
+  --convert-funlang-to-llvm \
+  --convert-func-to-llvm \
+  --convert-arith-to-llvm \
+  --reconcile-unrealized-casts
+```
+
+**Result (LLVM dialect):**
+
+```mlir
+module {
+  llvm.func @GC_malloc(i64) -> !llvm.ptr
+
+  llvm.func @test_list() -> !llvm.struct<(i32, ptr)> {
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+
+    // Nil
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %nil_undef = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+    %nil_1 = llvm.insertvalue %c0, %nil_undef[0] : !llvm.struct<(i32, ptr)>
+    %nil = llvm.insertvalue %null, %nil_1[1] : !llvm.struct<(i32, ptr)>
+
+    // Cons cells (similar to previous example)
+    // ...
+
+    llvm.return %lst3 : !llvm.struct<(i32, ptr)>
+  }
+}
+```
+
+### End-to-End Example
+
+**Complete workflow:**
+
+```fsharp
+// 1. F# AST → FunLang MLIR
+let ast = parseExpression "[1; 2; 3]"
+let mlirModule = compileToFunLang ast
+
+// 2. FunLang MLIR → LLVM MLIR
+lowerToLLVM mlirModule
+
+// 3. LLVM MLIR → LLVM IR
+let llvmIR = translateToLLVMIR mlirModule
+
+// 4. LLVM IR → Object file
+let objFile = compileLLVMIR llvmIR
+
+// 5. Link with runtime
+let executable = linkWithRuntime objFile
+
+// 6. Run!
+runExecutable executable
+```
+
+**Memory diagram at runtime:**
+
+```
+Stack:
+  %lst3: {1, 0x1000}
+
+Heap (GC-managed):
+  0x1000: ConsCell { head: 1, tail: {1, 0x2000} }
+  0x2000: ConsCell { head: 2, tail: {1, 0x3000} }
+  0x3000: ConsCell { head: 3, tail: {0, null} }
+```
+
+### Summary: Complete Lowering Pass
+
+**구현 완료:**
+
+- [x] FunLangToLLVMPass with all patterns
+- [x] Pattern registration (Closure, Apply, Nil, Cons)
+- [x] Pass manager integration
+- [x] End-to-end list construction
+
+**Pass pipeline:**
+
+1. convert-funlang-to-llvm
+2. convert-func-to-llvm
+3. convert-arith-to-llvm
+4. reconcile-unrealized-casts
+
+**다음 섹션:**
+
+- Common errors and debugging strategies
+
+---
+
+## Common Errors
+
+Lowering pass 구현 시 흔히 발생하는 오류와 해결 방법.
+
+### Error 1: Wrong Cons Cell Size
+
+**증상:**
+
+```
+Runtime segfault when accessing tail
+```
+
+**원인:**
+
+```cpp
+// 잘못된 코드
+uint64_t totalSize = elemSize + 12;  // struct<(i32, ptr)> = 12 bytes?
+// 실제: struct는 alignment 때문에 16 bytes!
+```
+
+**해결:**
+
+```cpp
+// 올바른 코드
+uint64_t tailSize = 16;  // Aligned struct size
+uint64_t totalSize = elemSize + tailSize;
+totalSize = (totalSize + 7) & ~7;  // Align total to 8 bytes
+```
+
+**디버깅:**
+
+```cpp
+// Print sizes in lowering pass
+llvm::errs() << "Element size: " << elemSize << "\n";
+llvm::errs() << "Total cell size: " << totalSize << "\n";
+```
+
+### Error 2: Type Mismatch in Store Operations
+
+**증상:**
+
+```
+error: 'llvm.store' op operand #0 type 'i32' does not match
+  destination pointer element type '!llvm.struct<(i32, ptr)>'
+```
+
+**원인:**
+
+```cpp
+// 잘못된 GEP - head pointer로 tail을 store
+llvm.store %tail, %head_ptr : !llvm.struct<(i32, ptr)>, !llvm.ptr
+```
+
+**해결:**
+
+```cpp
+// 올바른 GEP offsets
+auto headPtr = builder.create<LLVM::GEPOp>(
+    loc, cellPtr.getType(), cellPtr, ArrayRef<LLVM::GEPArg>{0}, elementType);
+    // ^^^^^^^^ offset 0 for head
+
+auto tailPtr = builder.create<LLVM::GEPOp>(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef<LLVM::GEPArg>{tailOffset}, builder.getI8Type());
+    // ^^^^^^^^^^^^^^^^ byte offset for tail
+```
+
+### Error 3: Missing TypeConverter Rule
+
+**증상:**
+
+```
+error: failed to legalize operation 'funlang.cons'
+  operand #1 type '!funlang.list<i32>' is not legal
+```
+
+**원인:**
+
+TypeConverter에 list type 변환 규칙 없음.
+
+**해결:**
+
+```cpp
+// TypeConverter에 추가
+addConversion([](funlang::FunLangListType type) {
+  auto ctx = type.getContext();
+  auto i32Type = IntegerType::get(ctx, 32);
+  auto ptrType = LLVM::LLVMPointerType::get(ctx);
+  return LLVM::LLVMStructType::getLiteral(ctx, {i32Type, ptrType});
+});
+```
+
+### Error 4: GEP Index Confusion
+
+**증상:**
+
+```
+Runtime crash: accessing wrong memory offset
+```
+
+**원인:**
+
+```cpp
+// Element index vs byte offset 혼동
+auto tailPtr = builder.create<LLVM::GEPOp>(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef<LLVM::GEPArg>{1},  // Element index 1? No!
+    structType);
+```
+
+**해결:**
+
+```cpp
+// Byte offset 사용
+uint64_t tailOffset = (elemSize + 7) & ~7;
+auto tailPtr = builder.create<LLVM::GEPOp>(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef<LLVM::GEPArg>{static_cast<int32_t>(tailOffset)},
+    builder.getI8Type());  // i8 for byte-addressable
+```
+
+**GEP modes:**
+
+- **Type-based**: `GEP ptr, [index]` with element type → element index
+- **Byte-based**: `GEP ptr, [offset]` with i8 type → byte offset
+
+### Debugging Strategies
+
+**Strategy 1: Print intermediate MLIR**
+
+```bash
+mlir-opt input.mlir \
+  --convert-funlang-to-llvm \
+  --print-ir-after-all \
+  -o output.mlir
+```
+
+**Strategy 2: Use mlir-opt with debug flags**
+
+```bash
+mlir-opt input.mlir \
+  --convert-funlang-to-llvm \
+  --debug-only=dialect-conversion \
+  --mlir-print-debuginfo
+```
+
+**Strategy 3: Add assertions in lowering patterns**
+
+```cpp
+LogicalResult matchAndRewrite(...) const override {
+  // Check preconditions
+  assert(adaptor.getTail().getType().isa<LLVM::LLVMStructType>() &&
+         "Tail must be converted to struct type");
+
+  // Pattern logic...
+}
+```
+
+**Strategy 4: Test incrementally**
+
+```mlir
+// Test NilOp alone first
+func.func @test_nil() -> !funlang.list<i32> {
+    %nil = funlang.nil : !funlang.list<i32>
+    func.return %nil : !funlang.list<i32>
+}
+
+// Then ConsOp with nil
+func.func @test_cons_nil() -> !funlang.list<i32> {
+    %nil = funlang.nil : !funlang.list<i32>
+    %c1 = arith.constant 1 : i32
+    %cons = funlang.cons %c1, %nil : !funlang.list<i32>
+    func.return %cons : !funlang.list<i32>
+}
+
+// Then multiple cons
+// ...
+```
+
+### Summary: Common Errors
+
+**주요 실수:**
+
+1. Cons cell size 계산 오류 (alignment 무시)
+2. GEP offset 혼동 (element index vs byte offset)
+3. TypeConverter 규칙 누락
+4. Store type mismatch
+
+**디버깅 도구:**
+
+- `mlir-opt --print-ir-after-all`
+- `--debug-only=dialect-conversion`
+- Assertions in pattern code
+- Incremental testing
+
+**다음 섹션:**
+
+- Chapter 18 summary and Chapter 19 preview
+
+---
+
+## Summary and Chapter 19 Preview
+
+### Chapter 18 복습
+
+**이 장에서 구현한 것:**
+
+1. **List Representation Design**
+   - Tagged union: `!llvm.struct<(i32, ptr)>`
+   - Cons cells: Heap-allocated `{element, tail}` structs
+   - Immutability and structural sharing
+
+2. **FunLang List Type**
+   - `!funlang.list<T>` parameterized type
+   - TableGen definition with type parameter
+   - C API shim and F# bindings
+
+3. **funlang.nil Operation**
+   - Empty list constructor
+   - Pure trait (no allocation)
+   - Lowering: constant struct {0, null}
+
+4. **funlang.cons Operation**
+   - Cons cell constructor
+   - Type-safe head/tail constraints
+   - Lowering: GC_malloc + GEP + store
+
+5. **TypeConverter Extension**
+   - `!funlang.list<T>` → `!llvm.struct<(i32, ptr)>`
+   - Element type erasure at runtime
+   - Integration with FunLangTypeConverter
+
+6. **Lowering Patterns**
+   - NilOpLowering: InsertValueOp for struct construction
+   - ConsOpLowering: GC_malloc + GEP + store + InsertValueOp
+   - Complete pass integration
+
+### List Operations의 의의
+
+**Before Chapter 18:**
+
+```mlir
+// 리스트 표현 불가
+// 패턴 매칭 불가
+```
+
+**After Chapter 18:**
+
+```mlir
+// 리스트 생성 가능
+%nil = funlang.nil : !funlang.list<i32>
+%lst = funlang.cons %head, %tail : !funlang.list<i32>
+
+// Chapter 19에서 패턴 매칭 추가:
+%result = funlang.match %lst : !funlang.list<i32> -> i32 {
+  ^nil: ...
+  ^cons(%h, %t): ...
+}
+```
+
+### 성공 기준 달성 확인
+
+- [x] List의 메모리 표현(tagged union)을 이해한다
+- [x] `!funlang.list<T>` 타입을 TableGen으로 정의할 수 있다
+- [x] `funlang.nil`과 `funlang.cons`의 동작 원리를 안다
+- [x] TypeConverter로 FunLang → LLVM 타입 변환을 구현할 수 있다
+- [x] Lowering pattern으로 operation을 LLVM dialect로 변환할 수 있다
+- [x] Chapter 19에서 `funlang.match` 구현을 시작할 준비가 된다
+
+### Chapter 19 Preview: Match Compilation
+
+**Chapter 19의 목표:**
+
+`funlang.match` operation으로 패턴 매칭을 MLIR로 표현하고, decision tree 알고리즘을 lowering으로 구현한다.
+
+**funlang.match operation (preview):**
+
+```mlir
+%sum = funlang.match %list : !funlang.list<i32> -> i32 {
+  ^nil:
+    %zero = arith.constant 0 : i32
+    funlang.yield %zero : i32
+
+  ^cons(%head: i32, %tail: !funlang.list<i32>):
+    %sum_tail = func.call @sum_list(%tail) : (!funlang.list<i32>) -> i32
+    %result = arith.addi %head, %sum_tail : i32
+    funlang.yield %result : i32
+}
+```
+
+**Lowering strategy:**
+
+```mlir
+// funlang.match lowering → scf.if + tag dispatch
+
+// Extract tag
+%tag_ptr = llvm.getelementptr %list[0] : ...
+%tag = llvm.load %tag_ptr : ...
+
+// Dispatch
+%is_nil = arith.cmpi eq, %tag, %c0 : i32
+%result = scf.if %is_nil -> i32 {
+  // Nil case
+  %zero = arith.constant 0 : i32
+  scf.yield %zero : i32
+} else {
+  // Cons case: extract head and tail
+  %data_ptr = llvm.getelementptr %list[1] : ...
+  %cell = llvm.load %data_ptr : ...
+  %head = llvm.load %head_ptr : ...
+  %tail = llvm.load %tail_ptr : ...
+
+  // Execute cons body
+  %sum_tail = func.call @sum_list(%tail) : ...
+  %result = arith.addi %head, %sum_tail : i32
+  scf.yield %result : i32
+}
+```
+
+**Chapter 19 구조:**
+
+1. **funlang.match Operation**: Region-based pattern matching
+2. **MatchOp Lowering**: Decision tree → scf.if/cf.br
+3. **Pattern Decomposition**: Tag dispatch + field extraction
+4. **Exhaustiveness Checking**: Verification at operation level
+5. **End-to-End Examples**: sum_list, length, map, filter
+
+### Phase 6 Progress
+
+**Completed:**
+
+- [x] Chapter 17: Pattern Matching Theory (decision tree algorithm)
+- [x] Chapter 18: List Operations (nil, cons, lowering)
+
+**Remaining:**
+
+- [ ] Chapter 19: Match Compilation (funlang.match operation and lowering)
+- [ ] Chapter 20: Functional Programs (실전 예제: map, filter, fold)
+
+**Phase 6이 완료되면:**
+
+- 완전한 함수형 언어 (closures + pattern matching + data structures)
+- Real-world functional programs 작성 가능
+- Phase 7 (optimizations)의 기반 완성
+
+### 마무리
+
+**Chapter 18에서 배운 핵심 개념:**
+
+1. **Parameterized types**: `!funlang.list<T>` for type safety
+2. **Tagged unions**: Runtime representation of sum types
+3. **GC allocation**: Heap-allocated cons cells
+4. **Type erasure**: Element type as compile-time information
+5. **ConversionPattern**: OpConversionPattern + TypeConverter + OpAdaptor
+
+**Next chapter: Let's implement pattern matching with funlang.match!**

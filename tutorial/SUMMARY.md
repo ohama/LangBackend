@@ -22,6 +22,7 @@
 - [Chapter 15: 커스텀 Operations](15-custom-operations.md)
 - [Chapter 16: Lowering Passes](16-lowering-passes.md)
 - [Chapter 17: Pattern Matching Theory](17-pattern-matching-theory.md)
+- [Chapter 18: List Operations](18-list-operations.md)
 
 # 부록
 
