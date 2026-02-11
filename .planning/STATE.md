@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 6 of 7 (Pattern Matching & Data Structures)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-11 — Completed 06-01-PLAN.md (Pattern Matching Theory)
+Last activity: 2026-02-11 — Completed 06-02-PLAN.md (List Operations)
 
-Progress: [█████████████░] 125% (15/12 estimated total plans)
+Progress: [█████████████░] 133% (16/12 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 7 min
-- Total execution time: 1.7 hours
+- Total plans completed: 16
+- Average duration: 8 min
+- Total execution time: 1.8 hours
 
 **By Phase:**
 
@@ -32,15 +32,15 @@ Progress: [█████████████░] 125% (15/12 estimated tot
 | 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
 | 4 - Closures & Higher-Order | 2/2 | 11 min | 6 min |
 | 5 - Custom MLIR Dialect | 3/3 | 29 min | 10 min |
-| 6 - Pattern Matching | 1/4 | 7 min | 7 min |
+| 6 - Pattern Matching | 2/4 | 17 min | 9 min |
 
 **Recent Trend:**
-- Last plan: 06-01 (7 min)
+- Last plan: 06-02 (10 min)
+- Previous: 06-01 (7 min)
 - Previous: 05-03 (8 min)
 - Previous: 05-02 (12 min)
 - Previous: 05-01 (9 min)
-- Previous: 04-02 (6 min)
-- Trend: Consistent 7-10min for documentation plans, Phase 6 started with theory
+- Trend: Consistent 7-10min for documentation plans, Phase 6 on track
 
 *Updated after each plan completion*
 
@@ -138,6 +138,12 @@ Recent decisions affecting current work:
 - [06-01]: Left-to-right column selection heuristic for FunLang (simple and predictable)
 - [06-01]: Complete constructor set optimization (no default branch for {Nil, Cons})
 - [06-01]: Simple exhaustiveness error messages for Phase 6 (detailed analysis deferred)
+- [06-02]: !funlang.list<T> as parameterized type (required for type safety in pattern matching)
+- [06-02]: Tagged union representation: !llvm.struct<(i32, ptr)> for Nil/Cons discrimination
+- [06-02]: Element type erasure at runtime (compile-time information only)
+- [06-02]: GC allocation for all cons cells (no stack optimization in Phase 6)
+- [06-02]: NilOp with Pure trait (enables CSE optimization)
+- [06-02]: ConsOp without Pure trait (memory allocation side effect)
 
 ### Pending Todos
 
@@ -175,10 +181,16 @@ None yet.
 - Pattern matrix representation with specialization/defaulting operations
 - Exhaustiveness checking via empty matrix detection
 - Foundation for Chapter 18-19 MLIR implementation (list ops, match compilation)
+- Plan 06-02 COMPLETE: List operations (Chapter 18 - 3577 lines)
+- !funlang.list<T> parameterized type with type safety
+- funlang.nil and funlang.cons operations
+- TypeConverter for list type → tagged union lowering
+- NilOpLowering and ConsOpLowering patterns
+- Complete GC-allocated list data structure
 
 ## Session Continuity
 
-Last session: 2026-02-11T01:05:47Z
-Stopped at: Completed 06-01-PLAN.md (Pattern Matching Theory)
+Last session: 2026-02-11T01:19:33Z
+Stopped at: Completed 06-02-PLAN.md (List Operations)
 Resume file: None
-Next: Phase 6 continues - 06-02 (List Operations: funlang.nil, funlang.cons)
+Next: Phase 6 continues - 06-03 (Match Compilation: funlang.match operation)
