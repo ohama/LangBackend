@@ -127,8 +127,8 @@ Plans:
 - [x] 06-02-PLAN.md — Chapter 18: List Operations (funlang.nil, funlang.cons, list representation, TypeConverter)
 - [x] 06-03-PLAN.md — Chapter 19: Match Compilation (funlang.match operation, SCF lowering, region handling)
 - [x] 06-04-PLAN.md — Chapter 20: Functional Programs (map, filter, fold, complete examples)
-- [ ] 06-05-PLAN.md — Gap Closure: Literal and wildcard pattern compilation (PMTC-01, PMTC-02)
-- [ ] 06-06-PLAN.md — Gap Closure: Tuple type and pattern matching (PMTC-05)
+- [x] 06-05-PLAN.md — Gap Closure: Literal and wildcard pattern compilation (PMTC-01, PMTC-02)
+- [x] 06-06-PLAN.md — Gap Closure: Tuple type and pattern matching (PMTC-05)
 
 ### Phase 7: Optimization & Polish
 **Goal**: Reader can implement optimization passes and has complete, polished tutorial series
@@ -157,5 +157,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Functions & Recursion | 2/2 | Complete | 2026-02-06 |
 | 4. Closures & Higher-Order Functions | 2/2 | Complete | 2026-02-06 |
 | 5. Custom MLIR Dialect | 3/3 | Complete | 2026-02-06 |
-| 6. Pattern Matching & Data Structures | 4/6 | Gap Closure | 2026-02-11 |
+| 6. Pattern Matching & Data Structures | 6/6 | Complete | 2026-02-11 |
 | 7. Optimization & Polish | 0/TBD | Not started | - |
