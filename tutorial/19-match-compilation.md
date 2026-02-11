@@ -3121,6 +3121,438 @@ module {
 
 ---
 
+## 튜플 패턴 매칭 (Tuple Pattern Matching)
+
+Chapter 18에서 우리는 `!funlang.tuple<T1, T2, ...>` 타입과 `funlang.make_tuple` 연산을 구현했다. 이제 튜플에 대한 패턴 매칭을 구현하자.
+
+### 튜플 패턴의 특성 (Tuple Pattern Characteristics)
+
+**튜플 패턴은 리스트 패턴과 근본적으로 다르다:**
+
+| 특성 | 리스트 패턴 | 튜플 패턴 |
+|------|-------------|-----------|
+| 태그 검사 | 필요 (Nil/Cons 구분) | 불필요 |
+| 패턴 case 수 | 최소 2개 (Nil, Cons) | 항상 1개 |
+| 매칭 실패 가능성 | 있음 | 없음 (항상 매칭) |
+| Lowering 대상 | scf.index_switch | 직접 extractvalue |
+| 제어 흐름 | 조건부 분기 | 선형 |
+
+**핵심 통찰:**
+
+튜플 패턴은 본질적으로 **구조 분해(destructuring)**다. 항상 매칭이 성공하므로 조건 분기가 필요 없다.
+
+```fsharp
+// 리스트: 두 가지 가능성, 조건 분기 필요
+match list with
+| [] -> expr1       // Nil case
+| x :: xs -> expr2  // Cons case
+
+// 튜플: 한 가지 가능성, 조건 분기 불필요
+match pair with
+| (x, y) -> x + y   // 항상 이 case로
+```
+
+### funlang.match 튜플 지원 (Tuple Support in funlang.match)
+
+**튜플 패턴 매칭의 MLIR 표현:**
+
+```mlir
+// 소스 코드: let (x, y) = pair in x + y
+%pair = funlang.make_tuple(%a, %b) : !funlang.tuple<i32, i32>
+
+%sum = funlang.match %pair : !funlang.tuple<i32, i32> -> i32 {
+  ^case(%x: i32, %y: i32):
+    %result = arith.addi %x, %y : i32
+    funlang.yield %result : i32
+}
+```
+
+**리스트 패턴과 비교:**
+
+```mlir
+// 리스트 패턴: 두 case
+%result = funlang.match %list : !funlang.list<i32> -> i32 {
+  ^nil:
+    %zero = arith.constant 0 : i32
+    funlang.yield %zero : i32
+  ^cons(%head: i32, %tail: !funlang.list<i32>):
+    // ...
+    funlang.yield %sum : i32
+}
+
+// 튜플 패턴: 한 case만
+%result = funlang.match %tuple : !funlang.tuple<i32, i32> -> i32 {
+  ^case(%x: i32, %y: i32):
+    // 항상 이 case 실행
+    funlang.yield %result : i32
+}
+```
+
+**튜플 패턴의 핵심:**
+
+1. **단일 case**: 분기 불필요
+2. **block arguments = 구조 분해된 원소**: `(%x, %y)` → `^case(%x: i32, %y: i32)`
+3. **원소 개수 = block argument 개수**: 타입의 arity와 일치
+
+### 튜플 로우어링 구현 (Tuple Lowering Implementation)
+
+**핵심 차이점:**
+
+리스트 패턴 lowering:
+1. 태그 추출 (extractvalue [0])
+2. scf.index_switch로 분기
+3. 각 case에서 데이터 추출
+
+튜플 패턴 lowering:
+1. 각 원소 추출 (extractvalue [i])
+2. 원래 block의 operation들을 inline
+3. 분기 없음!
+
+**TupleMatchLowering 패턴:**
+
+```cpp
+// 튜플 패턴 매칭의 lowering은 특별 처리가 필요
+// MatchOpLowering 내부에서 튜플 타입 감지 시
+
+LogicalResult matchTuplePattern(MatchOp op, OpAdaptor adaptor,
+                                 ConversionPatternRewriter &rewriter) {
+  Location loc = op.getLoc();
+  Value input = adaptor.getInput();
+
+  // 튜플은 단일 case만 가짐
+  assert(op.getCases().size() == 1 && "Tuple match must have exactly one case");
+
+  Region& caseRegion = op.getCases().front();
+  Block& caseBlock = caseRegion.front();
+
+  // 구조체에서 각 원소 추출
+  auto structType = input.getType().cast<LLVM::LLVMStructType>();
+  IRMapping mapper;
+
+  for (size_t i = 0; i < caseBlock.getNumArguments(); ++i) {
+    Value extracted = rewriter.create<LLVM::ExtractValueOp>(
+        loc, structType.getBody()[i], input, i);
+    mapper.map(caseBlock.getArgument(i), extracted);
+  }
+
+  // 원래 block의 operations를 현재 위치에 inline
+  for (Operation& op : caseBlock.getOperations()) {
+    if (auto yieldOp = dyn_cast<YieldOp>(&op)) {
+      // yield의 값으로 match 결과를 대체
+      Value yieldValue = mapper.lookupOrDefault(yieldOp.getValue());
+      rewriter.replaceOp(op, yieldValue);
+    } else {
+      rewriter.clone(op, mapper);
+    }
+  }
+
+  return success();
+}
+```
+
+**Lowering 결과 비교:**
+
+```mlir
+// Before lowering (FunLang)
+%sum = funlang.match %pair : !funlang.tuple<i32, i32> -> i32 {
+  ^case(%x: i32, %y: i32):
+    %result = arith.addi %x, %y : i32
+    funlang.yield %result : i32
+}
+
+// After lowering (LLVM dialect) - 분기 없음!
+%x = llvm.extractvalue %pair[0] : !llvm.struct<(i32, i32)>
+%y = llvm.extractvalue %pair[1] : !llvm.struct<(i32, i32)>
+%sum = arith.addi %x, %y : i32
+```
+
+**리스트 패턴 lowering과 비교:**
+
+```mlir
+// 리스트: scf.index_switch 필요
+%tag = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%tagIndex = arith.index_cast %tag : i32 to index
+%result = scf.index_switch %tagIndex : index -> i32
+case 0 {  // Nil
+  %zero = arith.constant 0 : i32
+  scf.yield %zero : i32
+}
+case 1 {  // Cons
+  %ptr = llvm.extractvalue %list[1] : !llvm.struct<(i32, ptr)>
+  %head = llvm.load %ptr : !llvm.ptr -> i32
+  // ...
+  scf.yield %sum : i32
+}
+default {
+  llvm.unreachable
+}
+
+// 튜플: extractvalue만으로 충분
+%x = llvm.extractvalue %pair[0] : !llvm.struct<(i32, i32)>
+%y = llvm.extractvalue %pair[1] : !llvm.struct<(i32, i32)>
+%result = arith.addi %x, %y : i32
+```
+
+### 중첩 패턴 (Nested Patterns)
+
+**튜플 안에 리스트가 있는 경우:**
+
+```fsharp
+// 두 리스트를 튜플로 묶어서 동시에 패턴 매칭
+let rec zip xs ys =
+  match (xs, ys) with
+  | ([], _) -> []
+  | (_, []) -> []
+  | (x :: xs', y :: ys') -> (x, y) :: zip xs' ys'
+```
+
+**MLIR 표현:**
+
+```mlir
+// 1단계: 튜플 구조 분해
+%tuple = funlang.make_tuple(%xs, %ys) : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+
+// 2단계: 튜플에서 두 리스트 추출
+%xs_extracted = ... extractvalue [0] ...
+%ys_extracted = ... extractvalue [1] ...
+
+// 3단계: 첫 번째 리스트에 대해 패턴 매칭
+%result = funlang.match %xs_extracted : !funlang.list<i32> -> ... {
+  ^nil:
+    // 빈 리스트 반환
+  ^cons(%x: i32, %xs_tail: !funlang.list<i32>):
+    // 4단계: 두 번째 리스트에 대해 중첩 패턴 매칭
+    %inner = funlang.match %ys_extracted : !funlang.list<i32> -> ... {
+      ^nil:
+        // 빈 리스트 반환
+      ^cons(%y: i32, %ys_tail: !funlang.list<i32>):
+        // (x, y) :: zip xs_tail ys_tail
+        %pair = funlang.make_tuple(%x, %y) : !funlang.tuple<i32, i32>
+        %rest = func.call @zip(%xs_tail, %ys_tail) : ...
+        %result = funlang.cons %pair, %rest : ...
+        funlang.yield %result
+    }
+    funlang.yield %inner
+}
+```
+
+**중첩 패턴 lowering 전략:**
+
+1. **외부에서 내부로**: 가장 바깥 패턴부터 lowering
+2. **튜플 먼저**: 튜플 분해는 조건 없이 extractvalue
+3. **리스트는 분기**: 각 리스트 패턴은 scf.index_switch 필요
+4. **깊이 우선**: 내부 패턴이 완전히 lowering된 후 외부로
+
+### MatchOpLowering 확장: 튜플 지원
+
+**기존 MatchOpLowering에 튜플 분기 추가:**
+
+```cpp
+class MatchOpLowering : public OpConversionPattern<MatchOp> {
+public:
+  LogicalResult matchAndRewrite(MatchOp op, OpAdaptor adaptor,
+                                 ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value input = adaptor.getInput();
+    Type inputType = op.getInput().getType();
+
+    // 튜플인지 확인
+    if (auto tupleType = inputType.dyn_cast<funlang::TupleType>()) {
+      return matchTuplePattern(op, adaptor, rewriter, tupleType);
+    }
+
+    // 리스트인 경우 기존 로직 사용
+    if (auto listType = inputType.dyn_cast<funlang::ListType>()) {
+      return matchListPattern(op, adaptor, rewriter, listType);
+    }
+
+    return op.emitError("unsupported match input type");
+  }
+
+private:
+  LogicalResult matchTuplePattern(MatchOp op, OpAdaptor adaptor,
+                                   ConversionPatternRewriter &rewriter,
+                                   funlang::TupleType tupleType) const {
+    Location loc = op.getLoc();
+    Value input = adaptor.getInput();
+
+    // 튜플은 단일 case만 허용
+    if (op.getCases().size() != 1) {
+      return op.emitError("tuple match must have exactly one case");
+    }
+
+    Region& caseRegion = op.getCases().front();
+    Block& caseBlock = caseRegion.front();
+
+    // block argument 개수 검증
+    if (caseBlock.getNumArguments() != tupleType.getNumElements()) {
+      return op.emitError() << "tuple arity mismatch: type has "
+                            << tupleType.getNumElements() << " elements but pattern has "
+                            << caseBlock.getNumArguments();
+    }
+
+    // 각 원소 추출 및 매핑
+    auto structType = getTypeConverter()->convertType(tupleType);
+    IRMapping mapper;
+
+    for (size_t i = 0; i < caseBlock.getNumArguments(); ++i) {
+      auto elemType = structType.cast<LLVM::LLVMStructType>().getBody()[i];
+      Value extracted = rewriter.create<LLVM::ExtractValueOp>(
+          loc, elemType, input, i);
+      mapper.map(caseBlock.getArgument(i), extracted);
+    }
+
+    // 현재 위치에 operations inline
+    Value resultValue;
+    for (Operation& caseOp : caseBlock.getOperations()) {
+      if (auto yieldOp = dyn_cast<YieldOp>(&caseOp)) {
+        resultValue = mapper.lookupOrDefault(yieldOp.getValue());
+      } else {
+        rewriter.clone(caseOp, mapper);
+      }
+    }
+
+    rewriter.replaceOp(op, resultValue);
+    return success();
+  }
+
+  LogicalResult matchListPattern(MatchOp op, OpAdaptor adaptor,
+                                  ConversionPatternRewriter &rewriter,
+                                  funlang::ListType listType) const {
+    // 기존 리스트 패턴 매칭 로직...
+    // (scf.index_switch 사용)
+  }
+};
+```
+
+### 리스트 vs 튜플 패턴 매칭 종합 비교
+
+| 구분 | 리스트 패턴 | 튜플 패턴 |
+|------|-------------|-----------|
+| **타입** | `!funlang.list<T>` | `!funlang.tuple<T1, T2, ...>` |
+| **case 수** | 2개 이상 (Nil, Cons, ...) | 정확히 1개 |
+| **태그 검사** | 필요 (extractvalue [0]) | 불필요 |
+| **분기** | scf.index_switch | 없음 |
+| **데이터 추출** | ptr load 필요 | extractvalue만 |
+| **패턴 변수 바인딩** | 조건부 (case 안에서) | 무조건 |
+| **default case** | 있음 (unreachable) | 없음 |
+| **lowering 복잡도** | 높음 | 낮음 |
+| **최종 코드 크기** | 크다 (분기 포함) | 작다 (선형) |
+
+**생성되는 코드 비교:**
+
+```mlir
+// 리스트 패턴 매칭 결과 (복잡)
+%tag = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%idx = arith.index_cast %tag : i32 to index
+%result = scf.index_switch %idx : index -> i32
+case 0 {  // ~10 lines
+  ...
+  scf.yield %val0 : i32
+}
+case 1 {  // ~15 lines
+  ...
+  scf.yield %val1 : i32
+}
+default {  // ~3 lines
+  llvm.unreachable
+}
+
+// 튜플 패턴 매칭 결과 (단순)
+%x = llvm.extractvalue %pair[0] : !llvm.struct<(i32, i32)>
+%y = llvm.extractvalue %pair[1] : !llvm.struct<(i32, i32)>
+// ... operations inline ...
+```
+
+### 튜플 패턴의 최적화 기회
+
+**튜플 패턴 매칭은 이미 최적화되어 있다:**
+
+1. **분기 제거**: 조건문 없이 바로 연산
+2. **Inlining 자동**: 별도 함수 호출 없음
+3. **레지스터 친화적**: 작은 튜플은 레지스터에 유지
+
+**추가 최적화 가능:**
+
+```mlir
+// Before: 사용하지 않는 원소도 추출
+%pair = funlang.make_tuple(%a, %b) : !funlang.tuple<i32, i32>
+%result = funlang.match %pair {
+  ^case(%x: i32, %y: i32):  // %y 사용 안 함
+    funlang.yield %x : i32
+}
+
+// After: Dead code elimination으로 %y 추출 제거
+%x = llvm.extractvalue %pair[0] : !llvm.struct<(i32, i32)>
+// %y 추출 생략됨
+%result = %x
+```
+
+### 와일드카드 패턴 (Wildcard Pattern)
+
+**사용하지 않는 원소는 와일드카드로:**
+
+```fsharp
+// 첫 번째 원소만 사용
+let fst pair = match pair with (x, _) -> x
+
+// 두 번째 원소만 사용
+let snd pair = match pair with (_, y) -> y
+```
+
+**MLIR에서 와일드카드:**
+
+```mlir
+// 와일드카드는 block argument가 없음
+%fst = funlang.match %pair : !funlang.tuple<i32, i32> -> i32 {
+  ^case(%x: i32):  // %y 자리에 block argument 없음 (또는 unused)
+    funlang.yield %x : i32
+}
+```
+
+**Lowering 시 최적화:**
+
+```cpp
+// 와일드카드 패턴 처리
+for (size_t i = 0; i < tupleType.getNumElements(); ++i) {
+  BlockArgument arg = caseBlock.getArgument(i);
+  if (!arg.use_empty()) {  // 사용되는 경우에만 추출
+    Value extracted = rewriter.create<LLVM::ExtractValueOp>(...);
+    mapper.map(arg, extracted);
+  }
+  // 와일드카드 (미사용)면 extractvalue 생략
+}
+```
+
+### Summary: 튜플 패턴 매칭
+
+**구현 완료:**
+
+- [x] 튜플 패턴의 특성 이해 (단일 case, 분기 없음)
+- [x] funlang.match에서 튜플 타입 지원
+- [x] MatchOpLowering에서 튜플/리스트 분기 처리
+- [x] extractvalue 체인으로 원소 추출
+- [x] 분기 없이 inline lowering
+- [x] 중첩 패턴 (튜플 + 리스트) 처리 전략
+- [x] 와일드카드 패턴과 dead code elimination
+
+**튜플 패턴 vs 리스트 패턴:**
+
+| 측면 | 리스트 | 튜플 |
+|------|--------|------|
+| 패턴 case | 다중 | 단일 |
+| 제어 흐름 | scf.index_switch | 선형 |
+| 태그 검사 | 필요 | 불필요 |
+| Lowering | 복잡 | 단순 |
+| 생성 코드 | 분기 포함 | extractvalue만 |
+
+**다음:**
+
+- Chapter 20에서 튜플을 활용한 실제 프로그램 (zip, fst/snd)
+- 중첩 튜플과 포인트 예제
+
+---
+
 ## Conclusion
 
 **Chapter 19 완료!**
@@ -3133,13 +3565,14 @@ module {
 2. **Multi-stage lowering**: FunLang → SCF → CF → LLVM (progressive refinement)
 3. **IRMapping**: Block arguments를 실제 values로 remapping
 4. **Builder callback pattern**: F#에서 regions를 구축하는 방법
+5. **튜플 패턴 매칭**: 분기 없는 extractvalue 기반 lowering
 
 **Phase 6 진행 상황:**
 
 - ✅ Chapter 17: Pattern matching theory (Decision tree algorithm)
-- ✅ Chapter 18: List operations (funlang.nil, funlang.cons)
-- ✅ Chapter 19: Match compilation (funlang.match, lowering to SCF)
-- ⏭️ Chapter 20: Functional programs (map, filter, fold - realistic examples)
+- ✅ Chapter 18: List operations (funlang.nil, funlang.cons, funlang.tuple, funlang.make_tuple)
+- ✅ Chapter 19: Match compilation (funlang.match, 리스트/튜플 패턴 lowering)
+- ⏭️ Chapter 20: Functional programs (map, filter, fold, zip - realistic examples)
 
 **다음 장에서 만나요!**
 
