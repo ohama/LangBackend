@@ -4,6 +4,18 @@
 
 A documentation-only tutorial series (10-15 markdown chapters) that teaches how to build an MLIR-based compiler backend for FunLang. The reader already knows FunLang's AST and type system from LangTutorial. Each chapter incrementally adds a language feature to compile, progressing from simple arithmetic to a full native binary via MLIR/LLVM.
 
+## Current Milestone: v2.0 Compiler Implementation
+
+**Goal:** Implement the actual FunLang → MLIR compiler based on tutorial documentation (Phase 1-4 coverage)
+
+**Target features:**
+- Arithmetic expressions (add, sub, mul, div, comparisons)
+- Let bindings with shadowing support
+- If-then-else control flow
+- Named functions and recursion
+- Closures and higher-order functions
+- E2E pipeline: FunLang source → MLIR → LLVM → native binary
+
 ## Core Value
 
 Each chapter produces a working compiler for all features covered so far — the reader can compile and run at every step, not just at the end.
@@ -62,4 +74,4 @@ Each chapter produces a working compiler for all features covered so far — the
 | Tutorial 한글 작성 | 독자 대상이 한국어 사용자, 접근성 향상 | Accepted |
 
 ---
-*Last updated: 2026-02-05 after initialization*
+*Last updated: 2026-02-11 — v2.0 Compiler Implementation milestone started*

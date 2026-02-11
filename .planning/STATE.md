@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-05)
+See: .planning/PROJECT.md (updated 2026-02-11)
 
-**Core value:** Each chapter produces a working compiler for all features covered so far
-**Current focus:** Phase 1 Complete → Phase 2 - Core Language Basics
+**Core value:** Implement working FunLang → MLIR compiler based on tutorial
+**Current focus:** v2.0 Compiler Implementation (Phase 1-4 features)
 
 ## Current Position
 
-Phase: 6 of 7 (Pattern Matching & Data Structures)
-Plan: 6 of 6 in current phase (includes gap closure)
-Status: Phase 6 complete with all gap closures
-Last activity: 2026-02-11 — Completed 06-06-PLAN.md (Gap Closure: Tuple Patterns)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v2.0
+Last activity: 2026-02-11 — Milestone v2.0 started
 
-Progress: [██████████████] 167% (20/12 estimated total plans)
+Progress: [░░░░░░░░░░░░░░] 0% (new milestone)
 
 ## Performance Metrics
 
