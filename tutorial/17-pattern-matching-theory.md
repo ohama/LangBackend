@@ -1529,3 +1529,1050 @@ Rows 1 (`Nil`) and 2 (`Cons`) 제거됨 (constructor patterns).
 
 **Next:** Specialization과 defaulting을 결합해서 complete compilation algorithm을 만든다.
 
+---
+
+## Complete Compilation Algorithm
+
+이제 specialization과 defaulting을 결합해서 **complete decision tree compilation algorithm**을 구성한다.
+
+### Algorithm Overview
+
+**Recursive function:**
+
+```
+compile : PatternMatrix × OccurrenceVector → DecisionTree
+```
+
+**Input:**
+
+- Pattern matrix `P` (n rows × m columns)
+- Occurrence vector `π` (m elements, scrutinee access paths)
+
+**Output:**
+
+- Decision tree `T`
+
+**Strategy:**
+
+1. **Base cases**: Empty matrix, irrefutable first row
+2. **Recursive case**: Select column, specialize on constructors, recurse
+3. **Default case**: Default on column, recurse
+
+### Base Case 1: Empty Matrix
+
+**Condition:**
+
+```python
+if P.is_empty():
+```
+
+**Meaning:**
+
+No pattern rows remain. 어떤 pattern도 매칭되지 않는다.
+
+**Action:**
+
+```python
+return FailureLeaf()
+```
+
+**MLIR equivalent:**
+
+```mlir
+// Non-exhaustive match error
+llvm.call @match_failure() : () -> ()
+llvm.unreachable
+```
+
+**Example:**
+
+```
+Pattern matrix:
+(empty)
+```
+
+Input: `Cons(1, Nil)`
+
+No patterns → **match failure**
+
+### Base Case 2: Irrefutable First Row
+
+**Condition:**
+
+```python
+if all(p.is_wildcard or p.is_variable for p in P[0]):
+```
+
+**Meaning:**
+
+첫 번째 row의 모든 patterns가 wildcard 또는 variable이다. 이 row는 **항상 매칭**된다.
+
+**Action:**
+
+```python
+return SuccessLeaf(P[0].action)
+```
+
+**Example:**
+
+```
+Pattern matrix:
+| _  _  →  a1
+| ... (more rows, but unreachable)
+```
+
+Any input → **select action a1**
+
+**Unreachable rows:**
+
+첫 번째 irrefutable row 이후의 rows는 **절대 실행 안 됨**.
+
+```fsharp
+match list with
+| _ -> 0
+| Nil -> 1  // Warning: Unreachable pattern
+```
+
+Compiler warning: "Unreachable pattern (row 2)"
+
+### Recursive Case: Constructor Test
+
+**Condition:**
+
+```python
+if P is not empty and first row has constructors:
+```
+
+**Steps:**
+
+1. **Select column**: 어느 occurrence를 테스트할지 선택
+2. **Get constructors**: 그 column에 등장하는 constructors 수집
+3. **Specialize**: 각 constructor에 대해 specialized matrix 생성, recurse
+4. **Default**: Wildcard rows로 default matrix 생성, recurse
+
+**Pseudocode:**
+
+```python
+def compile(P, π):
+    # Base case 1: Empty matrix
+    if not P:
+        return Failure()
+
+    # Base case 2: Irrefutable first row
+    if is_irrefutable(P[0]):
+        return Success(P[0].action)
+
+    # Recursive case: Constructor test
+    column = select_column(P, π)
+    constructors = get_constructors(P, column)
+
+    # Build switch node
+    branches = {}
+    for c in constructors:
+        # Specialize on constructor c
+        P_c = specialize(P, column, c)
+        π_c = specialize_occurrences(π, column, c)
+        branches[c] = compile(P_c, π_c)
+
+    # Default branch (wildcard rows)
+    P_default = default(P, column)
+    π_default = default_occurrences(π, column)
+    default_branch = compile(P_default, π_default)
+
+    return Switch(π[column], branches, default_branch)
+```
+
+### Column Selection Heuristic
+
+**문제:** 여러 columns가 있을 때, 어느 column을 먼저 테스트하는가?
+
+**Heuristic 1: Left-to-right (simple)**
+
+```python
+def select_column(P, π):
+    return 0  # Always test first column
+```
+
+**장점:** 간단, 예측 가능
+**단점:** 비효율적일 수 있음 (redundant tests)
+
+**Heuristic 2: Needed by most rows (Maranget)**
+
+```python
+def select_column(P, π):
+    """Select column needed by most rows (first constructor pattern)"""
+    for col in range(len(π)):
+        needed_count = sum(1 for row in P if not row[col].is_wildcard)
+        if needed_count > 0:
+            return col
+    return 0  # All wildcards, any column works
+```
+
+**의미:**
+
+- Constructor pattern이 가장 많은 column 선택
+- Wildcards는 어떤 constructor도 요구 안 함 (skip 가능)
+
+**Example:**
+
+```
+Columns: [c1, c2]
+
+| _     Cons(x, _)  →  a1  // c1 not needed, c2 needed
+| Nil   _           →  a2  // c1 needed, c2 not needed
+| _     _           →  a3  // neither needed
+```
+
+- c1 needed by: 1 row
+- c2 needed by: 1 row
+- Tie → select c1 (left-to-right tie-breaker)
+
+**Heuristic 3: Minimize combined row count (optimal)**
+
+```python
+def select_column(P, π):
+    """Select column that minimizes total specialized matrix sizes"""
+    best_column = 0
+    min_cost = float('inf')
+
+    for col in range(len(π)):
+        constructors = get_constructors(P, col)
+        cost = sum(len(specialize(P, col, c)) for c in constructors)
+        if cost < min_cost:
+            min_cost = cost
+            best_column = col
+
+    return best_column
+```
+
+**의미:** Specialized matrices의 크기 합이 최소인 column 선택
+
+**Tradeoff:** 계산 비용이 높음 (모든 columns에 대해 specialize 시뮬레이션)
+
+**FunLang Phase 6 choice: Heuristic 1 (left-to-right)**
+
+간단하고 예측 가능. 대부분의 FunLang patterns는 단순해서 heuristic 차이가 크지 않다.
+
+### Occurrence Specialization
+
+**Specialization 후 occurrence vector 업데이트:**
+
+**Example: Cons specialization**
+
+```python
+Before: π = [list]
+Constructor: Cons (arity 2)
+
+After: π = [list.head, list.tail]
+```
+
+**Pseudocode:**
+
+```python
+def specialize_occurrences(π, column, constructor):
+    """Expand occurrence at column into suboccurrences"""
+    arity = get_arity(constructor)
+    suboccurrences = [
+        Occurrence(π[column].path + f".{i}")
+        for i in range(arity)
+    ]
+
+    # Replace column with suboccurrences
+    return π[:column] + suboccurrences + π[column+1:]
+```
+
+**Occurrence paths:**
+
+- `list` → `list.0` (head), `list.1` (tail)
+- `list.tail` → `list.1.0` (tail's head), `list.1.1` (tail's tail)
+
+**MLIR code generation:**
+
+```mlir
+// π = [list]
+%list = ...
+
+// π = [list.0, list.1]
+%head = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%tail_ptr = llvm.getelementptr %list[1] : (!llvm.ptr) -> !llvm.ptr
+%tail = llvm.load %tail_ptr : !llvm.ptr -> !llvm.struct<(i32, ptr)>
+```
+
+Occurrence paths는 **extraction code를 생성하는 template**이다.
+
+### Occurrence Defaulting
+
+**Defaulting 후 occurrence vector 업데이트:**
+
+**Example:**
+
+```python
+Before: π = [list, other]
+Default on column 0:
+
+After: π = [other]
+```
+
+**Pseudocode:**
+
+```python
+def default_occurrences(π, column):
+    """Remove occurrence at column"""
+    return π[:column] + π[column+1:]
+```
+
+Defaulting은 column을 제거한다 (더 이상 테스트 안 함).
+
+### Complete Example: List Length Compilation
+
+**Pattern matrix:**
+
+```
+π = [list]
+
+| Nil             →  0
+| Cons(head, tail) →  1 + length tail
+```
+
+**Step 1: compile(P, [list])**
+
+- Not empty
+- First row not irrefutable (Nil is constructor)
+- Select column 0
+
+**Step 2: Get constructors**
+
+```python
+constructors = [Nil, Cons]
+```
+
+**Step 3: Specialize on Nil**
+
+```python
+P_nil = specialize(P, 0, Nil)
+π_nil = [list] → []
+```
+
+Result:
+```
+π = []
+
+| →  0
+```
+
+Irrefutable → `Success(0)`
+
+**Step 4: Specialize on Cons**
+
+```python
+P_cons = specialize(P, 0, Cons)
+π_cons = [list] → [list.head, list.tail]
+```
+
+Result:
+```
+π = [list.head, list.tail]
+
+| head  tail  →  1 + length tail
+```
+
+Irrefutable → `Success(1 + length tail)`
+
+**Step 5: Default**
+
+```python
+P_default = default(P, 0)
+```
+
+Result: Empty (no wildcard rows)
+
+`compile(P_default, []) = Failure()`
+
+하지만 Nil + Cons가 complete constructor set이므로 default branch는 unreachable.
+
+**Generated decision tree:**
+
+```
+Switch(list, {
+    Nil: Success(0),
+    Cons: Success(1 + length tail)
+}, Failure())
+```
+
+**MLIR output:**
+
+```mlir
+%tag = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%result = scf.index_switch %tag : i32 -> i32
+case 0 {  // Nil
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+}
+case 1 {  // Cons
+    %data = llvm.extractvalue %list[1] : !llvm.struct<(i32, ptr)>
+    %head = llvm.load %data[0] : !llvm.ptr -> i32
+    %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -> !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -> !llvm.struct<(i32, ptr)>
+
+    %one = arith.constant 1 : i32
+    %len_tail = func.call @length(%tail) : (!funlang.list<i32>) -> i32
+    %result_val = arith.addi %one, %len_tail : i32
+    scf.yield %result_val : i32
+}
+default {
+    llvm.unreachable  // Should never reach (exhaustive)
+}
+```
+
+### Example 2: Nested Pattern Compilation
+
+**Pattern matrix:**
+
+```
+π = [list]
+
+| Cons(x, Nil)          →  "singleton"
+| Cons(x, Cons(y, rest)) →  "at least two"
+| _                     →  "other"
+```
+
+**Step 1: compile(P, [list])**
+
+Select column 0, constructors = [Cons]
+
+**Step 2: Specialize on Cons**
+
+```python
+P_cons = specialize(P, 0, Cons)
+π_cons = [list.head, list.tail]
+```
+
+Result:
+```
+π = [list.head, list.tail]
+
+| x  Nil              →  "singleton"
+| x  Cons(y, rest)    →  "at least two"
+| _  _                →  "other"
+```
+
+**Step 3: compile(P_cons, [list.head, list.tail])**
+
+First row not irrefutable (column 1 has Nil constructor).
+
+Select column 1 (tail), constructors = [Nil, Cons]
+
+**Step 4: Specialize on Nil (column 1)**
+
+```python
+P_cons_nil = specialize(P_cons, 1, Nil)
+π_cons_nil = [list.head]
+```
+
+Result:
+```
+π = [list.head]
+
+| x  →  "singleton"
+| _  →  "other"
+```
+
+First row irrefutable → `Success("singleton")`
+
+**Step 5: Specialize on Cons (column 1)**
+
+```python
+P_cons_cons = specialize(P_cons, 1, Cons)
+π_cons_cons = [list.head, list.tail.head, list.tail.tail]
+```
+
+Result:
+```
+π = [list.head, list.tail.head, list.tail.tail]
+
+| x  y  rest  →  "at least two"
+| _  _  _     →  "other"
+```
+
+First row irrefutable → `Success("at least two")`
+
+**Step 6: Default (column 1)**
+
+```python
+P_cons_default = default(P_cons, 1)
+π_cons_default = [list.head]
+```
+
+Result:
+```
+π = [list.head]
+
+| _  →  "other"
+```
+
+Irrefutable → `Success("other")`
+
+**Step 7: Default on column 0 (original)**
+
+```python
+P_default = default(P, 0)
+π_default = []
+```
+
+Result:
+```
+π = []
+
+| →  "other"
+```
+
+Irrefutable → `Success("other")`
+
+**Generated decision tree:**
+
+```
+Switch(list, {
+    Cons: Switch(list.tail, {
+        Nil: Success("singleton"),
+        Cons: Success("at least two")
+    }, Success("other"))
+}, Success("other"))
+```
+
+**Nested structure:** Cons branch 안에 또 다른 switch (tail test).
+
+---
+
+## Exhaustiveness Checking
+
+Exhaustiveness checking은 decision tree 알고리즘에 **자연스럽게 통합**된다.
+
+### Exhaustiveness 정의
+
+**Exhaustive pattern match:**
+
+모든 가능한 input values가 어떤 pattern과 매칭된다.
+
+**Non-exhaustive pattern match:**
+
+어떤 input value는 어떤 pattern과도 매칭되지 않는다.
+
+**Example: Exhaustive**
+
+```fsharp
+match list with
+| Nil -> 0
+| Cons(_, _) -> 1
+```
+
+모든 list는 Nil 또는 Cons다 → Exhaustive.
+
+**Example: Non-exhaustive**
+
+```fsharp
+match list with
+| Nil -> 0
+// Missing: Cons case
+```
+
+Input `Cons(1, Nil)`은 매칭 안 됨 → Non-exhaustive.
+
+### Empty Matrix = Non-Exhaustive
+
+**Key insight:**
+
+Empty pattern matrix는 **어떤 input도 매칭 안 됨**을 의미한다.
+
+**Compilation algorithm:**
+
+```python
+def compile(P, π):
+    if not P:
+        return Failure()  # Non-exhaustive!
+```
+
+**Detection points:**
+
+1. **Initial matrix empty**: 아예 patterns가 없음
+2. **Specialization 후 empty**: 특정 constructor case가 없음
+3. **Default 후 empty**: Wildcard case가 없음
+
+### Example 1: Missing Constructor Case
+
+**Pattern matrix:**
+
+```
+π = [list]
+
+| Nil  →  0
+```
+
+**Compile:**
+
+- Specialize on Nil: `Success(0)`
+- Specialize on Cons: `specialize(P, 0, Cons)` → **empty matrix**
+  - No Cons patterns in original matrix
+  - Result: `Failure()`
+
+**Decision tree:**
+
+```
+Switch(list, {
+    Nil: Success(0),
+    Cons: Failure()  // Non-exhaustive!
+}, Failure())
+```
+
+**Compiler error:**
+
+```
+Error: Non-exhaustive pattern match
+Location: match list with ...
+Missing case: Cons(_, _)
+```
+
+### Example 2: Missing Wildcard
+
+**Pattern matrix:**
+
+```
+π = [list]
+
+| Nil         →  0
+| Cons(x, xs) →  1
+```
+
+**Compile:**
+
+- Specialize on Nil: `Success(0)`
+- Specialize on Cons: `Success(1)`
+- Default: `default(P, 0)` → **empty matrix**
+  - No wildcard rows
+  - Result: `Failure()`
+
+**하지만 이 경우는 실제로 exhaustive다!**
+
+Nil + Cons가 **complete constructor set**이므로 default branch는 unreachable.
+
+**Optimization:**
+
+Complete constructor set일 때 default branch를 생략할 수 있다.
+
+```python
+def compile(P, π):
+    # ...
+    constructors = get_constructors(P, column)
+    if is_complete_set(constructors):
+        # No default branch needed
+        return Switch(π[column], branches, None)
+    else:
+        # Default branch for incomplete sets
+        default_branch = compile(default(P, column), ...)
+        return Switch(π[column], branches, default_branch)
+```
+
+**Complete constructor sets:**
+
+- List: `{Nil, Cons}`
+- Bool: `{True, False}`
+- Option: `{None, Some}`
+
+### Example 3: Nested Non-Exhaustiveness
+
+**Pattern matrix:**
+
+```
+π = [list]
+
+| Cons(x, Nil)  →  "singleton"
+// Missing: Cons(x, Cons(y, rest))
+// Missing: Nil
+```
+
+**Compile:**
+
+1. Specialize on Cons:
+   ```
+   π = [list.head, list.tail]
+
+   | x  Nil  →  "singleton"
+   ```
+
+2. Specialize on Nil (column 1):
+   ```
+   π = [list.head]
+
+   | x  →  "singleton"
+   ```
+
+   Result: `Success("singleton")`
+
+3. Specialize on Cons (column 1):
+   ```
+   (empty matrix)  // No Cons(x, Cons(...)) pattern
+   ```
+
+   Result: `Failure()` → **Non-exhaustive**
+
+4. Default on column 0:
+   ```
+   (empty matrix)  // No wildcard or Nil pattern
+   ```
+
+   Result: `Failure()` → **Non-exhaustive**
+
+**Decision tree:**
+
+```
+Switch(list, {
+    Cons: Switch(list.tail, {
+        Nil: Success("singleton"),
+        Cons: Failure()  // Missing!
+    }, Failure()),
+}, Failure())  // Missing Nil!
+```
+
+**Compiler error:**
+
+```
+Error: Non-exhaustive pattern match
+Missing cases:
+  - Nil
+  - Cons(_, Cons(_, _))
+```
+
+### Exhaustiveness Error Reporting
+
+**Basic approach: Failure leaf**
+
+Compile 중 empty matrix 발견 시 error 발생:
+
+```python
+def compile(P, π):
+    if not P:
+        raise CompileError("Non-exhaustive pattern match")
+```
+
+**Advanced approach: Missing pattern reconstruction**
+
+Empty matrix가 발생한 경로를 추적해서 missing pattern 생성:
+
+```python
+def compile(P, π, path=[]):
+    if not P:
+        missing = reconstruct_pattern(path)
+        raise CompileError(f"Missing case: {missing}")
+
+    # ...
+    for c in constructors:
+        P_c = specialize(P, column, c)
+        compile(P_c, π_c, path + [(column, c)])
+```
+
+**Example path:**
+
+```
+path = [(0, Cons), (1, Cons)]
+→ Missing pattern: Cons(_, Cons(_, _))
+```
+
+**FunLang Phase 6 approach:**
+
+간단한 error message만 제공:
+
+```
+Error: Non-exhaustive pattern match at line X
+Consider adding a wildcard pattern: | _ -> ...
+```
+
+자세한 missing case 분석은 나중 phase 또는 bonus 섹션에서 다룬다.
+
+### Exhaustiveness Check가 자연스러운 이유
+
+**Decision tree 알고리즘의 장점:**
+
+> "Exhaustiveness checking은 **별도의 분석 pass가 아니다**. Compilation 과정에서 자동으로 발견된다."
+
+**왜 자연스러운가?**
+
+1. **Empty matrix는 명확한 신호**: No patterns left = no matches possible
+2. **Recursive structure**: 각 specialization/default 단계에서 independently 체크
+3. **Complete constructor sets**: 간단한 rule로 false positives 제거 가능
+
+**Contrast with if-else chain analysis:**
+
+If-else tree를 분석하려면:
+- 모든 경로를 traverse
+- 각 경로가 종료되는지 확인
+- Missing 경로를 역으로 추론
+
+Decision tree는 construction 과정에서 바로 확인된다.
+
+---
+
+## Summary and Next Steps
+
+### Chapter 17 핵심 개념 정리
+
+**1. Pattern Matrix Representation**
+
+- Rows = pattern clauses
+- Columns = scrutinees
+- Cells = patterns (wildcard, constructor, literal)
+- Occurrence vectors = access paths to values
+
+**2. Decision Tree Structure**
+
+- Internal nodes = tests (constructor, literal)
+- Edges = outcomes (Nil, Cons, default)
+- Leaves = actions (success, failure)
+- Property: Each subterm tested at most once
+
+**3. Specialization Operation**
+
+- Filters rows compatible with constructor
+- Expands constructor patterns to subpatterns
+- Updates occurrence vector with subpaths
+- Formula: `S(c, i, P) = specialized matrix`
+
+**4. Defaulting Operation**
+
+- Keeps only wildcard rows
+- Removes tested column
+- Detects non-exhaustiveness (empty result)
+- Formula: `D(i, P) = default matrix`
+
+**5. Compilation Algorithm**
+
+- Recursive function: `compile(P, π) = DecisionTree`
+- Base cases: empty (failure), irrefutable (success)
+- Recursive case: select column, specialize, default
+- Heuristics: column selection strategy
+
+**6. Exhaustiveness Checking**
+
+- Empty matrix = non-exhaustive match
+- Complete constructor sets = no default needed
+- Natural integration with compilation
+- Error reporting from failure leaves
+
+### Decision Tree Algorithm의 장점 요약
+
+**Efficiency:**
+
+- O(d) tests (d = pattern depth), not O(n × d)
+- Each subterm tested exactly once
+- No redundant comparisons
+
+**Correctness:**
+
+- Respects pattern order (first-match semantics)
+- Handles nested patterns systematically
+- Works with any constructor arity
+
+**Verification:**
+
+- Exhaustiveness checking built-in
+- Detects missing cases at compile time
+- Identifies unreachable patterns
+
+**Optimization:**
+
+- Structured representation enables optimizations
+- Column selection heuristics improve code quality
+- Complete constructor sets eliminate default branches
+
+### Pattern Matrix Workflow
+
+**전체 과정 요약:**
+
+```
+1. FunLang match expression
+   ↓
+2. Pattern matrix + occurrence vector
+   ↓
+3. Recursive compilation algorithm
+   ├─ Specialization (constructor tests)
+   ├─ Defaulting (wildcard cases)
+   └─ Column selection (heuristic)
+   ↓
+4. Decision tree
+   ↓
+5. MLIR IR (scf.index_switch, scf.if)
+   ↓
+6. LLVM IR (switch, br)
+```
+
+### Connection to MLIR Lowering
+
+**Chapter 17 (theory) → Chapter 19 (implementation):**
+
+**Pattern matrix → `funlang.match` operation:**
+
+```mlir
+%result = funlang.match %list : !funlang.list<i32> -> i32 {
+^nil:
+    %zero = arith.constant 0 : i32
+    funlang.yield %zero : i32
+^cons(%head: i32, %tail: !funlang.list<i32>):
+    %one = arith.constant 1 : i32
+    %len_tail = func.call @length(%tail) : (!funlang.list<i32>) -> i32
+    %result = arith.addi %one, %len_tail : i32
+    funlang.yield %result : i32
+}
+```
+
+**Decision tree → SCF dialect:**
+
+```mlir
+%tag = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%result = scf.index_switch %tag : i32 -> i32
+case 0 { ... }  // Nil branch
+case 1 { ... }  // Cons branch
+```
+
+**Specialization → Region block arguments:**
+
+```mlir
+^cons(%head: i32, %tail: !funlang.list<i32>):
+// Block arguments = pattern variables from specialization
+```
+
+**Exhaustiveness → Verification:**
+
+```cpp
+LogicalResult FunLang::MatchOp::verify() {
+    // Check all constructor cases are present or wildcard exists
+    if (!isExhaustive()) {
+        return emitOpError("non-exhaustive pattern match");
+    }
+    return success();
+}
+```
+
+### Chapter 18-20 Preview
+
+**Chapter 18: List Operations**
+
+- `funlang.nil` operation: Create empty list
+- `funlang.cons` operation: Prepend element to list
+- `!funlang.list<T>` type: Parameterized list type
+- LLVM representation: `!llvm.struct<(i32, ptr)>` with tag
+- Heap allocation with GC_malloc
+
+**Chapter 19: Match Compilation**
+
+- `funlang.match` operation: Region-based pattern matching
+- Region block arguments for pattern variables
+- Lowering to SCF dialect (`scf.index_switch`)
+- OpConversionPattern with region handling
+- Type conversion for `!funlang.list<T>`
+
+**Chapter 20: Functional Programs**
+
+- Complete examples: map, filter, fold
+- List manipulation functions
+- Recursive list traversal
+- Higher-order functions on lists
+- Performance analysis
+
+### Practice Questions
+
+이 장을 이해했는지 확인하는 질문들:
+
+**Q1: Pattern matrix의 각 요소는 무엇을 의미하는가?**
+
+<details>
+<summary>Answer</summary>
+
+- Rows: Pattern clauses (하나의 `pattern -> action`)
+- Columns: Scrutinees (매칭 대상 values)
+- Cells: Patterns (wildcard, constructor, literal)
+- Actions: 각 row가 매칭되면 실행할 코드
+
+</details>
+
+**Q2: Specialization이 `Cons(x, Nil)` pattern을 어떻게 변환하는가?**
+
+<details>
+<summary>Answer</summary>
+
+`Cons(x, Nil)` → 두 개의 subpattern columns `[x, Nil]`
+
+- `x`: variable pattern (head)
+- `Nil`: constructor pattern (tail)
+
+Occurrence vector도 확장:
+- `[list]` → `[list.head, list.tail]`
+
+</details>
+
+**Q3: Defaulting 후 empty matrix는 무엇을 의미하는가?**
+
+<details>
+<summary>Answer</summary>
+
+Non-exhaustive pattern match.
+
+- 모든 rows가 constructor patterns → wildcard 없음
+- Default case가 없음 → 일부 values가 매칭 안 됨
+- Compiler error 발생
+
+</details>
+
+**Q4: Decision tree가 if-else chain보다 효율적인 이유는?**
+
+<details>
+<summary>Answer</summary>
+
+1. 각 subterm을 최대 한 번만 테스트 (no redundancy)
+2. Complete constructor sets에서 불필요한 비교 제거
+3. Structured representation으로 optimization 가능
+4. O(d) tests (d = depth), not O(n × d) (n = patterns)
+
+</details>
+
+**Q5: Column selection heuristic이 왜 필요한가?**
+
+<details>
+<summary>Answer</summary>
+
+여러 scrutinees가 있을 때 테스트 순서가 효율성에 영향을 준다.
+
+- 좋은 순서: Constructor patterns가 많은 column 먼저
+- 나쁜 순서: Wildcard가 많은 column 먼저 (별 정보 없음)
+
+Heuristic으로 optimal에 가까운 decision tree 생성.
+
+</details>
+
+### 성공 기준 달성 확인
+
+이 장의 목표를 모두 달성했는가?
+
+- [x] Pattern matrix 표현법을 이해한다
+  - Rows, columns, occurrences 개념 설명
+  - Example matrices with nested patterns
+
+- [x] Decision tree 알고리즘의 동작 원리를 안다
+  - Recursive compilation function
+  - Base cases (empty, irrefutable)
+  - Recursive case (specialize, default)
+
+- [x] Specialization과 defaulting 연산을 설명할 수 있다
+  - Specialization: constructor assumption + decomposition
+  - Defaulting: wildcard filtering + column removal
+  - Occurrence vector updates
+
+- [x] Exhaustiveness checking이 어떻게 동작하는지 안다
+  - Empty matrix detection
+  - Complete constructor sets
+  - Error reporting strategies
+
+- [x] Chapter 18-19에서 MLIR 구현을 시작할 준비가 된다
+  - Pattern matrix → `funlang.match` operation mapping
+  - Decision tree → SCF dialect lowering
+  - Specialization → Region block arguments
+
+**Next chapter: Let's build the foundation for pattern matching—list data structures!**
+
