@@ -2995,6 +2995,457 @@ take_first_n tests passed
 
 ---
 
+## 튜플 예제: zip과 unzip (Tuple Examples: zip and unzip)
+
+Chapter 18에서 `!funlang.tuple<T1, T2, ...>` 타입과 `funlang.make_tuple` 연산을, Chapter 19에서 튜플 패턴 매칭을 구현했다. 이제 튜플을 활용하는 실제 프로그램을 작성하고 컴파일해보자.
+
+### zip 함수: 두 리스트를 쌍의 리스트로
+
+**zip의 개념:**
+
+두 리스트를 받아 각 위치의 원소들을 튜플로 묶은 리스트를 반환한다.
+
+```fsharp
+// zip의 타입
+zip : [a] -> [b] -> [(a, b)]
+
+// zip의 동작
+zip [1, 2, 3] ["a", "b", "c"] = [(1, "a"), (2, "b"), (3, "c")]
+
+// 길이가 다르면 짧은 쪽에 맞춤
+zip [1, 2] ["a", "b", "c"] = [(1, "a"), (2, "b")]
+```
+
+**FunLang 구현:**
+
+```fsharp
+let rec zip xs ys =
+  match xs with
+  | [] -> []
+  | x :: xs' ->
+      match ys with
+      | [] -> []
+      | y :: ys' -> make_tuple(x, y) :: zip xs' ys'
+```
+
+**동작 원리:**
+
+1. 첫 번째 리스트가 비어있으면 빈 리스트 반환
+2. 두 번째 리스트가 비어있으면 빈 리스트 반환
+3. 둘 다 원소가 있으면:
+   - 각 head로 튜플 생성: `make_tuple(x, y)`
+   - tail들로 재귀 호출: `zip xs' ys'`
+   - 결과를 cons: `pair :: rest`
+
+### zip 함수 컴파일: FunLang MLIR
+
+```mlir
+// zip : !funlang.list<i32> -> !funlang.list<f64> -> !funlang.list<!funlang.tuple<i32, f64>>
+func.func @zip(%xs: !funlang.list<i32>, %ys: !funlang.list<f64>)
+    -> !funlang.list<!funlang.tuple<i32, f64>> {
+
+  // 첫 번째 리스트 패턴 매칭
+  %result = funlang.match %xs : !funlang.list<i32>
+      -> !funlang.list<!funlang.tuple<i32, f64>> {
+
+    ^nil:
+      // xs가 비어있으면 빈 리스트 반환
+      %empty = funlang.nil : !funlang.list<!funlang.tuple<i32, f64>>
+      funlang.yield %empty : !funlang.list<!funlang.tuple<i32, f64>>
+
+    ^cons(%x: i32, %xs_tail: !funlang.list<i32>):
+      // xs = x :: xs_tail, 이제 ys 패턴 매칭
+      %inner = funlang.match %ys : !funlang.list<f64>
+          -> !funlang.list<!funlang.tuple<i32, f64>> {
+
+        ^nil:
+          // ys가 비어있으면 빈 리스트 반환
+          %empty2 = funlang.nil : !funlang.list<!funlang.tuple<i32, f64>>
+          funlang.yield %empty2 : !funlang.list<!funlang.tuple<i32, f64>>
+
+        ^cons(%y: f64, %ys_tail: !funlang.list<f64>):
+          // ys = y :: ys_tail
+          // 튜플 생성: (x, y)
+          %pair = funlang.make_tuple(%x, %y) : !funlang.tuple<i32, f64>
+
+          // 재귀 호출: zip xs_tail ys_tail
+          %rest = func.call @zip(%xs_tail, %ys_tail)
+              : (!funlang.list<i32>, !funlang.list<f64>)
+              -> !funlang.list<!funlang.tuple<i32, f64>>
+
+          // cons: pair :: rest
+          %cons_result = funlang.cons %pair, %rest
+              : !funlang.list<!funlang.tuple<i32, f64>>
+
+          funlang.yield %cons_result : !funlang.list<!funlang.tuple<i32, f64>>
+      }
+      funlang.yield %inner : !funlang.list<!funlang.tuple<i32, f64>>
+  }
+
+  return %result : !funlang.list<!funlang.tuple<i32, f64>>
+}
+```
+
+**핵심 포인트:**
+
+1. **중첩 패턴 매칭**: 먼저 xs를 매칭하고, Cons case 안에서 ys를 매칭
+2. **make_tuple 사용**: `funlang.make_tuple(%x, %y)` 로 쌍 생성
+3. **결과 타입**: `!funlang.list<!funlang.tuple<i32, f64>>` - 튜플의 리스트
+
+### fst와 snd 함수: 튜플 원소 추출
+
+**fst와 snd의 정의:**
+
+```fsharp
+// 첫 번째 원소 추출
+let fst pair = match pair with (x, _) -> x
+
+// 두 번째 원소 추출
+let snd pair = match pair with (_, y) -> y
+```
+
+**MLIR 구현:**
+
+```mlir
+// fst : !funlang.tuple<i32, f64> -> i32
+func.func @fst(%pair: !funlang.tuple<i32, f64>) -> i32 {
+  %result = funlang.match %pair : !funlang.tuple<i32, f64> -> i32 {
+    ^case(%x: i32, %y: f64):
+      funlang.yield %x : i32
+  }
+  return %result : i32
+}
+
+// snd : !funlang.tuple<i32, f64> -> f64
+func.func @snd(%pair: !funlang.tuple<i32, f64>) -> f64 {
+  %result = funlang.match %pair : !funlang.tuple<i32, f64> -> f64 {
+    ^case(%x: i32, %y: f64):
+      funlang.yield %y : f64
+  }
+  return %result : f64
+}
+```
+
+**Lowering 결과:**
+
+```mlir
+// fst after lowering - 분기 없이 직접 추출
+func.func @fst(%pair: !llvm.struct<(i32, f64)>) -> i32 {
+  %x = llvm.extractvalue %pair[0] : !llvm.struct<(i32, f64)>
+  return %x : i32
+}
+
+// snd after lowering
+func.func @snd(%pair: !llvm.struct<(i32, f64)>) -> f64 {
+  %y = llvm.extractvalue %pair[1] : !llvm.struct<(i32, f64)>
+  return %y : f64
+}
+```
+
+**핵심:**
+- 튜플 패턴 매칭은 **scf.index_switch 없이** 바로 extractvalue로 lowering
+- 와일드카드 `_`는 해당 위치의 extractvalue를 생략 (dead code elimination)
+
+### unzip 함수: 쌍의 리스트를 두 리스트로
+
+**unzip의 개념:**
+
+zip의 역연산. 튜플 리스트를 두 개의 리스트로 분리한다.
+
+```fsharp
+// unzip의 타입
+unzip : [(a, b)] -> ([a], [b])
+
+// unzip의 동작
+unzip [(1, "a"), (2, "b")] = ([1, 2], ["a", "b"])
+```
+
+**FunLang 구현:**
+
+```fsharp
+let rec unzip pairs =
+  match pairs with
+  | [] -> ([], [])
+  | p :: ps ->
+      let (x, y) = p in
+      let (xs, ys) = unzip ps in
+      (x :: xs, y :: ys)
+```
+
+**MLIR 구현:**
+
+```mlir
+// unzip : !funlang.list<!funlang.tuple<i32, f64>>
+//       -> !funlang.tuple<!funlang.list<i32>, !funlang.list<f64>>
+func.func @unzip(%pairs: !funlang.list<!funlang.tuple<i32, f64>>)
+    -> !funlang.tuple<!funlang.list<i32>, !funlang.list<f64>> {
+
+  %result = funlang.match %pairs
+      : !funlang.list<!funlang.tuple<i32, f64>>
+      -> !funlang.tuple<!funlang.list<i32>, !funlang.list<f64>> {
+
+    ^nil:
+      // 빈 리스트 → ([], [])
+      %empty_ints = funlang.nil : !funlang.list<i32>
+      %empty_floats = funlang.nil : !funlang.list<f64>
+      %empty_pair = funlang.make_tuple(%empty_ints, %empty_floats)
+          : !funlang.tuple<!funlang.list<i32>, !funlang.list<f64>>
+      funlang.yield %empty_pair
+          : !funlang.tuple<!funlang.list<i32>, !funlang.list<f64>>
+
+    ^cons(%p: !funlang.tuple<i32, f64>, %ps: !funlang.list<!funlang.tuple<i32, f64>>):
+      // p = (x, y), 튜플 분해
+      %xy = funlang.match %p : !funlang.tuple<i32, f64>
+          -> !funlang.tuple<i32, f64> {
+        ^case(%x: i32, %y: f64):
+          funlang.yield %p : !funlang.tuple<i32, f64>
+      }
+      // 실제로는 직접 extractvalue 사용
+      %x = ... extractvalue [0] ...
+      %y = ... extractvalue [1] ...
+
+      // 재귀: unzip ps
+      %rest = func.call @unzip(%ps) : ...
+      %xs = ... fst rest ...
+      %ys = ... snd rest ...
+
+      // 결과: (x :: xs, y :: ys)
+      %new_xs = funlang.cons %x, %xs : !funlang.list<i32>
+      %new_ys = funlang.cons %y, %ys : !funlang.list<f64>
+      %result_pair = funlang.make_tuple(%new_xs, %new_ys)
+          : !funlang.tuple<!funlang.list<i32>, !funlang.list<f64>>
+      funlang.yield %result_pair
+          : !funlang.tuple<!funlang.list<i32>, !funlang.list<f64>>
+  }
+
+  return %result : !funlang.tuple<!funlang.list<i32>, !funlang.list<f64>>
+}
+```
+
+### Point 조작 예제: 2D 좌표
+
+**Point 타입:**
+
+```fsharp
+// Point = (int, int) 튜플
+type point = int * int
+
+let origin = (0, 0)
+let p1 = (3, 4)
+```
+
+**기본 연산들:**
+
+```fsharp
+// 오른쪽으로 이동
+let move_right pt =
+  match pt with (x, y) -> (x + 1, y)
+
+// 위로 이동
+let move_up pt =
+  match pt with (x, y) -> (x, y + 1)
+
+// 두 점 사이의 거리 (맨해튼)
+let manhattan_distance p1 p2 =
+  match (p1, p2) with ((x1, y1), (x2, y2)) ->
+    abs(x2 - x1) + abs(y2 - y1)
+
+// 점 리스트의 중심점
+let centroid points =
+  let sum_pts = fold (fun (sx, sy) (x, y) -> (sx + x, sy + y)) (0, 0) points
+  let n = length points
+  match sum_pts with (sx, sy) -> (sx / n, sy / n)
+```
+
+**MLIR 구현 - move_right:**
+
+```mlir
+// move_right : !funlang.tuple<i32, i32> -> !funlang.tuple<i32, i32>
+func.func @move_right(%pt: !funlang.tuple<i32, i32>) -> !funlang.tuple<i32, i32> {
+  %result = funlang.match %pt : !funlang.tuple<i32, i32> -> !funlang.tuple<i32, i32> {
+    ^case(%x: i32, %y: i32):
+      %c1 = arith.constant 1 : i32
+      %new_x = arith.addi %x, %c1 : i32
+      %new_pt = funlang.make_tuple(%new_x, %y) : !funlang.tuple<i32, i32>
+      funlang.yield %new_pt : !funlang.tuple<i32, i32>
+  }
+  return %result : !funlang.tuple<i32, i32>
+}
+```
+
+**Lowering 결과:**
+
+```mlir
+func.func @move_right(%pt: !llvm.struct<(i32, i32)>) -> !llvm.struct<(i32, i32)> {
+  %x = llvm.extractvalue %pt[0] : !llvm.struct<(i32, i32)>
+  %y = llvm.extractvalue %pt[1] : !llvm.struct<(i32, i32)>
+  %c1 = arith.constant 1 : i32
+  %new_x = arith.addi %x, %c1 : i32
+  %0 = llvm.mlir.undef : !llvm.struct<(i32, i32)>
+  %1 = llvm.insertvalue %new_x, %0[0] : !llvm.struct<(i32, i32)>
+  %result = llvm.insertvalue %y, %1[1] : !llvm.struct<(i32, i32)>
+  return %result : !llvm.struct<(i32, i32)>
+}
+```
+
+**중첩 튜플 - manhattan_distance:**
+
+```mlir
+// manhattan_distance : !funlang.tuple<i32, i32> -> !funlang.tuple<i32, i32> -> i32
+func.func @manhattan_distance(%p1: !funlang.tuple<i32, i32>, %p2: !funlang.tuple<i32, i32>) -> i32 {
+  // 두 점을 하나의 튜플로 묶어서 패턴 매칭
+  %combined = funlang.make_tuple(%p1, %p2)
+      : !funlang.tuple<!funlang.tuple<i32, i32>, !funlang.tuple<i32, i32>>
+
+  // 중첩 튜플 분해
+  %result = funlang.match %combined
+      : !funlang.tuple<!funlang.tuple<i32, i32>, !funlang.tuple<i32, i32>> -> i32 {
+
+    ^case(%pt1: !funlang.tuple<i32, i32>, %pt2: !funlang.tuple<i32, i32>):
+      // 첫 번째 점 분해
+      %xy1 = funlang.match %pt1 : !funlang.tuple<i32, i32> -> !funlang.tuple<i32, i32> {
+        ^case(%x1: i32, %y1: i32):
+          funlang.yield %pt1 : !funlang.tuple<i32, i32>
+      }
+      // 실제로는 extractvalue 연쇄
+      // %x1 = extractvalue %pt1[0]
+      // %y1 = extractvalue %pt1[1]
+      // %x2 = extractvalue %pt2[0]
+      // %y2 = extractvalue %pt2[1]
+
+      // 거리 계산
+      // %dx = abs(x2 - x1)
+      // %dy = abs(y2 - y1)
+      // %result = dx + dy
+      ...
+      funlang.yield %distance : i32
+  }
+
+  return %result : i32
+}
+```
+
+### 튜플 + 고차 함수 결합
+
+**튜플을 사용한 map_with_index:**
+
+```fsharp
+// 리스트의 각 원소에 인덱스와 함께 함수 적용
+let map_with_index f lst =
+  let indexed = zip [0..length lst - 1] lst
+  map (fun (i, x) -> f i x) indexed
+```
+
+**enumerate 함수:**
+
+```fsharp
+// 리스트에 인덱스를 붙여서 튜플 리스트로
+let rec enumerate_from n lst =
+  match lst with
+  | [] -> []
+  | x :: xs -> (n, x) :: enumerate_from (n + 1) xs
+
+let enumerate = enumerate_from 0
+
+// 사용 예
+enumerate ["a", "b", "c"]  // [(0, "a"), (1, "b"), (2, "c")]
+```
+
+**partition 함수 (튜플 반환):**
+
+```fsharp
+// 리스트를 조건에 따라 두 리스트로 분리
+let rec partition pred lst =
+  match lst with
+  | [] -> ([], [])
+  | x :: xs ->
+      let (yes, no) = partition pred xs
+      if pred x then
+        (x :: yes, no)
+      else
+        (yes, x :: no)
+
+// 사용 예
+partition (fun x -> x > 0) [-1, 2, -3, 4]  // ([2, 4], [-1, -3])
+```
+
+**MLIR 구현 - partition:**
+
+```mlir
+func.func @partition(%pred: !funlang.closure<(i32) -> i1>,
+                      %lst: !funlang.list<i32>)
+    -> !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>> {
+
+  %result = funlang.match %lst : !funlang.list<i32>
+      -> !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>> {
+
+    ^nil:
+      %empty1 = funlang.nil : !funlang.list<i32>
+      %empty2 = funlang.nil : !funlang.list<i32>
+      %pair = funlang.make_tuple(%empty1, %empty2)
+          : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+      funlang.yield %pair : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+
+    ^cons(%x: i32, %xs: !funlang.list<i32>):
+      // 재귀: partition pred xs
+      %rest = func.call @partition(%pred, %xs) : ...
+      %yes = ... fst rest ...
+      %no = ... snd rest ...
+
+      // pred x 평가
+      %test = funlang.apply %pred(%x) : (i32) -> i1
+
+      // 조건부 cons
+      %new_pair = scf.if %test -> !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>> {
+        %new_yes = funlang.cons %x, %yes : !funlang.list<i32>
+        %pair = funlang.make_tuple(%new_yes, %no)
+            : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+        scf.yield %pair : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+      } else {
+        %new_no = funlang.cons %x, %no : !funlang.list<i32>
+        %pair = funlang.make_tuple(%yes, %new_no)
+            : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+        scf.yield %pair : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+      }
+
+      funlang.yield %new_pair : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+  }
+
+  return %result : !funlang.tuple<!funlang.list<i32>, !funlang.list<i32>>
+}
+```
+
+### Summary: 튜플 예제
+
+**구현한 함수들:**
+
+| 함수 | 타입 | 설명 |
+|------|------|------|
+| zip | `[a] -> [b] -> [(a,b)]` | 두 리스트를 쌍으로 묶기 |
+| fst | `(a,b) -> a` | 첫 번째 원소 추출 |
+| snd | `(a,b) -> b` | 두 번째 원소 추출 |
+| unzip | `[(a,b)] -> ([a], [b])` | 쌍 리스트를 두 리스트로 분리 |
+| move_right | `point -> point` | 좌표 변환 |
+| manhattan_distance | `point -> point -> int` | 두 점 사이 거리 |
+| enumerate | `[a] -> [(int, a)]` | 인덱스 붙이기 |
+| partition | `(a -> bool) -> [a] -> ([a], [a])` | 조건에 따라 분리 |
+
+**핵심 패턴:**
+
+1. **make_tuple로 튜플 생성**: `funlang.make_tuple(%a, %b)`
+2. **패턴 매칭으로 분해**: `^case(%x, %y):` 또는 extractvalue 직접 사용
+3. **중첩 가능**: 튜플 안에 리스트, 리스트 안에 튜플
+4. **다중 반환값**: 함수에서 튜플 반환하여 여러 값 리턴
+5. **고차 함수와 결합**: map, fold 등과 함께 사용
+
+**Lowering 특성:**
+
+- 튜플 패턴: **분기 없이** extractvalue 체인
+- 리스트 패턴: scf.index_switch 사용
+- 중첩: 외부에서 내부로 순차 처리
+
+---
+
 ## Phase 6 Complete Summary
 
 **축하한다! Phase 6를 완료했다.**
