@@ -2489,6 +2489,417 @@ for (auto [caseIndex, region] : enumerate(matchOp.getCases())) {
 
 ---
 
+## 리터럴 패턴 로우어링
+
+지금까지 constructor patterns (Nil, Cons)를 위한 lowering을 설명했다. 이제 **리터럴 패턴**을 위한 lowering 전략을 다룬다.
+
+### Constructor vs Literal Dispatch
+
+**Constructor 패턴과 리터럴 패턴의 핵심 차이:**
+
+| 특성 | Constructor | Literal |
+|------|-------------|---------|
+| 값의 범위 | 유한 (finite) | 무한 (infinite) |
+| 테스트 | Tag extraction | Value comparison |
+| MLIR dispatch | `scf.index_switch` | `arith.cmpi` + `scf.if` |
+| Complexity | O(1) | O(n) sequential |
+
+**Constructor patterns use `scf.index_switch`:**
+
+Tag는 유한한 범위 (예: 0 = Nil, 1 = Cons)이므로 jump table이 가능하다.
+
+```mlir
+// Constructor dispatch: O(1)
+%tag = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%tag_index = arith.index_cast %tag : i32 to index
+
+%result = scf.index_switch %tag_index : index -> i32
+case 0 { /* Nil case */ scf.yield ... }
+case 1 { /* Cons case */ scf.yield ... }
+default { scf.yield %unreachable : i32 }
+```
+
+**Literal patterns use `arith.cmpi` + `scf.if` chain:**
+
+정수 리터럴은 무한하므로 순차적 비교가 필요하다.
+
+```mlir
+// Literal dispatch: O(n)
+%is_zero = arith.cmpi eq, %x, %c0 : i32
+%result = scf.if %is_zero -> i32 {
+    scf.yield %zero_result : i32
+} else {
+    %is_one = arith.cmpi eq, %x, %c1 : i32
+    %inner = scf.if %is_one -> i32 {
+        scf.yield %one_result : i32
+    } else {
+        scf.yield %default_result : i32
+    }
+    scf.yield %inner : i32
+}
+```
+
+### 리터럴 패턴 Lowering 구현
+
+**리터럴 매칭을 위한 C++ lowering pattern:**
+
+```cpp
+// LiteralMatchLowering.cpp
+
+class LiteralMatchOpLowering : public OpConversionPattern<LiteralMatchOp> {
+public:
+  using OpConversionPattern<LiteralMatchOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      LiteralMatchOp matchOp,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter& rewriter) const override {
+
+    Location loc = matchOp.getLoc();
+    Value scrutinee = adaptor.getScrutinee();
+    Type resultType = matchOp.getResult().getType();
+
+    // Collect all cases: (literal_value, region)
+    auto cases = matchOp.getCases();
+    Region* defaultRegion = matchOp.getDefaultRegion();
+
+    // Build nested scf.if chain from bottom up
+    Value result = buildIfChain(rewriter, loc, scrutinee,
+                                 cases, defaultRegion, resultType);
+
+    rewriter.replaceOp(matchOp, result);
+    return success();
+  }
+
+private:
+  Value buildIfChain(
+      ConversionPatternRewriter& rewriter,
+      Location loc,
+      Value scrutinee,
+      ArrayRef<std::pair<int64_t, Region*>> cases,
+      Region* defaultRegion,
+      Type resultType) const {
+
+    // Base case: no more cases, use default
+    if (cases.empty()) {
+      return cloneRegionAndGetResult(rewriter, loc, defaultRegion, resultType);
+    }
+
+    // Current case
+    auto [literalValue, caseRegion] = cases.front();
+    auto remainingCases = cases.drop_front();
+
+    // Create comparison: scrutinee == literal
+    Value literalConst = rewriter.create<arith::ConstantIntOp>(
+        loc, literalValue, scrutinee.getType());
+    Value isMatch = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, scrutinee, literalConst);
+
+    // Create scf.if
+    auto ifOp = rewriter.create<scf::IfOp>(
+        loc, resultType, isMatch,
+        /*thenBuilder=*/[&](OpBuilder& b, Location loc) {
+          Value result = cloneRegionAndGetResult(b, loc, caseRegion, resultType);
+          b.create<scf::YieldOp>(loc, result);
+        },
+        /*elseBuilder=*/[&](OpBuilder& b, Location loc) {
+          Value result = buildIfChain(
+              rewriter, loc, scrutinee, remainingCases, defaultRegion, resultType);
+          b.create<scf::YieldOp>(loc, result);
+        });
+
+    return ifOp.getResult(0);
+  }
+
+  Value cloneRegionAndGetResult(
+      OpBuilder& builder,
+      Location loc,
+      Region* region,
+      Type resultType) const {
+    // Clone operations from region
+    IRMapping mapper;
+    for (Operation& op : region->front()) {
+      if (auto yieldOp = dyn_cast<YieldOp>(&op)) {
+        return mapper.lookupOrDefault(yieldOp.getValue());
+      } else {
+        builder.clone(op, mapper);
+      }
+    }
+    llvm_unreachable("Region must end with yield");
+  }
+};
+```
+
+**생성된 IR 예제:**
+
+```fsharp
+// FunLang source
+match x with
+| 0 -> "zero"
+| 1 -> "one"
+| _ -> "other"
+```
+
+```mlir
+// After lowering: nested scf.if chain
+%c0 = arith.constant 0 : i32
+%c1 = arith.constant 1 : i32
+
+%is_zero = arith.cmpi eq, %x, %c0 : i32
+%result = scf.if %is_zero -> !llvm.ptr<i8> {
+    scf.yield %zero_str : !llvm.ptr<i8>
+} else {
+    %is_one = arith.cmpi eq, %x, %c1 : i32
+    %inner = scf.if %is_one -> !llvm.ptr<i8> {
+        scf.yield %one_str : !llvm.ptr<i8>
+    } else {
+        // Default case: no comparison
+        scf.yield %other_str : !llvm.ptr<i8>
+    }
+    scf.yield %inner : !llvm.ptr<i8>
+}
+```
+
+### 최적화 기회 (Optimization Opportunities)
+
+**1. Dense Range Detection**
+
+리터럴이 0, 1, 2, ... 연속일 때 `scf.index_switch`로 변환 가능:
+
+```mlir
+// Before: sequential comparisons
+%is_0 = arith.cmpi eq, %x, %c0
+scf.if %is_0 { ... } else {
+    %is_1 = arith.cmpi eq, %x, %c1
+    scf.if %is_1 { ... } else {
+        %is_2 = arith.cmpi eq, %x, %c2
+        // ...
+    }
+}
+
+// After: range check + index_switch
+%in_range = arith.cmpi ult, %x, %c3 : i32
+scf.if %in_range {
+    %idx = arith.index_cast %x : i32 to index
+    scf.index_switch %idx : index -> i32
+    case 0 { /* case 0 */ }
+    case 1 { /* case 1 */ }
+    case 2 { /* case 2 */ }
+} else {
+    // default
+}
+```
+
+**Dense range detection algorithm:**
+
+```cpp
+bool isDenseRange(ArrayRef<int64_t> literals) {
+  if (literals.empty()) return false;
+
+  // Sort literals
+  SmallVector<int64_t> sorted(literals.begin(), literals.end());
+  llvm::sort(sorted);
+
+  // Check if consecutive
+  for (size_t i = 1; i < sorted.size(); ++i) {
+    if (sorted[i] != sorted[i-1] + 1)
+      return false;
+  }
+
+  // Starts from 0 or 1 (common case)
+  return sorted[0] == 0 || sorted[0] == 1;
+}
+```
+
+**2. Sparse Set Optimization**
+
+리터럴이 sparse할 때 (예: 0, 10, 100) binary search 가능:
+
+```mlir
+// O(log n) with binary search
+%mid = arith.constant 10 : i32
+%less_than_mid = arith.cmpi slt, %x, %mid : i32
+scf.if %less_than_mid {
+    // Check 0
+    %is_0 = arith.cmpi eq, %x, %c0
+    scf.if %is_0 { ... } else { /* default */ }
+} else {
+    // Check 10, 100
+    %is_10 = arith.cmpi eq, %x, %c10
+    scf.if %is_10 { ... } else {
+        %is_100 = arith.cmpi eq, %x, %c100
+        scf.if %is_100 { ... } else { /* default */ }
+    }
+}
+```
+
+이 최적화는 MLIR transformation pass로 구현 가능 (Phase 7).
+
+**3. LLVM Backend Optimization**
+
+SCF → CF → LLVM pipeline 후 LLVM backend가 추가 최적화:
+
+```llvm
+; LLVM will recognize this pattern
+%cmp0 = icmp eq i32 %x, 0
+br i1 %cmp0, label %case0, label %check1
+check1:
+%cmp1 = icmp eq i32 %x, 1
+br i1 %cmp1, label %case1, label %default
+
+; And optimize to switch:
+switch i32 %x, label %default [
+    i32 0, label %case0
+    i32 1, label %case1
+]
+```
+
+**LLVM switch lowering:**
+
+- Dense: jump table (O(1))
+- Sparse: binary search tree (O(log n))
+- Very sparse: linear search (O(n))
+
+### Mixed Patterns: Constructor + Literal
+
+**실제 코드는 constructor와 literal을 섞어 쓴다:**
+
+```fsharp
+match (list, n) with
+| (Nil, _) -> 0
+| (Cons(x, _), 0) -> x
+| (Cons(x, xs), n) -> x + process xs (n - 1)
+```
+
+**Lowering 전략:**
+
+1. **First column (list)**: Constructor pattern → `scf.index_switch`
+2. **Second column (n)**: Literal pattern → `arith.cmpi` + `scf.if`
+
+```mlir
+// Step 1: Constructor dispatch on list
+%list_tag = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%tag_index = arith.index_cast %list_tag : i32 to index
+
+%result = scf.index_switch %tag_index : index -> i32
+case 0 {
+    // Nil case: wildcard on n (no test)
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+}
+case 1 {
+    // Cons case: extract data
+    %data = llvm.extractvalue %list[1] : !llvm.struct<(i32, ptr)>
+    %x = llvm.load %data : !llvm.ptr -> i32
+
+    // Step 2: Literal dispatch on n
+    %is_zero = arith.cmpi eq, %n, %c0 : i32
+    %inner = scf.if %is_zero -> i32 {
+        // Case: Cons(x, _), 0 → x
+        scf.yield %x : i32
+    } else {
+        // Case: Cons(x, xs), n → x + process xs (n-1)
+        %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -> !llvm.ptr
+        %xs = llvm.load %tail_ptr : !llvm.ptr -> !llvm.struct<(i32, ptr)>
+        %n_minus_1 = arith.subi %n, %c1 : i32
+        %rest = func.call @process(%xs, %n_minus_1) : (...) -> i32
+        %sum = arith.addi %x, %rest : i32
+        scf.yield %sum : i32
+    }
+    scf.yield %inner : i32
+}
+```
+
+**핵심 원칙:**
+
+- Constructor column: `scf.index_switch`로 O(1) dispatch
+- Literal column: `scf.if` chain으로 O(n) dispatch
+- Wildcard: test 없음 (fallthrough 또는 skip)
+
+### 와일드카드 Default Case 처리
+
+**Wildcard (`_`) pattern의 lowering:**
+
+Wildcard는 **어떤 테스트도 생성하지 않는다.**
+
+```fsharp
+match x with
+| 0 -> "zero"
+| 1 -> "one"
+| _ -> "other"  // Wildcard: no test
+```
+
+```mlir
+%is_zero = arith.cmpi eq, %x, %c0 : i32
+scf.if %is_zero {
+    scf.yield %zero_str : !llvm.ptr<i8>
+} else {
+    %is_one = arith.cmpi eq, %x, %c1 : i32
+    scf.if %is_one {
+        scf.yield %one_str : !llvm.ptr<i8>
+    } else {
+        // _ case: NO comparison, just yield
+        scf.yield %other_str : !llvm.ptr<i8>
+    }
+}
+```
+
+**Wildcard optimization in subpatterns:**
+
+```fsharp
+match list with
+| Cons(_, tail) -> length tail + 1  // Don't extract head
+| Nil -> 0
+```
+
+```mlir
+case 1 {  // Cons
+    // Wildcard _: Skip head extraction
+    // %head = llvm.load %data  -- NOT generated!
+
+    %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -> !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -> !llvm.struct<(i32, ptr)>
+    // ...
+}
+```
+
+**Wildcard 최적화의 효과:**
+
+1. **메모리 접근 감소**: 불필요한 load 제거
+2. **레지스터 절약**: unused 값을 저장 안 함
+3. **DCE 촉진**: Dead code elimination이 더 쉬워짐
+
+### Type Dispatch Pattern
+
+**타입 기반 dispatch (future extension):**
+
+일부 언어는 runtime type으로 dispatch한다:
+
+```fsharp
+// Hypothetical type dispatch
+match value with
+| :? int as n -> n + 1
+| :? string as s -> String.length s
+| _ -> 0
+```
+
+이는 다음으로 lowering 가능:
+
+```mlir
+// Type tag dispatch (similar to ADT constructor)
+%type_tag = llvm.extractvalue %boxed_value[0] : !llvm.struct<(i32, ptr)>
+%tag_index = arith.index_cast %type_tag : i32 to index
+
+scf.index_switch %tag_index : index -> i32
+case 0 { /* int case */ }
+case 1 { /* string case */ }
+default { scf.yield %zero : i32 }
+```
+
+현재 FunLang은 ADT constructor만 지원하지만, 동일한 패턴이 적용된다.
+
+---
+
 ## Summary and Chapter 20 Preview
 
 ### Chapter 19 Recap
