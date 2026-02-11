@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 6 of 7 (Pattern Matching & Data Structures)
-Plan: 5 of 5 in current phase (includes gap closure)
-Status: Phase 6 complete with gap closure
-Last activity: 2026-02-11 — Completed 06-05-PLAN.md (Gap Closure: Literal Patterns)
+Plan: 6 of 6 in current phase (includes gap closure)
+Status: Phase 6 complete with all gap closures
+Last activity: 2026-02-11 — Completed 06-06-PLAN.md (Gap Closure: Tuple Patterns)
 
-Progress: [██████████████] 158% (19/12 estimated total plans)
+Progress: [██████████████] 167% (20/12 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: 8 min
-- Total execution time: 2.3 hours
+- Total execution time: 2.4 hours
 
 **By Phase:**
 
@@ -32,15 +32,15 @@ Progress: [██████████████] 158% (19/12 estimated tot
 | 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
 | 4 - Closures & Higher-Order | 2/2 | 11 min | 6 min |
 | 5 - Custom MLIR Dialect | 3/3 | 29 min | 10 min |
-| 6 - Pattern Matching | 5/5 | 46 min | 9 min |
+| 6 - Pattern Matching | 6/6 | 54 min | 9 min |
 
 **Recent Trend:**
-- Last plan: 06-05 (12 min, gap closure)
+- Last plan: 06-06 (8 min, tuple gap closure)
+- Previous: 06-05 (12 min, literal gap closure)
 - Previous: 06-04 (9 min)
 - Previous: 06-03 (8 min)
 - Previous: 06-02 (10 min)
-- Previous: 06-01 (7 min)
-- Trend: Consistent 7-12min for documentation plans, Phase 6 complete with gap closure
+- Trend: Consistent 8-12min for documentation plans, Phase 6 complete with all gap closures
 
 *Updated after each plan completion*
 
@@ -149,6 +149,10 @@ Recent decisions affecting current work:
 - [06-03]: Dedicated funlang.yield terminator (not reusing scf.yield, clear ownership and future extensibility)
 - [06-03]: Block arguments for pattern variables (not extract operations, declarative and SSA-friendly)
 - [06-03]: Hardcoded tag mapping (Nil=0, Cons=1) for Phase 6 (extensible to ADT in future)
+- [06-06]: Tuple type uses ArrayRefParameter for variadic type parameters
+- [06-06]: Tuples lower to LLVM struct without tag (no Nil/Cons variants)
+- [06-06]: Tuple pattern matching produces extractvalue chain, not scf.index_switch
+- [06-06]: Single case for tuple patterns (always matches)
 
 ### Pending Todos
 
@@ -212,11 +216,16 @@ None yet.
   - Literal pattern lowering implementation (Chapter 19 - 411 lines)
   - FizzBuzz/classify examples (Chapter 20 - 306 lines)
   - Closed PMTC-01 and PMTC-02 verification gaps
-- Total Phase 6 content: 12,928 lines covering complete functional programming
+- Plan 06-06 COMPLETE: Gap closure - Tuple patterns (1469 lines added)
+  - Tuple type and make_tuple operation (Chapter 18 - 582 lines)
+  - Tuple pattern matching and lowering (Chapter 19 - 436 lines)
+  - Tuple examples: zip, fst/snd, points (Chapter 20 - 451 lines)
+  - Closed PMTC-05 verification gap
+- Total Phase 6 content: 14,397 lines covering complete functional programming with tuples
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: Completed 06-05-PLAN.md (Gap Closure: Literal Patterns)
+Last session: 2026-02-11T02:19:00Z
+Stopped at: Completed 06-06-PLAN.md (Gap Closure: Tuple Patterns)
 Resume file: None
-Next: Phase 6 COMPLETE with gap closure! Ready for Phase 7 (Optimization)
+Next: Phase 6 COMPLETE with all gap closures! Ready for Phase 7 (Optimization)
