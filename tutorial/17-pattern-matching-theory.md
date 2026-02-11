@@ -2310,6 +2310,452 @@ Decision tree는 construction 과정에서 바로 확인된다.
 
 ---
 
+## 리터럴 패턴과 와일드카드 최적화
+
+지금까지 constructor patterns (Nil, Cons)를 중심으로 설명했다. 하지만 실제 프로그래밍에서는 **리터럴 패턴**과 **와일드카드 패턴**도 매우 중요하다.
+
+### 리터럴 패턴 컴파일 (Literal Pattern Compilation)
+
+**리터럴 패턴이란?**
+
+리터럴 패턴은 특정 **상수 값**과 매칭되는 패턴이다:
+
+```fsharp
+// 정수 리터럴 패턴
+match x with
+| 0 -> "zero"
+| 1 -> "one"
+| 2 -> "two"
+| _ -> "other"
+
+// 문자열 리터럴 패턴 (문자열 타입이 있다면)
+match color with
+| "red" -> 0xFF0000
+| "green" -> 0x00FF00
+| "blue" -> 0x0000FF
+| _ -> 0x000000
+```
+
+**Constructor patterns와의 차이:**
+
+| 특성 | Constructor Pattern | Literal Pattern |
+|------|---------------------|-----------------|
+| 예제 | `Nil`, `Cons(x, xs)` | `0`, `1`, `42` |
+| 분해 | Subpatterns 있음 | Subpatterns 없음 |
+| 값의 개수 | 유한 (finite set) | 무한 (infinite set) |
+| 테스트 방법 | Tag switch | Equality comparison |
+| MLIR operation | `scf.index_switch` | `arith.cmpi` + `scf.if` |
+
+**리터럴 패턴의 특징:**
+
+1. **분해되지 않음:** `Cons(x, xs)`는 `x`와 `xs`로 분해되지만, `42`는 그 자체로 atomic하다
+2. **무한 가능성:** 정수는 무한히 많으므로 모든 case를 나열할 수 없다
+3. **등호 테스트:** Constructor tag가 아니라 값 자체를 비교해야 한다
+
+### 리터럴 패턴의 Pattern Matrix
+
+**Example: Modulo 3 classification**
+
+```fsharp
+let classify_mod3 n =
+    match n % 3 with
+    | 0 -> "divisible by 3"
+    | 1 -> "remainder 1"
+    | 2 -> "remainder 2"
+    | _ -> "unexpected"  // 논리적으로 unreachable
+```
+
+**Pattern matrix:**
+
+```
+Scrutinee: [x]  (where x = n % 3)
+
+Matrix:
+| 0   →  "divisible by 3"
+| 1   →  "remainder 1"
+| 2   →  "remainder 2"
+| _   →  "unexpected"
+```
+
+**리터럴 패턴의 specialization:**
+
+리터럴 `lit`에 대한 specialization `S(lit, 0, P)`:
+
+```
+S(0, 0, P):
+| →  "divisible by 3"   (from 0 pattern)
+| →  "unexpected"       (from _ pattern)
+```
+
+**리터럴 0과 호환되는 rows만 남는다:**
+- Row 1 (`0`): 리터럴 0과 일치 → 유지
+- Row 2 (`1`): 리터럴 1 ≠ 0 → 제거
+- Row 3 (`2`): 리터럴 2 ≠ 0 → 제거
+- Row 4 (`_`): Wildcard는 모든 값과 호환 → 유지
+
+**리터럴 specialization 후에는 column이 사라진다** (리터럴은 subpatterns가 없음).
+
+### 리터럴 패턴 vs Constructor 패턴 컴파일
+
+**Constructor patterns (유한 set):**
+
+```mlir
+// List patterns: {Nil, Cons} = complete set
+%tag = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%result = scf.index_switch %tag : i32 -> i32
+case 0 { /* Nil */ }
+case 1 { /* Cons */ }
+default { /* unreachable */ }
+```
+
+**O(1) dispatch:** Tag 값으로 바로 jump.
+
+**Literal patterns (무한 set):**
+
+```mlir
+// Integer patterns: 0, 1, 2, ... = infinite set
+%is_zero = arith.cmpi eq, %x, %c0 : i32
+%result = scf.if %is_zero -> i32 {
+    scf.yield %zero_result : i32
+} else {
+    %is_one = arith.cmpi eq, %x, %c1 : i32
+    %result1 = scf.if %is_one -> i32 {
+        scf.yield %one_result : i32
+    } else {
+        %is_two = arith.cmpi eq, %x, %c2 : i32
+        %result2 = scf.if %is_two -> i32 {
+            scf.yield %two_result : i32
+        } else {
+            scf.yield %default_result : i32
+        }
+        scf.yield %result2 : i32
+    }
+    scf.yield %result1 : i32
+}
+```
+
+**O(n) sequential tests:** 각 리터럴을 순서대로 비교.
+
+### Decision Tree for Literal Patterns
+
+**Example: FizzBuzz remainder check**
+
+```fsharp
+match (n % 3, n % 5) with
+| (0, 0) -> "FizzBuzz"
+| (0, _) -> "Fizz"
+| (_, 0) -> "Buzz"
+| (_, _) -> string_of_int n
+```
+
+**Decision tree:**
+
+```
+       [n % 3]
+          |
+    Test: == 0?
+      /      \
+   Yes        No
+   /            \
+ [n % 5]      [n % 5]
+   |            |
+ == 0?        == 0?
+  / \          / \
+Yes  No      Yes  No
+ |    |       |    |
+FB   Fizz   Buzz  n
+```
+
+**생성된 코드:**
+
+```mlir
+%mod3 = arith.remsi %n, %c3 : i32
+%mod5 = arith.remsi %n, %c5 : i32
+
+%is_div3 = arith.cmpi eq, %mod3, %c0 : i32
+%result = scf.if %is_div3 -> !llvm.ptr<i8> {
+    // First column is 0
+    %is_div5 = arith.cmpi eq, %mod5, %c0 : i32
+    %inner = scf.if %is_div5 -> !llvm.ptr<i8> {
+        scf.yield %fizzbuzz : !llvm.ptr<i8>
+    } else {
+        scf.yield %fizz : !llvm.ptr<i8>
+    }
+    scf.yield %inner : !llvm.ptr<i8>
+} else {
+    // First column is not 0
+    %is_div5_2 = arith.cmpi eq, %mod5, %c0 : i32
+    %inner2 = scf.if %is_div5_2 -> !llvm.ptr<i8> {
+        scf.yield %buzz : !llvm.ptr<i8>
+    } else {
+        %str = func.call @int_to_string(%n) : (i32) -> !llvm.ptr<i8>
+        scf.yield %str : !llvm.ptr<i8>
+    }
+    scf.yield %inner2 : !llvm.ptr<i8>
+}
+```
+
+### 와일드카드 최적화 (Wildcard Optimization)
+
+**와일드카드 패턴 `_`의 핵심 특성:**
+
+> Wildcard는 **어떤 런타임 테스트도 생성하지 않는다.**
+
+**Example 1: Wildcard in constructor pattern**
+
+```fsharp
+match list with
+| Cons(_, tail) -> length tail + 1
+| Nil -> 0
+```
+
+**`_` vs named variable:**
+
+```fsharp
+// Case A: Wildcard (no extraction)
+| Cons(_, tail) -> ...
+
+// Case B: Named variable (extraction needed)
+| Cons(head, tail) -> ...
+```
+
+**생성된 코드 비교:**
+
+```mlir
+// Case A: Wildcard - head 추출 안 함
+case 1 {  // Cons
+    // %head = 추출 안 함! (unused)
+    %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -> !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -> !llvm.struct<(i32, ptr)>
+    // ...
+}
+
+// Case B: Named variable - head 추출 필요
+case 1 {  // Cons
+    %head = llvm.load %data : !llvm.ptr -> i32  // 추출함
+    %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -> !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -> !llvm.struct<(i32, ptr)>
+    // ...
+}
+```
+
+**Wildcard 최적화 효과:**
+
+- **메모리 접근 감소:** 불필요한 load 제거
+- **레지스터 절약:** 사용하지 않는 값을 저장 안 함
+- **Dead code elimination 촉진:** 컴파일러가 더 쉽게 최적화
+
+**Example 2: Wildcard as default case**
+
+```fsharp
+match color_code with
+| 0 -> "black"
+| 1 -> "white"
+| _ -> "unknown"
+```
+
+**Wildcard default는 테스트를 생성하지 않는다:**
+
+```mlir
+%is_black = arith.cmpi eq, %color, %c0 : i32
+%result = scf.if %is_black -> !llvm.ptr<i8> {
+    scf.yield %black_str : !llvm.ptr<i8>
+} else {
+    %is_white = arith.cmpi eq, %color, %c1 : i32
+    %result1 = scf.if %is_white -> !llvm.ptr<i8> {
+        scf.yield %white_str : !llvm.ptr<i8>
+    } else {
+        // _ case: NO TEST, just yield
+        scf.yield %unknown_str : !llvm.ptr<i8>
+    }
+    scf.yield %result1 : !llvm.ptr<i8>
+}
+```
+
+**Default branch에서는 equality test가 없다!**
+
+이전 tests가 모두 실패했으면 자동으로 default case가 실행된다.
+
+### 생성 코드 비교 (Generated Code Comparison)
+
+**패턴 종류별 MLIR operation mapping:**
+
+| Pattern Type | Test Operation | Dispatch Method | Branch Count |
+|--------------|----------------|-----------------|--------------|
+| Constructor (closed) | `llvm.extractvalue` (tag) | `scf.index_switch` | O(1) |
+| Constructor (open) | `llvm.extractvalue` (tag) | `scf.index_switch` + default | O(1) |
+| Literal | `arith.cmpi eq` | `scf.if` chain | O(n) sequential |
+| Wildcard | None | Fallthrough | 0 (no test) |
+| Variable | None | Binding only | 0 (no test) |
+
+**Complete example: Mixed patterns**
+
+```fsharp
+match (list, n) with
+| (Nil, _) -> 0
+| (Cons(x, _), 0) -> x
+| (Cons(x, xs), n) -> x + process xs (n - 1)
+```
+
+**Decision tree structure:**
+
+```
+        [list]
+           |
+      Constructor test
+        /        \
+      Nil       Cons
+       |          |
+    yield 0    [n]
+              Literal test
+                /    \
+            n==0    n!=0
+              |        |
+          yield x  yield x + ...
+```
+
+**생성된 MLIR (simplified):**
+
+```mlir
+// Step 1: Constructor test on list
+%list_tag = llvm.extractvalue %list[0] : !llvm.struct<(i32, ptr)>
+%tag_index = arith.index_cast %list_tag : i32 to index
+
+%result = scf.index_switch %tag_index : index -> i32
+case 0 {  // Nil
+    // Wildcard _ on n: NO TEST
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+}
+case 1 {  // Cons
+    %data = llvm.extractvalue %list[1] : !llvm.struct<(i32, ptr)>
+    %x = llvm.load %data : !llvm.ptr -> i32
+
+    // Step 2: Literal test on n
+    %is_zero = arith.cmpi eq, %n, %c0 : i32
+    %inner = scf.if %is_zero -> i32 {
+        // Literal 0 matched, wildcard _ on tail: NO extraction
+        scf.yield %x : i32
+    } else {
+        // Default case, extract tail for recursion
+        %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -> !llvm.ptr
+        %xs = llvm.load %tail_ptr : !llvm.ptr -> !llvm.struct<(i32, ptr)>
+        %n_minus_1 = arith.subi %n, %c1 : i32
+        %rest = func.call @process(%xs, %n_minus_1) : (...) -> i32
+        %sum = arith.addi %x, %rest : i32
+        scf.yield %sum : i32
+    }
+    scf.yield %inner : i32
+}
+```
+
+### 리터럴 패턴 최적화 기회
+
+**1. Jump table for dense ranges**
+
+리터럴이 0, 1, 2, ...와 같이 연속적일 때:
+
+```mlir
+// Before: Sequential tests
+%is_0 = arith.cmpi eq, %x, %c0
+scf.if %is_0 { ... } else {
+    %is_1 = arith.cmpi eq, %x, %c1
+    scf.if %is_1 { ... } else { ... }
+}
+
+// After: Range check + index_switch
+%in_range = arith.cmpi ult, %x, %c3 : i32
+scf.if %in_range {
+    %idx = arith.index_cast %x : i32 to index
+    scf.index_switch %idx {
+        case 0 { ... }
+        case 1 { ... }
+        case 2 { ... }
+    }
+} else {
+    // default
+}
+```
+
+**2. LLVM switch optimization**
+
+LLVM backend는 sequential comparisons를 자동으로 switch instruction으로 변환할 수 있다:
+
+```llvm
+; Input: sequential icmp + br
+%cmp0 = icmp eq i32 %x, 0
+br i1 %cmp0, label %case0, label %check1
+check1:
+%cmp1 = icmp eq i32 %x, 1
+br i1 %cmp1, label %case1, label %default
+
+; Optimized: switch instruction
+switch i32 %x, label %default [
+    i32 0, label %case0
+    i32 1, label %case1
+]
+```
+
+**3. Guard patterns (future)**
+
+리터럴 테스트와 predicate guard를 결합:
+
+```fsharp
+match x with
+| n when n > 0 && n < 100 -> "small positive"
+| n when n >= 100 -> "large positive"
+| _ -> "non-positive"
+```
+
+이런 guard patterns는 Phase 7 이후에 다룰 수 있다.
+
+### Wildcard Specialization 규칙 상세
+
+**Wildcard expansion for different constructor arities:**
+
+| Constructor | Arity | Wildcard Expansion |
+|-------------|-------|-------------------|
+| Nil | 0 | `[]` (empty) |
+| Cons | 2 | `[_, _]` |
+| Some | 1 | `[_]` |
+| Pair | 2 | `[_, _]` |
+| Triple | 3 | `[_, _, _]` |
+
+**Example: Option type**
+
+```fsharp
+type 'a option = None | Some of 'a
+
+match opt with
+| Some x -> x + 1
+| _ -> 0
+```
+
+**Specialization of `_` on `Some`:**
+
+```
+Original:
+| Some x  →  x + 1
+| _       →  0
+
+S(Some, 0, P):
+| x  →  x + 1    (from Some x)
+| _  →  0        (from _, expanded to Some _)
+```
+
+**Wildcard는 어떤 constructor와도 호환된다!**
+
+### Key Takeaways
+
+1. **리터럴 패턴은 equality tests를 생성한다** (`arith.cmpi eq`)
+2. **Constructor 패턴은 tag switch를 생성한다** (`scf.index_switch`)
+3. **Wildcard는 테스트를 생성하지 않는다** (fallthrough/binding only)
+4. **리터럴 set이 연속적이면 switch 최적화 가능**
+5. **Wildcard default는 마지막 else branch로 컴파일**
+6. **Named variables와 wildcards는 semantics만 다름** (binding vs no binding)
+
+---
+
 ## Summary and Next Steps
 
 ### Chapter 17 핵심 개념 정리
