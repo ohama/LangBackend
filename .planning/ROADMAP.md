@@ -120,13 +120,15 @@ Plans:
   4. Reader can compile tuple pattern matching
   5. Reader understands how pattern matching lowers to SCF control flow (switch/if)
   6. Reader can compile realistic functional programs using lists and pattern matching
-**Plans**: 4 plans
+**Plans**: 6 plans (4 core + 2 gap closure)
 
 Plans:
-- [ ] 06-01-PLAN.md — Chapter 17: Pattern Matching Theory (decision tree algorithm, pattern matrix, specialization/defaulting)
-- [ ] 06-02-PLAN.md — Chapter 18: List Operations (funlang.nil, funlang.cons, list representation, TypeConverter)
-- [ ] 06-03-PLAN.md — Chapter 19: Match Compilation (funlang.match operation, SCF lowering, region handling)
-- [ ] 06-04-PLAN.md — Chapter 20: Functional Programs (map, filter, fold, complete examples)
+- [x] 06-01-PLAN.md — Chapter 17: Pattern Matching Theory (decision tree algorithm, pattern matrix, specialization/defaulting)
+- [x] 06-02-PLAN.md — Chapter 18: List Operations (funlang.nil, funlang.cons, list representation, TypeConverter)
+- [x] 06-03-PLAN.md — Chapter 19: Match Compilation (funlang.match operation, SCF lowering, region handling)
+- [x] 06-04-PLAN.md — Chapter 20: Functional Programs (map, filter, fold, complete examples)
+- [ ] 06-05-PLAN.md — Gap Closure: Literal and wildcard pattern compilation (PMTC-01, PMTC-02)
+- [ ] 06-06-PLAN.md — Gap Closure: Tuple type and pattern matching (PMTC-05)
 
 ### Phase 7: Optimization & Polish
 **Goal**: Reader can implement optimization passes and has complete, polished tutorial series
@@ -155,5 +157,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Functions & Recursion | 2/2 | Complete | 2026-02-06 |
 | 4. Closures & Higher-Order Functions | 2/2 | Complete | 2026-02-06 |
 | 5. Custom MLIR Dialect | 3/3 | Complete | 2026-02-06 |
-| 6. Pattern Matching & Data Structures | 0/4 | Planned | - |
+| 6. Pattern Matching & Data Structures | 4/6 | Gap Closure | 2026-02-11 |
 | 7. Optimization & Polish | 0/TBD | Not started | - |
