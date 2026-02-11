@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 ## Current Position
 
-Phase: 5 of 7 (Custom MLIR Dialect)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 — Completed 05-03-PLAN.md (Lowering Passes)
+Phase: 6 of 7 (Pattern Matching & Data Structures)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-11 — Completed 06-01-PLAN.md (Pattern Matching Theory)
 
-Progress: [█████████████] 117% (14/12 estimated total plans)
+Progress: [█████████████░] 125% (15/12 estimated total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 7 min
-- Total execution time: 1.6 hours
+- Total execution time: 1.7 hours
 
 **By Phase:**
 
@@ -32,14 +32,15 @@ Progress: [█████████████] 117% (14/12 estimated total 
 | 3 - Functions & Recursion | 2/2 | 17 min | 9 min |
 | 4 - Closures & Higher-Order | 2/2 | 11 min | 6 min |
 | 5 - Custom MLIR Dialect | 3/3 | 29 min | 10 min |
+| 6 - Pattern Matching | 1/4 | 7 min | 7 min |
 
 **Recent Trend:**
-- Last plan: 05-03 (8 min)
+- Last plan: 06-01 (7 min)
+- Previous: 05-03 (8 min)
 - Previous: 05-02 (12 min)
 - Previous: 05-01 (9 min)
 - Previous: 04-02 (6 min)
-- Previous: 04-01 (5 min)
-- Trend: Documentation plans ~8-10min, Phase 5 complete with 9k+ lines
+- Trend: Consistent 7-10min for documentation plans, Phase 6 started with theory
 
 *Updated after each plan completion*
 
@@ -133,6 +134,10 @@ Recent decisions affecting current work:
 - [05-03]: OpConversionPattern for complex lowering (ClosureOp/ApplyOp need dynamic logic)
 - [05-03]: DRR reserved for simple optimization patterns (empty closure, known closure inlining)
 - [05-03]: Partial conversion in FunLangToLLVM pass (other dialects lowered by separate passes)
+- [06-01]: Theory-first approach for pattern matching (algorithm understanding before MLIR implementation)
+- [06-01]: Left-to-right column selection heuristic for FunLang (simple and predictable)
+- [06-01]: Complete constructor set optimization (no default branch for {Nil, Cons})
+- [06-01]: Simple exhaustiveness error messages for Phase 6 (detailed analysis deferred)
 
 ### Pending Todos
 
@@ -164,9 +169,16 @@ None yet.
 - Code reduction: 92% closure creation, 87% closure application, 50% compiler code
 - DialectConversion patterns: ClosureOpLowering, ApplyOpLowering, DRR optimization
 
+**Phase 6 - Pattern Matching & Data Structures:**
+- Plan 06-01 COMPLETE: Pattern matching theory (Chapter 17 - 2578 lines)
+- Decision tree compilation algorithm (Maranget 2008)
+- Pattern matrix representation with specialization/defaulting operations
+- Exhaustiveness checking via empty matrix detection
+- Foundation for Chapter 18-19 MLIR implementation (list ops, match compilation)
+
 ## Session Continuity
 
-Last session: 2026-02-06T03:51:13Z
-Stopped at: Completed 05-03-PLAN.md (Lowering Passes) - PHASE 5 COMPLETE
+Last session: 2026-02-11T01:05:47Z
+Stopped at: Completed 06-01-PLAN.md (Pattern Matching Theory)
 Resume file: None
-Next: Phase 6 - Pattern Matching (06-01: funlang.match operation and region-based patterns)
+Next: Phase 6 continues - 06-02 (List Operations: funlang.nil, funlang.cons)
