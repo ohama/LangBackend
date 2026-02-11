@@ -3,7 +3,42 @@
 **Defined:** 2026-02-05
 **Core Value:** Each chapter produces a working compiler for all features covered so far
 
-## v1 Requirements
+---
+
+## v2.0 Implementation Requirements
+
+Implementation of actual FunLang → MLIR compiler based on tutorial documentation.
+
+### IMPL-INFRA: 컴파일 인프라 구현
+
+- [ ] **IMPL-INFRA-01**: P/Invoke bindings for MLIR-C API (context, module, type, operation, region, block)
+- [ ] **IMPL-INFRA-02**: OpBuilder wrapper class with fluent API for MLIR operation creation
+- [ ] **IMPL-INFRA-03**: Lowering pipeline (MLIR → LLVM dialect → LLVM IR → Object → Binary)
+- [ ] **IMPL-INFRA-04**: CLI integration with --emit-mlir option in FunLang
+
+### IMPL-LANG: 언어 기능 구현
+
+- [ ] **IMPL-LANG-01**: Arithmetic expressions compilation (add, sub, mul, div, negate)
+- [ ] **IMPL-LANG-02**: Comparison operators compilation (<, >, <=, >=, ==, <>)
+- [ ] **IMPL-LANG-03**: Boolean literals and logical operators (&&, ||)
+- [ ] **IMPL-LANG-04**: Let bindings with shadowing support (let x = e1 in e2)
+- [ ] **IMPL-LANG-05**: If-then-else expressions (scf.if based)
+- [ ] **IMPL-LANG-06**: Named function definitions (func.func)
+- [ ] **IMPL-LANG-07**: Function calls and recursion (func.call)
+- [ ] **IMPL-LANG-08**: Lambda expressions (fun x -> body)
+- [ ] **IMPL-LANG-09**: Free variable capture (closure environment)
+- [ ] **IMPL-LANG-10**: Higher-order functions (functions as arguments/return values)
+- [ ] **IMPL-LANG-11**: Currying (multi-argument as nested single-argument closures)
+
+### IMPL-TEST: 테스트 구현
+
+- [ ] **IMPL-TEST-01**: E2E fslit tests (FunLang source → compile → execute → verify)
+- [ ] **IMPL-TEST-02**: Unit tests for codegen modules (F# Expecto)
+- [ ] **IMPL-TEST-03**: MLIR IR tests (FileCheck verification)
+
+---
+
+## v1 Requirements (Tutorial Documentation - COMPLETE)
 
 Requirements for initial release. Each maps to roadmap phases.
 
@@ -189,5 +224,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Phase 7 (Optimization & Polish): 4 requirements
 
 ---
+
+## v2.0 Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| IMPL-INFRA-01 | TBD | Pending |
+| IMPL-INFRA-02 | TBD | Pending |
+| IMPL-INFRA-03 | TBD | Pending |
+| IMPL-INFRA-04 | TBD | Pending |
+| IMPL-LANG-01 | TBD | Pending |
+| IMPL-LANG-02 | TBD | Pending |
+| IMPL-LANG-03 | TBD | Pending |
+| IMPL-LANG-04 | TBD | Pending |
+| IMPL-LANG-05 | TBD | Pending |
+| IMPL-LANG-06 | TBD | Pending |
+| IMPL-LANG-07 | TBD | Pending |
+| IMPL-LANG-08 | TBD | Pending |
+| IMPL-LANG-09 | TBD | Pending |
+| IMPL-LANG-10 | TBD | Pending |
+| IMPL-LANG-11 | TBD | Pending |
+| IMPL-TEST-01 | TBD | Pending |
+| IMPL-TEST-02 | TBD | Pending |
+| IMPL-TEST-03 | TBD | Pending |
+
+---
 *Requirements defined: 2026-02-05*
-*Last updated: 2026-02-05 after roadmap creation*
+*Last updated: 2026-02-11 — v2.0 Implementation requirements added*
