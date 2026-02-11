@@ -24,6 +24,7 @@
 - [Chapter 17: Pattern Matching Theory](17-pattern-matching-theory.md)
 - [Chapter 18: List Operations](18-list-operations.md)
 - [Chapter 19: Match Compilation](19-match-compilation.md)
+- [Chapter 20: Functional Programs](20-functional-programs.md)
 
 # 부록
 

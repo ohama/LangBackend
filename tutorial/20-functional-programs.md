@@ -1333,3 +1333,1544 @@ append tests passed ✓
 - `append`: 결합
 
 다음 섹션에서는 가장 강력한 combinator인 **`fold`**를 구현한다.
+
+## fold 함수: 일반적인 리스트 Combinator
+
+### fold의 개념
+
+`fold` (또는 `reduce`)는 리스트를 하나의 값으로 축약하는 가장 일반적인 combinator다:
+
+```fsharp
+// fold의 타입
+fold : (acc -> a -> acc) -> acc -> [a] -> acc
+
+// fold의 의미
+fold f acc [x1, x2, ..., xn] = f (... (f (f acc x1) x2) ...) xn
+```
+
+**fold는 모든 리스트 연산의 기초다:**
+
+```fsharp
+// sum: 모든 원소의 합
+let sum lst = fold (+) 0 lst
+sum [1, 2, 3, 4, 5]  // 15
+
+// product: 모든 원소의 곱
+let product lst = fold (*) 1 lst
+product [1, 2, 3, 4]  // 24
+
+// length: map과 filter도 fold로 구현 가능
+let length lst = fold (fun acc _ -> acc + 1) 0 lst
+length [1, 2, 3]  // 3
+```
+
+**왜 fold가 가장 강력한가?**
+
+| 함수 | fold로 구현 가능? | 예제 |
+|------|-----------------|------|
+| `sum` | ✓ | `fold (+) 0` |
+| `product` | ✓ | `fold (*) 1` |
+| `length` | ✓ | `fold (fun acc _ -> acc + 1) 0` |
+| `map` | ✓ | `fold (fun acc x -> acc ++ [f x]) []` |
+| `filter` | ✓ | `fold (fun acc x -> if p x then acc ++ [x] else acc) []` |
+| `reverse` | ✓ | `fold (fun acc x -> x :: acc) []` |
+
+**fold는 universal list combinator다.** 다른 모든 리스트 함수를 fold로 표현할 수 있다.
+
+### FunLang 소스 코드
+
+`fold` 함수를 FunLang으로 작성한다:
+
+```fsharp
+let rec fold f acc lst =
+  match lst with
+  | [] -> acc
+  | head :: tail -> fold f (f acc head) tail
+```
+
+**동작 원리:**
+
+1. **Base case**: Empty list → return accumulator (결과)
+2. **Recursive case**:
+   - Apply `f` to `acc` and `head` → new accumulator
+   - Recursively fold over `tail` with new accumulator
+
+**실행 trace:**
+
+```fsharp
+fold (+) 0 [1, 2, 3, 4, 5]
+→ fold (+) (0 + 1) [2, 3, 4, 5]
+→ fold (+) 1 [2, 3, 4, 5]
+→ fold (+) (1 + 2) [3, 4, 5]
+→ fold (+) 3 [3, 4, 5]
+→ fold (+) (3 + 3) [4, 5]
+→ fold (+) 6 [4, 5]
+→ fold (+) (6 + 4) [5]
+→ fold (+) 10 [5]
+→ fold (+) (10 + 5) []
+→ fold (+) 15 []
+→ 15
+```
+
+**Accumulator 패턴:**
+
+Accumulator는 중간 결과를 저장하는 변수다:
+- **초기값**: `acc = 0` (sum의 경우)
+- **갱신**: `acc = f acc head` (각 원소마다 업데이트)
+- **최종값**: 리스트가 empty일 때 accumulator 반환
+
+### fold vs map/filter 비교
+
+| 특성 | map | filter | fold |
+|------|-----|--------|------|
+| 타입 | `(a -> b) -> [a] -> [b]` | `(a -> bool) -> [a] -> [a]` | `(acc -> a -> acc) -> acc -> [a] -> acc` |
+| 입력 | 리스트 | 리스트 | 리스트 + 초기값 |
+| 출력 | 리스트 | 리스트 | 단일 값 |
+| 함수 인자 | 1개 (원소) | 1개 (원소) | 2개 (누적값, 원소) |
+| 일반성 | 특수 | 특수 | 일반 (map/filter 구현 가능) |
+
+### 컴파일된 MLIR: FunLang Dialect
+
+```mlir
+// fold : (acc -> T -> acc) -> acc -> !funlang.list<T> -> acc
+func.func @fold(%f: !funlang.closure<(i32, i32) -> i32>,
+                %acc: i32,
+                %lst: !funlang.list<i32>) -> i32 {
+  // match lst with ...
+  %result = funlang.match %lst : !funlang.list<i32> -> i32 {
+    // Case 1: [] -> acc
+    ^nil:
+      funlang.yield %acc : i32
+
+    // Case 2: head :: tail -> fold f (f acc head) tail
+    ^cons(%head: i32, %tail: !funlang.list<i32>):
+      // f acc head
+      %new_acc = funlang.apply %f(%acc, %head)
+        : (!funlang.closure<(i32, i32) -> i32>, i32, i32) -> i32
+
+      // fold f new_acc tail (tail recursion!)
+      %final = func.call @fold(%f, %new_acc, %tail)
+        : (!funlang.closure<(i32, i32) -> i32>, i32, !funlang.list<i32>) -> i32
+
+      funlang.yield %final : i32
+  }
+
+  return %result : i32
+}
+```
+
+**핵심 포인트:**
+
+1. **Three arguments**: 클로저 `f`, 누적값 `acc`, 리스트 `lst`
+2. **Binary closure**: `f`는 두 인자 (`acc`, `head`)를 받는다
+3. **Tail recursion**: 재귀 호출이 함수의 마지막 operation (최적화 가능!)
+4. **Accumulator threading**: `acc` → `new_acc` → `final`로 흐름
+
+### Tail Recursion 분석
+
+`fold`는 **tail recursive**다:
+
+```fsharp
+// Tail recursive (good)
+let rec fold f acc lst =
+  match lst with
+  | [] -> acc
+  | head :: tail -> fold f (f acc head) tail
+  // ^^^ Recursive call is the LAST operation
+
+// NOT tail recursive (map, filter)
+let rec map f lst =
+  match lst with
+  | [] -> []
+  | head :: tail -> (f head) :: (map f tail)
+  // ^^^ Recursive call is NOT the last (cons follows)
+```
+
+**Tail recursion의 장점:**
+
+1. **Stack frame 재사용**: 각 재귀 호출이 새 stack frame을 생성하지 않음
+2. **메모리 효율**: O(1) stack space (vs O(n) for non-tail)
+3. **컴파일러 최적화**: Loop로 변환 가능
+
+**LLVM optimization pass가 tail call을 감지하면:**
+
+```mlir
+// Before optimization (recursive)
+%result = func.call @fold(%f, %new_acc, %tail) : (...) -> i32
+
+// After optimization (loop)
+// Stack frame 재사용, jump로 변환
+```
+
+### Common Fold Patterns
+
+**1. Sum (합계)**
+
+```fsharp
+let sum lst = fold (fun acc x -> acc + x) 0 lst
+// Or simply: fold (+) 0 lst
+
+sum [1, 2, 3, 4, 5]  // 15
+```
+
+Compiled MLIR:
+
+```mlir
+func.func @sum(%lst: !funlang.list<i32>) -> i32 {
+  // Create add closure
+  %add = funlang.closure @add_impl() : () -> ((i32, i32) -> i32)
+
+  // Initial accumulator
+  %zero = arith.constant 0 : i32
+
+  // Call fold
+  %result = func.call @fold(%add, %zero, %lst)
+    : (!funlang.closure<(i32, i32) -> i32>, i32, !funlang.list<i32>) -> i32
+
+  return %result : i32
+}
+
+func.func @add_impl(%acc: i32, %x: i32) -> i32 {
+  %result = arith.addi %acc, %x : i32
+  return %result : i32
+}
+```
+
+**2. Product (곱셈)**
+
+```fsharp
+let product lst = fold (*) 1 lst
+
+product [1, 2, 3, 4]  // 24
+```
+
+**3. Length (길이)**
+
+```fsharp
+let length lst = fold (fun acc _ -> acc + 1) 0 lst
+
+length [1, 2, 3]  // 3
+```
+
+이전에 재귀로 구현한 `length`와 같은 결과지만, fold를 사용하면 더 일반적이다.
+
+**4. Reverse (역순)**
+
+```fsharp
+let reverse lst = fold (fun acc x -> x :: acc) [] lst
+
+reverse [1, 2, 3]  // [3, 2, 1]
+```
+
+**Trace:**
+
+```
+fold cons [] [1, 2, 3]
+→ fold cons (1 :: []) [2, 3]
+→ fold cons [1] [2, 3]
+→ fold cons (2 :: [1]) [3]
+→ fold cons [2, 1] [3]
+→ fold cons (3 :: [2, 1]) []
+→ fold cons [3, 2, 1] []
+→ [3, 2, 1]
+```
+
+**5. Maximum (최댓값)**
+
+```fsharp
+let max_list lst =
+  match lst with
+  | [] -> error "empty list"
+  | head :: tail -> fold (fun acc x -> if x > acc then x else acc) head tail
+
+max_list [3, 1, 4, 1, 5, 9, 2]  // 9
+```
+
+### 테스트 프로그램: fold (+) 0 [1, 2, 3, 4, 5]
+
+```fsharp
+// FunLang source
+let add = fun acc x -> acc + x
+
+let rec fold f acc lst =
+  match lst with
+  | [] -> acc
+  | head :: tail -> fold f (f acc head) tail
+
+let result = fold add 0 [1, 2, 3, 4, 5]
+// Expected: 15
+```
+
+**Compiled MLIR (main function):**
+
+```mlir
+func.func @main() -> i32 {
+  // Create add closure
+  %add_fn = llvm.mlir.addressof @add_impl : !llvm.ptr
+  %null_env = llvm.mlir.null : !llvm.ptr
+  %closure_size = llvm.mlir.constant(16 : i64) : i64
+  %closure_mem = llvm.call @GC_malloc(%closure_size) : (i64) -> !llvm.ptr
+
+  %fn_ptr_field = llvm.getelementptr %closure_mem[0, 0] : (!llvm.ptr) -> !llvm.ptr
+  llvm.store %add_fn, %fn_ptr_field : !llvm.ptr, !llvm.ptr
+
+  %env_ptr_field = llvm.getelementptr %closure_mem[0, 1] : (!llvm.ptr) -> !llvm.ptr
+  llvm.store %null_env, %env_ptr_field : !llvm.ptr, !llvm.ptr
+
+  %add = llvm.load %closure_mem : !llvm.ptr -> !funlang.closure<(i32, i32) -> i32>
+
+  // Initial accumulator
+  %zero = arith.constant 0 : i32
+
+  // Create list: [1, 2, 3, 4, 5]
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+  %c3 = arith.constant 3 : i32
+  %c4 = arith.constant 4 : i32
+  %c5 = arith.constant 5 : i32
+
+  %nil = funlang.nil : !funlang.list<i32>
+  %l5 = funlang.cons %c5, %nil : (i32, !funlang.list<i32>) -> !funlang.list<i32>
+  %l4 = funlang.cons %c4, %l5 : (i32, !funlang.list<i32>) -> !funlang.list<i32>
+  %l3 = funlang.cons %c3, %l4 : (i32, !funlang.list<i32>) -> !funlang.list<i32>
+  %l2 = funlang.cons %c2, %l3 : (i32, !funlang.list<i32>) -> !funlang.list<i32>
+  %l1 = funlang.cons %c1, %l2 : (i32, !funlang.list<i32>) -> !funlang.list<i32>
+
+  // Call fold
+  %result = func.call @fold(%add, %zero, %l1)
+    : (!funlang.closure<(i32, i32) -> i32>, i32, !funlang.list<i32>) -> i32
+
+  return %result : i32
+}
+
+func.func @add_impl(%acc: i32, %x: i32) -> i32 {
+  %result = arith.addi %acc, %x : i32
+  return %result : i32
+}
+```
+
+**검증:**
+
+```fsharp
+let testFoldSum() =
+    let ctx = MLIRContext.Create()
+    let module = compileProgram ctx foldSumSource
+
+    let pm = PassManager.Create(ctx)
+    pm.AddPass("convert-funlang-to-scf")
+    pm.AddPass("convert-scf-to-cf")
+    pm.AddPass("convert-funlang-to-llvm")
+    pm.Run(module)
+
+    let engine = ExecutionEngine.Create(module)
+    let result = engine.Invoke("main", [||])
+
+    assert (result = 15)
+    printfn "fold (+) 0 [1, 2, 3, 4, 5] = 15 ✓"
+```
+
+**Output:**
+
+```
+fold (+) 0 [1, 2, 3, 4, 5] = 15 ✓
+```
+
+성공! `fold` 함수도 완전히 작동한다.
+
+## 완전한 예제: Sum of Squares
+
+이제 모든 것을 조합하여 **실전 함수형 프로그램**을 작성한다.
+
+### 문제 정의
+
+주어진 숫자 리스트의 **제곱의 합**을 계산한다:
+
+```
+sum_of_squares [1, 2, 3] = 1² + 2² + 3² = 1 + 4 + 9 = 14
+```
+
+### FunLang 소스 코드
+
+```fsharp
+// Helper: square function
+let square = fun x -> x * x
+
+// Helper: add function
+let add = fun acc x -> acc + x
+
+// map: transform each element
+let rec map f lst =
+  match lst with
+  | [] -> []
+  | head :: tail -> (f head) :: (map f tail)
+
+// fold: reduce to single value
+let rec fold f acc lst =
+  match lst with
+  | [] -> acc
+  | head :: tail -> fold f (f acc head) tail
+
+// Composition: sum of squares
+let sum_of_squares lst =
+  fold add 0 (map square lst)
+
+// Test
+let result = sum_of_squares [1, 2, 3]
+// Expected: 14
+```
+
+**함수 조합 분석:**
+
+```
+[1, 2, 3]
+  ↓ map square
+[1, 4, 9]
+  ↓ fold add 0
+14
+```
+
+**이것이 바로 함수형 프로그래밍의 핵심이다:**
+- 작은 함수들 (`square`, `add`, `map`, `fold`)
+- 조합하여 복잡한 동작 (`sum_of_squares`)
+- 선언적 스타일: "무엇을" 계산할지 명확
+
+### 전체 컴파일 파이프라인 (9 단계)
+
+이 프로그램을 end-to-end로 컴파일하는 과정을 모두 추적한다.
+
+**Stage 1: FunLang Source (사용자 작성)**
+
+```fsharp
+let sum_of_squares lst =
+  fold add 0 (map square lst)
+```
+
+**Stage 2: FunLang AST (Parser 출력)**
+
+```fsharp
+Let("sum_of_squares",
+    Fun("lst",
+        App(App(App(Var "fold", Var "add"),
+                Int 0),
+            App(App(Var "map", Var "square"),
+                Var "lst"))),
+    ...)
+```
+
+**Stage 3: FunLang MLIR (Compiler.fs 출력)**
+
+```mlir
+func.func @sum_of_squares(%lst: !funlang.list<i32>) -> i32 {
+  // square closure (defined elsewhere)
+  %square = ... : !funlang.closure<(i32) -> i32>
+
+  // add closure (defined elsewhere)
+  %add = ... : !funlang.closure<(i32, i32) -> i32>
+
+  // map square lst
+  %squared_list = func.call @map(%square, %lst)
+    : (!funlang.closure<(i32) -> i32>, !funlang.list<i32>) -> !funlang.list<i32>
+
+  // fold add 0 squared_list
+  %zero = arith.constant 0 : i32
+  %result = func.call @fold(%add, %zero, %squared_list)
+    : (!funlang.closure<(i32, i32) -> i32>, i32, !funlang.list<i32>) -> i32
+
+  return %result : i32
+}
+```
+
+**Stage 4: FunLang → SCF Lowering (FunLangToSCFPass)**
+
+`funlang.match` operations이 `scf.if`로 변환된다:
+
+```mlir
+// @map function (simplified)
+func.func @map(...) -> ... {
+  %is_nil = ... : i1
+  %result = scf.if %is_nil -> ... {
+    // Nil case
+    scf.yield %empty : ...
+  } else {
+    // Cons case
+    %transformed = funlang.apply %f(%head) : ...
+    %mapped_tail = func.call @map(...) : ...
+    %new_list = funlang.cons %transformed, %mapped_tail : ...
+    scf.yield %new_list : ...
+  }
+  return %result : ...
+}
+```
+
+**Stage 5: FunLang Ops → LLVM (FunLangToLLVMPass)**
+
+`funlang.cons`, `funlang.nil`, `funlang.apply` 등이 LLVM operations로 변환:
+
+```mlir
+// funlang.cons lowering
+%cell_size = llvm.mlir.constant(16 : i64) : i64
+%cell = llvm.call @GC_malloc(%cell_size) : (i64) -> !llvm.ptr
+%head_ptr = llvm.getelementptr %cell[0, 0] : (!llvm.ptr) -> !llvm.ptr
+llvm.store %head, %head_ptr : i32, !llvm.ptr
+%tail_ptr = llvm.getelementptr %cell[0, 1] : (!llvm.ptr) -> !llvm.ptr
+llvm.store %tail, %tail_ptr : !llvm.struct<(i32, ptr)>, !llvm.ptr
+
+%cons_tag = arith.constant 1 : i32
+%list = llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+%list1 = llvm.insertvalue %cons_tag, %list[0] : !llvm.struct<(i32, ptr)>
+%list2 = llvm.insertvalue %cell, %list1[1] : !llvm.struct<(i32, ptr)>
+```
+
+**Stage 6: SCF → CF Lowering (SCFToControlFlowPass)**
+
+`scf.if` → `cf.cond_br`, `cf.br`:
+
+```mlir
+func.func @map(...) -> ... {
+^entry:
+  %is_nil = ... : i1
+  cf.cond_br %is_nil, ^nil_case, ^cons_case
+
+^nil_case:
+  %empty = ...
+  cf.br ^exit(%empty : ...)
+
+^cons_case:
+  %transformed = ...
+  %mapped_tail = func.call @map(...) : ...
+  %new_list = ...
+  cf.br ^exit(%new_list : ...)
+
+^exit(%result: ...):
+  return %result : ...
+}
+```
+
+**Stage 7: Func → LLVM (ConvertFuncToLLVMPass)**
+
+`func.func` → `llvm.func`, `func.call` → `llvm.call`:
+
+```mlir
+llvm.func @map(%f: !llvm.ptr, %lst: !llvm.struct<(i32, ptr)>) -> !llvm.struct<(i32, ptr)> {
+  ...
+  %result = llvm.call @map(%f, %tail) : (!llvm.ptr, !llvm.struct<(i32, ptr)>) -> !llvm.struct<(i32, ptr)>
+  ...
+}
+```
+
+**Stage 8: LLVM Dialect → LLVM IR (Translate to LLVM IR)**
+
+MLIR LLVM dialect를 실제 LLVM IR로 변환:
+
+```llvm
+define { i32, i8* } @map({ i8*, i8* }* %f, { i32, i8* } %lst) {
+entry:
+  %0 = extractvalue { i32, i8* } %lst, 0
+  %1 = icmp eq i32 %0, 0
+  br i1 %1, label %nil_case, label %cons_case
+
+nil_case:
+  %2 = insertvalue { i32, i8* } undef, i32 0, 0
+  %3 = insertvalue { i32, i8* } %2, i8* null, 1
+  br label %exit
+
+cons_case:
+  %4 = extractvalue { i32, i8* } %lst, 1
+  %5 = bitcast i8* %4 to { i32, { i32, i8* } }*
+  %6 = getelementptr { i32, { i32, i8* } }, { i32, { i32, i8* } }* %5, i32 0, i32 0
+  %7 = load i32, i32* %6
+  %8 = getelementptr { i32, { i32, i8* } }, { i32, { i32, i8* } }* %5, i32 0, i32 1
+  %9 = load { i32, i8* }, { i32, i8* }* %8
+  ; ... (apply closure, recursive call, cons)
+  br label %exit
+
+exit:
+  %result = phi { i32, i8* } [ %3, %nil_case ], [ %new_list, %cons_case ]
+  ret { i32, i8* } %result
+}
+```
+
+**Stage 9: LLVM IR → Machine Code (JIT 또는 AOT)**
+
+LLVM backend가 target architecture의 machine code 생성:
+
+```asm
+; x86-64 assembly (simplified)
+map:
+    push    rbp
+    mov     rbp, rsp
+    ; Extract tag
+    mov     eax, dword ptr [rsi]
+    test    eax, eax
+    je      .LBB0_1        ; Nil case
+    ; Cons case
+    mov     rdi, qword ptr [rsi + 8]
+    mov     ecx, dword ptr [rdi]     ; head
+    mov     rsi, qword ptr [rdi + 8]  ; tail
+    ; ... (apply f, recursive call)
+    jmp     .LBB0_2
+.LBB0_1:
+    ; Return empty list
+    xor     eax, eax
+    xor     edx, edx
+.LBB0_2:
+    pop     rbp
+    ret
+```
+
+### 실행 및 검증
+
+```fsharp
+let testSumOfSquares() =
+    let ctx = MLIRContext.Create()
+    let module = compileProgram ctx sumOfSquaresSource
+
+    // Apply all passes
+    let pm = PassManager.Create(ctx)
+    pm.AddPass("convert-funlang-to-scf")
+    pm.AddPass("convert-scf-to-cf")
+    pm.AddPass("convert-funlang-to-llvm")
+    pm.AddPass("convert-func-to-llvm")
+    pm.Run(module)
+
+    // JIT compile and execute
+    let engine = ExecutionEngine.Create(module)
+    let result = engine.Invoke("main", [||])
+
+    // Verify
+    assert (result = 14)
+    printfn "sum_of_squares [1, 2, 3] = 14 ✓"
+
+    // Detailed trace
+    printfn "Pipeline trace:"
+    printfn "  [1, 2, 3]"
+    printfn "  → map square"
+    printfn "  [1, 4, 9]"
+    printfn "  → fold add 0"
+    printfn "  14 ✓"
+```
+
+**Output:**
+
+```
+sum_of_squares [1, 2, 3] = 14 ✓
+Pipeline trace:
+  [1, 2, 3]
+  → map square
+  [1, 4, 9]
+  → fold add 0
+  14 ✓
+```
+
+**완전한 컴파일러가 작동한다!**
+
+9단계의 변환을 거쳐 FunLang 소스 코드가 실행 가능한 machine code가 되었다.
+
+## 성능 고려사항
+
+### Stack Usage in Recursive List Functions
+
+리스트 함수는 재귀적이므로 stack 사용량이 중요하다.
+
+**Stack depth by function:**
+
+| 함수 | Stack depth | 이유 |
+|------|-------------|------|
+| `map` | O(n) | Non-tail recursive (cons 후에 return) |
+| `filter` | O(n) | Non-tail recursive (cons 후에 return) |
+| `fold` | **O(1)** | **Tail recursive (최적화 가능)** |
+| `length` | O(n) | Non-tail recursive |
+| `append` | O(n) | Non-tail recursive |
+
+**Non-tail recursion example (map):**
+
+```fsharp
+let rec map f lst =
+  match lst with
+  | [] -> []
+  | head :: tail -> (f head) :: (map f tail)
+  // ^^^ Cons operation AFTER recursive call
+  // Stack frame must be preserved until map returns
+```
+
+Call stack for `map square [1, 2, 3]`:
+
+```
+map [1, 2, 3]
+  map [2, 3]
+    map [3]
+      map []
+      return []
+    cons 9 []
+    return [9]
+  cons 4 [9]
+  return [4, 9]
+cons 1 [4, 9]
+return [1, 4, 9]
+```
+
+**각 frame은 다음을 저장해야 한다:**
+- Return address
+- `head` value (cons를 위해)
+- `tail` pointer
+
+**Tail recursion example (fold):**
+
+```fsharp
+let rec fold f acc lst =
+  match lst with
+  | [] -> acc
+  | head :: tail -> fold f (f acc head) tail
+  // ^^^ Recursive call is LAST operation
+  // Stack frame can be REUSED
+```
+
+Call stack for `fold add 0 [1, 2, 3]`:
+
+```
+fold 0 [1, 2, 3]
+fold 1 [2, 3]      // Same stack frame, acc updated
+fold 3 [3]         // Same stack frame, acc updated
+fold 6 []          // Same stack frame, acc updated
+return 6
+```
+
+**Only ONE stack frame!**
+
+### Tail Call Optimization (TCO)
+
+LLVM은 tail call을 감지하여 최적화할 수 있다.
+
+**Before TCO:**
+
+```llvm
+define i32 @fold(...) {
+  ; ...
+  %new_acc = add i32 %acc, %head
+  %result = call i32 @fold(..., %new_acc, %tail)
+  ret i32 %result
+}
+```
+
+**After TCO:**
+
+```llvm
+define i32 @fold(...) {
+entry:
+  br label %loop
+
+loop:
+  ; ...
+  %new_acc = add i32 %acc, %head
+  ; Update arguments and jump (no new stack frame)
+  br label %loop
+}
+```
+
+**TCO 활성화:**
+
+```fsharp
+// PassManager.fs
+let pm = PassManager.Create(ctx)
+
+// Add standard LLVM optimization passes
+pm.AddPass("inline")              // Inline small functions
+pm.AddPass("simplifycfg")         // Simplify control flow
+pm.AddPass("tailcallelim")        // Tail call elimination
+pm.AddPass("mem2reg")             // Promote memory to registers
+pm.Run(module)
+```
+
+**결과:**
+
+- `fold`는 loop로 변환되어 O(1) stack 사용
+- 큰 리스트 (100,000+ elements)도 stack overflow 없이 처리 가능
+
+### GC Pressure
+
+리스트 연산은 많은 메모리를 할당한다.
+
+**Allocation counts:**
+
+```fsharp
+// Create list [1, 2, 3]
+// - 3 cons cells = 3 * 16 bytes = 48 bytes
+
+// map square [1, 2, 3]
+// - Input: 3 cells (48 bytes)
+// - Output: 3 NEW cells (48 bytes)
+// - Total alive: 96 bytes (both lists live)
+
+// fold add 0 (map square [1, 2, 3])
+// - Input: 3 cells (48 bytes) from map
+// - Output: i32 (4 bytes) - no new list!
+// - GC can collect input list after fold
+```
+
+**Allocation pattern by function:**
+
+| 함수 | 할당량 | 설명 |
+|------|--------|------|
+| `map` | O(n) cons cells | 새 리스트 생성 |
+| `filter` | O(k) cons cells (k ≤ n) | 조건 만족하는 원소만 |
+| `fold` | **O(1)** | 단일 값만 반환 |
+| `append` | O(n) cons cells | 첫 번째 리스트 복사 |
+
+**GC optimization:**
+
+```fsharp
+// BAD: 중간 리스트가 메모리에 남는다
+let result1 = map f1 lst
+let result2 = map f2 result1
+let result3 = map f3 result2
+// result1, result2, result3 모두 메모리에 존재
+
+// GOOD: Fusion으로 중간 리스트 제거 (Phase 7에서 다룸)
+let result = map (f3 << f2 << f1) lst
+// 단일 pass, 중간 리스트 없음
+```
+
+### Phase 7 Preview: Optimization Opportunities
+
+Phase 7에서 다룰 최적화:
+
+**1. List Fusion**
+
+```fsharp
+// Before: 두 번 순회
+map f (map g lst)
+
+// After fusion: 한 번만 순회
+map (f << g) lst
+```
+
+**2. Deforestation**
+
+```fsharp
+// Before: 중간 리스트 생성
+fold h z (map f lst)
+
+// After deforestation: 직접 계산
+fold (fun acc x -> h acc (f x)) z lst
+```
+
+**3. Tail Recursion Modulo Cons**
+
+```fsharp
+// map을 tail recursive로 변환
+let map f lst =
+  let rec loop acc lst =
+    match lst with
+    | [] -> reverse acc
+    | head :: tail -> loop ((f head) :: acc) tail
+  loop [] lst
+```
+
+**4. Parallel Map**
+
+큰 리스트에 대해 map을 병렬화:
+
+```mlir
+// Sequential
+%result = scf.for %i = 0 to %n step 1 iter_args(%acc = %init) -> ... {
+  %elem = load %lst[%i]
+  %transformed = apply %f(%elem)
+  ...
+}
+
+// Parallel (MLIR scf.parallel)
+scf.parallel (%i) = (0) to (%n) step (1) {
+  %elem = load %lst[%i]
+  %transformed = apply %f(%elem)
+  store %transformed, %result[%i]
+}
+```
+
+이러한 최적화는 Phase 7에서 MLIR transformation passes로 구현할 것이다.
+
+## 완전한 컴파일러 통합
+
+이제 모든 것을 통합하여 **완전한 FunLang 컴파일러**를 구축한다.
+
+### FunLang AST Type Extensions
+
+최종 AST 정의:
+
+```fsharp
+// Ast.fs
+module Ast
+
+type Expr =
+    // Phase 1-2: Basics
+    | Int of int
+    | Float of float
+    | Bool of bool
+    | Var of string
+    | Add of Expr * Expr
+    | Sub of Expr * Expr
+    | Mul of Expr * Expr
+    | Div of Expr * Expr
+    | Lt of Expr * Expr
+    | Gt of Expr * Expr
+    | Eq of Expr * Expr
+
+    // Phase 3: Control flow and functions
+    | Let of string * Expr * Expr
+    | If of Expr * Expr * Expr
+    | LetRec of string * Expr * Expr
+
+    // Phase 4: Closures and higher-order functions
+    | Fun of string * Expr              // lambda
+    | App of Expr * Expr                // application
+
+    // Phase 6: Lists and pattern matching
+    | Nil                                // []
+    | Cons of Expr * Expr                // head :: tail
+    | List of Expr list                  // [1, 2, 3] (syntactic sugar)
+    | Match of Expr * (Pattern * Expr) list
+
+and Pattern =
+    | PVar of string                     // x (variable binding)
+    | PNil                               // [] (empty list)
+    | PCons of Pattern * Pattern         // head :: tail (cons pattern)
+    | PWild                              // _ (wildcard)
+    | PInt of int                        // 42 (literal match)
+    | PBool of bool                      // true/false
+
+type Program = Expr
+```
+
+### Compiler.fs: compileExpr Complete Implementation
+
+```fsharp
+// Compiler.fs
+module Compiler
+
+open MLIR
+open Ast
+
+let rec compileExpr (builder: OpBuilder) (expr: Expr) (symbolTable: Map<string, Value>) : Value =
+    match expr with
+    // Phase 1-2: Arithmetic
+    | Int n ->
+        let ty = builder.GetI32Type()
+        builder.CreateConstantInt(ty, n)
+
+    | Float f ->
+        let ty = builder.GetF64Type()
+        builder.CreateConstantFloat(ty, f)
+
+    | Bool b ->
+        let ty = builder.GetI1Type()
+        builder.CreateConstantBool(ty, b)
+
+    | Var name ->
+        symbolTable.[name]
+
+    | Add (left, right) ->
+        let lhs = compileExpr builder left symbolTable
+        let rhs = compileExpr builder right symbolTable
+        builder.CreateAddI(lhs, rhs)
+
+    | Mul (left, right) ->
+        let lhs = compileExpr builder left symbolTable
+        let rhs = compileExpr builder right symbolTable
+        builder.CreateMulI(lhs, rhs)
+
+    // ... (other arithmetic ops)
+
+    // Phase 3: Let and If
+    | Let (name, value, body) ->
+        let val_result = compileExpr builder value symbolTable
+        let newSymbolTable = symbolTable.Add(name, val_result)
+        compileExpr builder body newSymbolTable
+
+    | If (cond, thenExpr, elseExpr) ->
+        let condVal = compileExpr builder cond symbolTable
+        let resultTy = inferType thenExpr symbolTable
+        builder.CreateScfIf(condVal, resultTy, fun thenBuilder ->
+            let thenResult = compileExpr thenBuilder thenExpr symbolTable
+            thenBuilder.CreateScfYield(thenResult)
+        , fun elseBuilder ->
+            let elseResult = compileExpr elseBuilder elseExpr symbolTable
+            elseBuilder.CreateScfYield(elseResult)
+        )
+
+    | LetRec (name, func, body) ->
+        // Create named function for recursion
+        let funcName = sprintf "_%s" name
+        let funcOp = compileFunctionDefinition builder funcName func symbolTable
+        let funcRef = builder.CreateFuncRef(funcOp)
+        let newSymbolTable = symbolTable.Add(name, funcRef)
+        compileExpr builder body newSymbolTable
+
+    // Phase 4: Closures
+    | Fun (param, body) ->
+        // Analyze free variables
+        let freeVars = analyzeFreeVars (Fun(param, body)) symbolTable
+
+        // Create closure implementation function
+        let implName = sprintf "_lambda_%d" (freshId())
+        let implFunc = createClosureImpl builder implName param body freeVars symbolTable
+
+        // Capture environment
+        let captures = freeVars |> List.map (fun v -> symbolTable.[v])
+
+        // Create closure object
+        builder.CreateClosure(implFunc, captures)
+
+    | App (func, arg) ->
+        let funcVal = compileExpr builder func symbolTable
+        let argVal = compileExpr builder arg symbolTable
+        builder.CreateApply(funcVal, argVal)
+
+    // Phase 6: Lists
+    | Nil ->
+        let elemTy = inferElementType expr symbolTable
+        let listTy = builder.GetListType(elemTy)
+        builder.CreateNil(listTy)
+
+    | Cons (head, tail) ->
+        let headVal = compileExpr builder head symbolTable
+        let tailVal = compileExpr builder tail symbolTable
+        let headTy = headVal.GetType()
+        let listTy = builder.GetListType(headTy)
+        builder.CreateCons(headVal, tailVal, listTy)
+
+    | List exprs ->
+        // Desugar to nested Cons
+        let desugared = desugarList exprs
+        compileExpr builder desugared symbolTable
+
+    | Match (scrutinee, cases) ->
+        compileMatch builder scrutinee cases symbolTable
+
+and compileMatch (builder: OpBuilder) (scrutinee: Expr) (cases: (Pattern * Expr) list) (symbolTable: Map<string, Value>) : Value =
+    let scrutineeVal = compileExpr builder scrutinee symbolTable
+    let resultTy = inferType (snd cases.[0]) symbolTable
+
+    // Create funlang.match operation
+    builder.CreateMatch(scrutineeVal, resultTy, fun matchBuilder ->
+        cases |> List.map (fun (pattern, body) ->
+            match pattern with
+            | PNil ->
+                // Nil case: no block arguments
+                matchBuilder.CreateNilCase(fun caseBuilder ->
+                    let result = compileExpr caseBuilder body symbolTable
+                    caseBuilder.CreateYield(result)
+                )
+
+            | PCons (PVar headName, PVar tailName) ->
+                // Cons case: bind head and tail
+                let headTy = inferPatternType pattern symbolTable
+                let listTy = builder.GetListType(headTy)
+                matchBuilder.CreateConsCase(headTy, listTy, fun caseBuilder headArg tailArg ->
+                    let newSymbolTable =
+                        symbolTable
+                            .Add(headName, headArg)
+                            .Add(tailName, tailArg)
+                    let result = compileExpr caseBuilder body newSymbolTable
+                    caseBuilder.CreateYield(result)
+                )
+
+            | _ -> failwith "Unsupported pattern"
+        )
+    )
+
+and desugarList (exprs: Expr list) : Expr =
+    match exprs with
+    | [] -> Nil
+    | head :: tail -> Cons(head, desugarList tail)
+```
+
+### Type Inference for List Types
+
+리스트 타입 추론:
+
+```fsharp
+// TypeInfer.fs
+let rec inferType (expr: Expr) (symbolTable: Map<string, Value>) : MLIRType =
+    match expr with
+    | Int _ -> builder.GetI32Type()
+    | Float _ -> builder.GetF64Type()
+    | Bool _ -> builder.GetI1Type()
+
+    | Var name ->
+        let value = symbolTable.[name]
+        value.GetType()
+
+    | Nil ->
+        // Need context to infer element type
+        // If context is unavailable, default to i32
+        builder.GetListType(builder.GetI32Type())
+
+    | Cons (head, tail) ->
+        let headTy = inferType head symbolTable
+        builder.GetListType(headTy)
+
+    | List (head :: _) ->
+        let headTy = inferType head symbolTable
+        builder.GetListType(headTy)
+
+    | Match (scrutinee, cases) ->
+        // Result type is the type of first case body
+        inferType (snd cases.[0]) symbolTable
+
+    | Fun (param, body) ->
+        // Function type: paramTy -> returnTy
+        // Need type annotation or inference
+        let paramTy = inferParamType param
+        let returnTy = inferType body symbolTable
+        builder.GetFunctionType(paramTy, returnTy)
+
+    | _ -> failwith "Type inference not implemented"
+```
+
+### End-to-End Compilation Function
+
+```fsharp
+// Pipeline.fs
+let compileProgram (source: string) : MLIRModule =
+    // 1. Parse
+    let ast = Parser.parse source
+
+    // 2. Desugar
+    let desugared = Desugar.desugar ast
+
+    // 3. Type check
+    TypeChecker.check desugared
+
+    // 4. Compile to MLIR
+    let ctx = MLIRContext.Create()
+    let module = MLIRModule.Create(ctx)
+    let builder = OpBuilder.Create(ctx)
+
+    let mainFunc = builder.CreateFunc("main", [], inferType desugared Map.empty, fun funcBuilder ->
+        let result = Compiler.compileExpr funcBuilder desugared Map.empty
+        funcBuilder.CreateReturn(result)
+    )
+
+    module.AddFunction(mainFunc)
+
+    // 5. Apply lowering passes
+    let pm = PassManager.Create(ctx)
+    pm.AddPass("convert-funlang-to-scf")
+    pm.AddPass("convert-scf-to-cf")
+    pm.AddPass("convert-funlang-to-llvm")
+    pm.AddPass("convert-func-to-llvm")
+    pm.Run(module)
+
+    module
+
+// Execute
+let execute (module: MLIRModule) : obj =
+    let engine = ExecutionEngine.Create(module)
+    engine.Invoke("main", [||])
+
+// Complete pipeline
+let run (source: string) : obj =
+    let module = compileProgram source
+    execute module
+```
+
+### Example Usage
+
+```fsharp
+// Main.fs
+[<EntryPoint>]
+let main argv =
+    let source = """
+        let square = fun x -> x * x
+        let add = fun acc x -> acc + x
+
+        let rec map f lst =
+          match lst with
+          | [] -> []
+          | head :: tail -> (f head) :: (map f tail)
+
+        let rec fold f acc lst =
+          match lst with
+          | [] -> acc
+          | head :: tail -> fold f (f acc head) tail
+
+        let sum_of_squares lst =
+          fold add 0 (map square lst)
+
+        sum_of_squares [1, 2, 3]
+    """
+
+    let result = Pipeline.run source
+    printfn "Result: %A" result  // Result: 14
+
+    0
+```
+
+**Output:**
+
+```
+Result: 14
+```
+
+**완전한 컴파일러가 작동한다!**
+
+## Common Errors and Debugging
+
+함수형 프로그램 작성 시 자주 발생하는 오류와 해결 방법.
+
+### 1. Infinite Recursion
+
+**오류:**
+
+```fsharp
+let rec bad_map f lst =
+  match lst with
+  | [] -> []
+  | head :: tail -> (f head) :: (bad_map f lst)  // BUG: lst instead of tail
+```
+
+**증상:**
+
+```
+Stack overflow
+Segmentation fault
+Infinite loop
+```
+
+**해결:**
+
+- 재귀 호출이 "smaller" input을 사용하는지 확인
+- Base case가 반드시 도달 가능한지 확인
+
+```fsharp
+// Correct
+| head :: tail -> (f head) :: (map f tail)  // ✓ tail is smaller
+```
+
+### 2. Type Mismatch
+
+**오류:**
+
+```fsharp
+let bad_fold f acc lst =
+  match lst with
+  | [] -> 0  // BUG: should return acc, not 0
+  | head :: tail -> fold f (f acc head) tail
+```
+
+**증상:**
+
+```
+Type error: Expected i32, found i64
+Type mismatch in match branches
+```
+
+**해결:**
+
+- 모든 match branch가 같은 타입 반환하는지 확인
+- Accumulator 타입이 일관되는지 확인
+
+```fsharp
+// Correct
+| [] -> acc  // ✓ Same type as recursive case
+```
+
+### 3. Wrong Accumulator Type
+
+**오류:**
+
+```fsharp
+// Want to reverse a list
+let reverse lst = fold (fun acc x -> acc :: x) [] lst  // BUG: wrong cons order
+```
+
+**증상:**
+
+```
+Type error: Cannot cons list to element
+Expected: element :: list
+Found: list :: element
+```
+
+**해결:**
+
+- Cons operator는 `element :: list` 순서
+- Accumulator 타입 확인
+
+```fsharp
+// Correct
+let reverse lst = fold (fun acc x -> x :: acc) [] lst  // ✓ x :: acc
+```
+
+### 4. Stack Overflow
+
+**오류:**
+
+```fsharp
+// Large list
+let big_list = [1..100000]
+let result = map square big_list  // Stack overflow!
+```
+
+**증상:**
+
+```
+Segmentation fault (core dumped)
+Stack overflow at recursion depth 100000
+```
+
+**해결:**
+
+- Tail recursive 버전 사용
+- TCO 활성화
+- Iteration으로 변환 (Phase 7)
+
+```fsharp
+// Tail recursive version
+let map_tailrec f lst =
+  let rec loop acc lst =
+    match lst with
+    | [] -> reverse acc
+    | head :: tail -> loop ((f head) :: acc) tail
+  loop [] lst
+```
+
+### 5. Debugging Strategies
+
+**전략 1: Trace execution**
+
+```fsharp
+let rec map f lst =
+  printfn "map called with list of length %d" (length lst)
+  match lst with
+  | [] ->
+      printfn "  -> returning []"
+      []
+  | head :: tail ->
+      printfn "  -> transforming %A" head
+      let transformed = f head
+      printfn "  -> recursing on tail"
+      let mapped_tail = map f tail
+      printfn "  -> cons %A onto result" transformed
+      transformed :: mapped_tail
+```
+
+**전략 2: Unit tests**
+
+```fsharp
+let test_map() =
+    assert (map square [] = [])
+    assert (map square [1] = [1])
+    assert (map square [1, 2] = [1, 4])
+    assert (map square [1, 2, 3] = [1, 4, 9])
+    printfn "map tests passed ✓"
+```
+
+**전략 3: MLIR inspection**
+
+```fsharp
+let module = compileProgram source
+printfn "%s" (module.ToString())  // Print MLIR before lowering
+
+let pm = PassManager.Create(ctx)
+pm.EnableIRPrinting()  // Print after each pass
+pm.AddPass("convert-funlang-to-scf")
+pm.Run(module)
+```
+
+**전략 4: GDB debugging**
+
+```bash
+# Compile with debug info
+mlir-opt --debug-only=funlang-to-scf input.mlir
+
+# Run under GDB
+gdb --args mlir-opt ...
+(gdb) break FunLangToSCFPass::runOnOperation
+(gdb) run
+```
+
+## Phase 6 Complete Summary
+
+**축하한다! Phase 6를 완료했다.**
+
+### Chapter 17-20 복습
+
+**Chapter 17: Pattern Matching Theory**
+- Decision tree 알고리즘으로 패턴 매칭을 효율적으로 컴파일
+- Exhaustiveness checking으로 빠진 case 감지
+- Unreachable case detection으로 중복 제거
+
+**Chapter 18: List Operations**
+- `!funlang.list<T>` parameterized type
+- Tagged union representation: `!llvm.struct<(i32, ptr)>`
+- `funlang.nil`과 `funlang.cons` operations
+- TypeConverter와 lowering patterns
+
+**Chapter 19: Match Compilation**
+- `funlang.match` operation 정의
+- Multi-stage lowering: FunLang → SCF → CF → LLVM
+- IRMapping으로 block argument remapping
+- Region-based IR structure
+
+**Chapter 20: Functional Programs (this chapter)**
+- FunLang AST extensions for lists
+- Compiler integration (compileExpr, type inference)
+- Core list functions: map, filter, fold, length, append
+- Complete example: sum_of_squares
+- End-to-end compilation pipeline (9 stages)
+- Performance analysis and optimization preview
+
+### What You Can Now Compile
+
+**Phase 6 종료 시점에 컴파일 가능한 프로그램:**
+
+```fsharp
+// 1. List construction
+let list = [1, 2, 3, 4, 5]
+
+// 2. Pattern matching
+let rec sum lst =
+  match lst with
+  | [] -> 0
+  | head :: tail -> head + sum tail
+
+// 3. Higher-order functions
+let map f lst = ...
+let filter pred lst = ...
+let fold combiner acc lst = ...
+
+// 4. Function composition
+let sum_of_squares lst =
+  fold (+) 0 (map (fun x -> x * x) lst)
+
+// 5. Complex functional programs
+let process data =
+  data
+  |> filter is_valid
+  |> map transform
+  |> fold aggregate initial
+
+// 6. Nested data structures
+let nested = [[1, 2], [3, 4], [5, 6]]
+let flattened = fold append [] nested
+```
+
+**이것은 실제 함수형 언어와 동등한 표현력이다!**
+
+### Technical Achievements
+
+**Phase 6에서 구현한 기술:**
+
+1. **Parameterized types**: `!funlang.list<T>` with element type parameter
+2. **Tagged unions**: Efficient runtime representation of ADTs
+3. **Pattern matching**: Decision tree compilation for performance
+4. **Multi-stage lowering**: Progressive refinement through dialects
+5. **Type conversion**: Consistent type mapping across lowering stages
+6. **Region-based IR**: Structured control flow with scoped bindings
+7. **Tail recursion**: Optimization opportunity for fold
+8. **GC integration**: Automatic memory management for lists
+9. **Complete pipeline**: Source → AST → MLIR → LLVM IR → Machine code
+
+### Phase 7 Preview: Optimization
+
+Phase 7에서 다룰 내용:
+
+**1. List Fusion**
+
+중간 리스트 제거:
+
+```fsharp
+// Before
+map f (map g lst)  // Two passes, intermediate list
+
+// After fusion
+map (f << g) lst   // One pass, no intermediate
+```
+
+**2. Deforestation**
+
+Tree 구조 중간 생성 제거:
+
+```fsharp
+// Before
+fold h z (map f lst)  // Creates intermediate list
+
+// After deforestation
+fold (fun acc x -> h acc (f x)) z lst  // Direct
+```
+
+**3. Inlining**
+
+Small 함수 inline:
+
+```mlir
+// Before
+%result = func.call @square(%x) : (i32) -> i32
+
+// After inlining
+%result = arith.muli %x, %x : i32
+```
+
+**4. Loop Unrolling**
+
+재귀를 explicit loop로 변환:
+
+```mlir
+// Before (recursive)
+func.func @map(...) {
+  %result = funlang.match %lst : ... {
+    ^nil: ...
+    ^cons(...): %mapped = func.call @map(...) ...
+  }
+}
+
+// After (loop)
+func.func @map(...) {
+  scf.for %i = 0 to %n step 1 iter_args(%acc = %init) -> ... {
+    %elem = load %lst[%i]
+    %transformed = apply %f(%elem)
+    ...
+  }
+}
+```
+
+**5. Parallel Map**
+
+데이터 병렬성 활용:
+
+```mlir
+scf.parallel (%i) = (0) to (%n) step (1) {
+  %elem = load %lst[%i]
+  %result = apply %f(%elem)
+  store %result, %output[%i]
+}
+```
+
+**6. Constant Folding**
+
+컴파일 시간에 계산:
+
+```fsharp
+// Before
+let result = sum [1, 2, 3, 4, 5]
+
+// After constant folding
+let result = 15  // Computed at compile time
+```
+
+이러한 최적화는 MLIR의 **transformation passes**로 구현되며, Phase 7에서 자세히 다룬다.
+
+### Congratulations!
+
+**Phase 6 완료를 축하한다!**
+
+이제 여러분은:
+- ✓ 완전한 함수형 프로그래밍 언어를 컴파일할 수 있다
+- ✓ 리스트, 패턴 매칭, 고차 함수를 지원한다
+- ✓ Multi-stage lowering pipeline을 이해한다
+- ✓ End-to-end 컴파일 (source to machine code)을 할 수 있다
+- ✓ 성능 특성과 최적화 기회를 안다
+
+**다음 단계:** Phase 7 (Optimization)에서 더 빠르고 효율적인 코드 생성을 배운다.
+
+Happy functional programming! 🎉
