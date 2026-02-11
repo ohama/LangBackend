@@ -2689,6 +2689,312 @@ gdb --args mlir-opt ...
 (gdb) run
 ```
 
+## 리터럴 패턴 예제: fizzbuzz
+
+지금까지 리스트에 대한 constructor pattern (Nil, Cons)을 다뤘다. 이제 **리터럴 패턴**을 사용하는 실전 예제를 살펴본다.
+
+### FizzBuzz 문제
+
+**FizzBuzz 규칙:**
+
+- 3의 배수: "Fizz"
+- 5의 배수: "Buzz"
+- 15의 배수: "FizzBuzz"
+- 그 외: 숫자 그대로
+
+**FunLang 구현:**
+
+```fsharp
+let fizzbuzz n =
+    match (n % 3, n % 5) with
+    | (0, 0) -> "FizzBuzz"
+    | (0, _) -> "Fizz"
+    | (_, 0) -> "Buzz"
+    | (_, _) -> string_of_int n
+```
+
+**패턴 분석:**
+
+| Row | n % 3 | n % 5 | Result |
+|-----|-------|-------|--------|
+| 1 | 0 | 0 | "FizzBuzz" |
+| 2 | 0 | _ | "Fizz" |
+| 3 | _ | 0 | "Buzz" |
+| 4 | _ | _ | n |
+
+### 컴파일된 MLIR: 리터럴 패턴
+
+```mlir
+func.func @fizzbuzz(%n: i32) -> !llvm.ptr<i8> {
+  // Compute remainders
+  %c3 = arith.constant 3 : i32
+  %c5 = arith.constant 5 : i32
+  %c0 = arith.constant 0 : i32
+
+  %mod3 = arith.remsi %n, %c3 : i32
+  %mod5 = arith.remsi %n, %c5 : i32
+
+  // Pattern matching: sequential arith.cmpi chain
+  %is_div3 = arith.cmpi eq, %mod3, %c0 : i32
+  %result = scf.if %is_div3 -> !llvm.ptr<i8> {
+    // First column is 0 (n % 3 == 0)
+    %is_div5 = arith.cmpi eq, %mod5, %c0 : i32
+    %inner = scf.if %is_div5 -> !llvm.ptr<i8> {
+      // Case (0, 0): FizzBuzz
+      scf.yield %fizzbuzz_str : !llvm.ptr<i8>
+    } else {
+      // Case (0, _): Fizz
+      scf.yield %fizz_str : !llvm.ptr<i8>
+    }
+    scf.yield %inner : !llvm.ptr<i8>
+  } else {
+    // First column is not 0 (n % 3 != 0)
+    %is_div5_2 = arith.cmpi eq, %mod5, %c0 : i32
+    %inner2 = scf.if %is_div5_2 -> !llvm.ptr<i8> {
+      // Case (_, 0): Buzz
+      scf.yield %buzz_str : !llvm.ptr<i8>
+    } else {
+      // Case (_, _): n as string
+      %str = func.call @int_to_string(%n) : (i32) -> !llvm.ptr<i8>
+      scf.yield %str : !llvm.ptr<i8>
+    }
+    scf.yield %inner2 : !llvm.ptr<i8>
+  }
+
+  return %result : !llvm.ptr<i8>
+}
+```
+
+**핵심 관찰:**
+
+1. **`arith.cmpi eq`**: 리터럴 0과의 비교
+2. **Nested `scf.if`**: Decision tree 구조
+3. **Wildcard `_`**: else branch로 fallthrough (테스트 없음)
+
+### classify 함수: 숫자 분류
+
+**숫자를 여러 카테고리로 분류하는 예제:**
+
+```fsharp
+let classify n =
+    match n with
+    | 0 -> "zero"
+    | 1 -> "one"
+    | 2 -> "two"
+    | _ -> if n < 0 then "negative" else "many"
+```
+
+**컴파일된 MLIR:**
+
+```mlir
+func.func @classify(%n: i32) -> !llvm.ptr<i8> {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+
+  // Sequential literal comparisons
+  %is_zero = arith.cmpi eq, %n, %c0 : i32
+  %result = scf.if %is_zero -> !llvm.ptr<i8> {
+    scf.yield %zero_str : !llvm.ptr<i8>
+  } else {
+    %is_one = arith.cmpi eq, %n, %c1 : i32
+    %r1 = scf.if %is_one -> !llvm.ptr<i8> {
+      scf.yield %one_str : !llvm.ptr<i8>
+    } else {
+      %is_two = arith.cmpi eq, %n, %c2 : i32
+      %r2 = scf.if %is_two -> !llvm.ptr<i8> {
+        scf.yield %two_str : !llvm.ptr<i8>
+      } else {
+        // Default case with guard
+        %is_neg = arith.cmpi slt, %n, %c0 : i32
+        %r3 = scf.if %is_neg -> !llvm.ptr<i8> {
+          scf.yield %negative_str : !llvm.ptr<i8>
+        } else {
+          scf.yield %many_str : !llvm.ptr<i8>
+        }
+        scf.yield %r3 : !llvm.ptr<i8>
+      }
+      scf.yield %r2 : !llvm.ptr<i8>
+    }
+    scf.yield %r1 : !llvm.ptr<i8>
+  }
+
+  return %result : !llvm.ptr<i8>
+}
+```
+
+### 최적화: Dense Range Switch
+
+리터럴이 0, 1, 2 연속일 때 `scf.index_switch` 최적화 가능:
+
+```mlir
+// Optimized: range check + index_switch
+%in_range = arith.cmpi ult, %n, %c3 : i32
+%result = scf.if %in_range -> !llvm.ptr<i8> {
+  %idx = arith.index_cast %n : i32 to index
+  %r = scf.index_switch %idx : index -> !llvm.ptr<i8>
+  case 0 { scf.yield %zero_str : !llvm.ptr<i8> }
+  case 1 { scf.yield %one_str : !llvm.ptr<i8> }
+  case 2 { scf.yield %two_str : !llvm.ptr<i8> }
+  default { scf.yield %unreachable : !llvm.ptr<i8> }
+  scf.yield %r : !llvm.ptr<i8>
+} else {
+  // n >= 3: check if negative
+  %is_neg = arith.cmpi slt, %n, %c0 : i32
+  %r2 = scf.if %is_neg -> !llvm.ptr<i8> {
+    scf.yield %negative_str : !llvm.ptr<i8>
+  } else {
+    scf.yield %many_str : !llvm.ptr<i8>
+  }
+  scf.yield %r2 : !llvm.ptr<i8>
+}
+```
+
+**최적화 효과:**
+
+- **Before:** O(n) sequential comparisons
+- **After:** O(1) jump table for dense range
+
+### Wildcard Default Case 최적화
+
+**Wildcard `_`는 테스트를 생성하지 않는다:**
+
+```fsharp
+match x with
+| 0 -> handle_zero()
+| 1 -> handle_one()
+| _ -> handle_default()  // No comparison needed!
+```
+
+```mlir
+%is_zero = arith.cmpi eq, %x, %c0 : i32
+scf.if %is_zero {
+  // case 0
+} else {
+  %is_one = arith.cmpi eq, %x, %c1 : i32
+  scf.if %is_one {
+    // case 1
+  } else {
+    // _ case: NO arith.cmpi, just fallthrough
+    // All other cases exhausted, this is the default
+  }
+}
+```
+
+**핵심 원칙:**
+
+- 마지막 else branch는 이전 모든 테스트가 실패한 경우
+- 추가 비교 없이 바로 default 코드 실행
+- 이것이 wildcard의 **zero-cost abstraction**
+
+### 리터럴 + Constructor 혼합 예제
+
+**리스트와 숫자를 함께 매칭:**
+
+```fsharp
+let take_first_n lst n =
+    match (lst, n) with
+    | (_, 0) -> []
+    | ([], _) -> []
+    | (head :: tail, n) -> head :: take_first_n tail (n - 1)
+```
+
+**컴파일된 MLIR:**
+
+```mlir
+func.func @take_first_n(%lst: !funlang.list<i32>, %n: i32) -> !funlang.list<i32> {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+
+  // Check n == 0 first (literal pattern)
+  %is_n_zero = arith.cmpi eq, %n, %c0 : i32
+  %result = scf.if %is_n_zero -> !funlang.list<i32> {
+    // Case (_, 0): return empty
+    %empty = funlang.nil : !funlang.list<i32>
+    scf.yield %empty : !funlang.list<i32>
+  } else {
+    // Check list constructor (constructor pattern)
+    %struct = builtin.unrealized_conversion_cast %lst : ... to !llvm.struct<(i32, ptr)>
+    %tag = llvm.extractvalue %struct[0] : !llvm.struct<(i32, ptr)>
+    %tag_index = arith.index_cast %tag : i32 to index
+
+    %inner = scf.index_switch %tag_index : index -> !funlang.list<i32>
+    case 0 {
+      // Case ([], _): return empty
+      %empty = funlang.nil : !funlang.list<i32>
+      scf.yield %empty : !funlang.list<i32>
+    }
+    case 1 {
+      // Case (head :: tail, n): recursive
+      %data = llvm.extractvalue %struct[1] : !llvm.struct<(i32, ptr)>
+      %head = llvm.load %data : !llvm.ptr -> i32
+      %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -> !llvm.ptr
+      %tail = llvm.load %tail_ptr : !llvm.ptr -> !funlang.list<i32>
+
+      %n_minus_1 = arith.subi %n, %c1 : i32
+      %rest = func.call @take_first_n(%tail, %n_minus_1) : (...) -> !funlang.list<i32>
+      %new_list = funlang.cons %head, %rest : ...
+      scf.yield %new_list : !funlang.list<i32>
+    }
+    default { scf.yield %unreachable : !funlang.list<i32> }
+
+    scf.yield %inner : !funlang.list<i32>
+  }
+
+  return %result : !funlang.list<i32>
+}
+```
+
+**혼합 패턴 lowering 전략:**
+
+1. **Literal column first**: `arith.cmpi` + `scf.if`
+2. **Constructor column inside**: `scf.index_switch`
+3. **Wildcard**: test 없이 fallthrough
+
+### 검증 및 테스트
+
+```fsharp
+let testFizzBuzz() =
+    // Test fizzbuzz
+    assert (fizzbuzz 3 = "Fizz")
+    assert (fizzbuzz 5 = "Buzz")
+    assert (fizzbuzz 15 = "FizzBuzz")
+    assert (fizzbuzz 7 = "7")
+    printfn "fizzbuzz tests passed"
+
+    // Test classify
+    assert (classify 0 = "zero")
+    assert (classify 1 = "one")
+    assert (classify 2 = "two")
+    assert (classify 42 = "many")
+    assert (classify (-5) = "negative")
+    printfn "classify tests passed"
+
+    // Test take_first_n
+    assert (take_first_n [1, 2, 3, 4, 5] 3 = [1, 2, 3])
+    assert (take_first_n [1, 2, 3] 0 = [])
+    assert (take_first_n [] 5 = [])
+    printfn "take_first_n tests passed"
+```
+
+**Output:**
+
+```
+fizzbuzz tests passed
+classify tests passed
+take_first_n tests passed
+```
+
+### Key Takeaways
+
+1. **리터럴 패턴**: `arith.cmpi eq` + `scf.if` chain
+2. **Constructor 패턴**: `scf.index_switch`로 O(1) dispatch
+3. **Wildcard**: else branch로 fallthrough (테스트 없음)
+4. **Dense range**: `scf.index_switch`로 최적화 가능
+5. **혼합 패턴**: 각 column의 패턴 타입에 맞는 dispatch 사용
+
+---
+
 ## Phase 6 Complete Summary
 
 **축하한다! Phase 6를 완료했다.**
