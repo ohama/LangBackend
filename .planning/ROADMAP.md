@@ -1,26 +1,14 @@
 # Roadmap: LangBackend
 
-## Overview
+## Milestones
 
-LangBackend is a 10-15 chapter tutorial series teaching MLIR-based compiler backend development for FunLang. The roadmap progresses from foundational MLIR interop through increasingly complex language features, culminating in a complete compilation pipeline from typed AST to native binary. Each phase produces tutorial chapters that enable readers to build working compilers incrementally, following the core value: every chapter must produce a compilable, runnable result.
+- ✅ **v1.0 Tutorial Documentation** - Phases 1-6 (shipped 2026-02-11)
+- 🚧 **v2.0 Compiler Implementation** - Phases 7-11 (in progress)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 1: Foundation & Interop** - MLIR build setup, F# bindings, and architecture validation
-- [x] **Phase 2: Core Language Basics** - Arithmetic, let bindings, control flow, and memory strategy
-- [x] **Phase 3: Functions & Recursion** - Function definitions, calls, and recursive patterns
-- [x] **Phase 4: Closures & Higher-Order Functions** - Environment capture and closure compilation
-- [x] **Phase 5: Custom MLIR Dialect** - FunLang dialect design and progressive lowering
-- [ ] **Phase 6: Pattern Matching & Data Structures** - Lists, tuples, and decision tree compilation
-- [ ] **Phase 7: Optimization & Polish** - Optimization passes, quality improvements, and completion
-
-## Phase Details
+<details>
+<summary>✅ v1.0 Tutorial Documentation (Phases 1-6) - SHIPPED 2026-02-11</summary>
 
 ### Phase 1: Foundation & Interop
 **Goal**: Reader can build MLIR with C API, create F# P/Invoke bindings, and compile a "hello world" program
@@ -130,25 +118,96 @@ Plans:
 - [x] 06-05-PLAN.md — Gap Closure: Literal and wildcard pattern compilation (PMTC-01, PMTC-02)
 - [x] 06-06-PLAN.md — Gap Closure: Tuple type and pattern matching (PMTC-05)
 
-### Phase 7: Optimization & Polish
-**Goal**: Reader can implement optimization passes and has complete, polished tutorial series
-**Depends on**: Phase 6
-**Requirements**: OPT-01, OPT-02, OPT-03, OPT-04
+</details>
+
+### 🚧 v2.0 Compiler Implementation (In Progress)
+
+**Milestone Goal:** Implement working FunLang → MLIR compiler supporting arithmetic, let bindings, if-else, functions, and closures
+
+#### Phase 7: Foundation Infrastructure
+**Goal**: Developer has working P/Invoke bindings to MLIR-C API and fluent F# OpBuilder wrapper
+**Depends on**: Phase 6 (v1.0 complete)
+**Requirements**: IMPL-INFRA-01, IMPL-INFRA-02
 **Success Criteria** (what must be TRUE):
-  1. Reader can implement constant folding and dead code elimination passes
-  2. Reader can implement tail call optimization (critical for functional languages)
-  3. Reader sees before/after IR comparisons demonstrating each optimization
-  4. Reader has complete tutorial series covering FunLang compilation from AST to native binary
-  5. All tutorial chapters are self-contained, incrementally buildable, with working examples
+  1. Developer can call MLIR-C API functions from F# to create contexts, modules, types, operations, regions, and blocks
+  2. Developer has OpBuilder wrapper class with fluent API for MLIR operation creation
+  3. Developer can create simple MLIR modules programmatically using F# wrappers
+  4. All wrapper types implement IDisposable for automatic resource cleanup
+  5. Bindings work cross-platform (Linux, macOS, Windows via WSL)
 **Plans**: TBD
 
 Plans:
 - [ ] 07-01: TBD during planning
 
+#### Phase 8: Core Expressions
+**Goal**: Developer can compile arithmetic expressions, comparisons, booleans, let bindings, and if-else to MLIR
+**Depends on**: Phase 7
+**Requirements**: IMPL-LANG-01, IMPL-LANG-02, IMPL-LANG-03, IMPL-LANG-04, IMPL-LANG-05
+**Success Criteria** (what must be TRUE):
+  1. Developer can compile arithmetic expressions (add, sub, mul, div, negate) to arith dialect operations
+  2. Developer can compile comparison operators (<, >, <=, >=, ==, <>) to arith.cmpi operations
+  3. Developer can compile boolean literals (true, false) and logical operators (&&, ||) to i1 operations
+  4. Developer can compile let bindings with shadowing support, mapping to SSA values
+  5. Developer can compile if-then-else expressions to scf.if operations with block arguments
+  6. Compiled programs can execute simple expressions and print results
+**Plans**: TBD
+
+Plans:
+- [ ] 08-01: TBD during planning
+
+#### Phase 9: Functions
+**Goal**: Developer can compile named function definitions, calls, and recursive functions to MLIR
+**Depends on**: Phase 8
+**Requirements**: IMPL-LANG-06, IMPL-LANG-07
+**Success Criteria** (what must be TRUE):
+  1. Developer can compile named function definitions to func.func operations
+  2. Developer can compile function calls to func.call operations with correct argument passing
+  3. Developer can compile recursive functions that execute correctly (factorial, fibonacci)
+  4. Developer can compile mutually recursive functions without forward declaration issues
+  5. Compiled programs with functions can execute and return correct results
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: TBD during planning
+
+#### Phase 10: Closures
+**Goal**: Developer can compile lambda expressions with free variable capture and higher-order functions
+**Depends on**: Phase 9
+**Requirements**: IMPL-LANG-08, IMPL-LANG-09, IMPL-LANG-10, IMPL-LANG-11
+**Success Criteria** (what must be TRUE):
+  1. Developer can compile lambda expressions (fun x -> body) to closure structures
+  2. Developer can perform free variable analysis and capture environment correctly
+  3. Developer can compile higher-order functions (functions as arguments and return values)
+  4. Developer can compile currying (multi-argument functions as nested single-argument closures)
+  5. Compiled closures execute correctly with proper environment access
+  6. Closure-heavy programs run without memory leaks (GC integration working)
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: TBD during planning
+
+#### Phase 11: Pipeline & Testing
+**Goal**: Developer has complete compilation pipeline with CLI integration and comprehensive test suite
+**Depends on**: Phase 10
+**Requirements**: IMPL-INFRA-03, IMPL-INFRA-04, IMPL-TEST-01, IMPL-TEST-02, IMPL-TEST-03
+**Success Criteria** (what must be TRUE):
+  1. Developer has lowering pipeline that converts MLIR → LLVM dialect → LLVM IR → Object → Binary
+  2. Developer can invoke compiler from CLI with --emit-mlir option to inspect intermediate IR
+  3. Developer has E2E fslit tests that compile FunLang source, execute binary, and verify output
+  4. Developer has unit tests (F# Expecto) for codegen modules with good coverage
+  5. Developer has MLIR IR tests using FileCheck for verification of IR transformations
+  6. Full compiler pipeline works end-to-end: FunLang source → native binary execution
+**Plans**: TBD
+
+Plans:
+- [ ] 11-01: TBD during planning
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
+
+**v1.0 Tutorial Documentation (COMPLETE):**
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -158,4 +217,13 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. Closures & Higher-Order Functions | 2/2 | Complete | 2026-02-06 |
 | 5. Custom MLIR Dialect | 3/3 | Complete | 2026-02-06 |
 | 6. Pattern Matching & Data Structures | 6/6 | Complete | 2026-02-11 |
-| 7. Optimization & Polish | 0/TBD | Not started | - |
+
+**v2.0 Compiler Implementation (IN PROGRESS):**
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 7. Foundation Infrastructure | 0/TBD | Not started | - |
+| 8. Core Expressions | 0/TBD | Not started | - |
+| 9. Functions | 0/TBD | Not started | - |
+| 10. Closures | 0/TBD | Not started | - |
+| 11. Pipeline & Testing | 0/TBD | Not started | - |

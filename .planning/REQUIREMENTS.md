@@ -229,24 +229,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IMPL-INFRA-01 | TBD | Pending |
-| IMPL-INFRA-02 | TBD | Pending |
-| IMPL-INFRA-03 | TBD | Pending |
-| IMPL-INFRA-04 | TBD | Pending |
-| IMPL-LANG-01 | TBD | Pending |
-| IMPL-LANG-02 | TBD | Pending |
-| IMPL-LANG-03 | TBD | Pending |
-| IMPL-LANG-04 | TBD | Pending |
-| IMPL-LANG-05 | TBD | Pending |
-| IMPL-LANG-06 | TBD | Pending |
-| IMPL-LANG-07 | TBD | Pending |
-| IMPL-LANG-08 | TBD | Pending |
-| IMPL-LANG-09 | TBD | Pending |
-| IMPL-LANG-10 | TBD | Pending |
-| IMPL-LANG-11 | TBD | Pending |
-| IMPL-TEST-01 | TBD | Pending |
-| IMPL-TEST-02 | TBD | Pending |
-| IMPL-TEST-03 | TBD | Pending |
+| IMPL-INFRA-01 | Phase 7 | Pending |
+| IMPL-INFRA-02 | Phase 7 | Pending |
+| IMPL-INFRA-03 | Phase 11 | Pending |
+| IMPL-INFRA-04 | Phase 11 | Pending |
+| IMPL-LANG-01 | Phase 8 | Pending |
+| IMPL-LANG-02 | Phase 8 | Pending |
+| IMPL-LANG-03 | Phase 8 | Pending |
+| IMPL-LANG-04 | Phase 8 | Pending |
+| IMPL-LANG-05 | Phase 8 | Pending |
+| IMPL-LANG-06 | Phase 9 | Pending |
+| IMPL-LANG-07 | Phase 9 | Pending |
+| IMPL-LANG-08 | Phase 10 | Pending |
+| IMPL-LANG-09 | Phase 10 | Pending |
+| IMPL-LANG-10 | Phase 10 | Pending |
+| IMPL-LANG-11 | Phase 10 | Pending |
+| IMPL-TEST-01 | Phase 11 | Pending |
+| IMPL-TEST-02 | Phase 11 | Pending |
+| IMPL-TEST-03 | Phase 11 | Pending |
+
+**Coverage:**
+- v2.0 requirements: 18 total
+- Mapped to phases: 18
+- Unmapped: 0
+
+**Phase Distribution:**
+- Phase 7 (Foundation Infrastructure): 2 requirements
+- Phase 8 (Core Expressions): 5 requirements
+- Phase 9 (Functions): 2 requirements
+- Phase 10 (Closures): 4 requirements
+- Phase 11 (Pipeline & Testing): 5 requirements
 
 ---
 *Requirements defined: 2026-02-05*
