@@ -1836,6 +1836,588 @@ func.func @map(
 
 ---
 
+## 튜플 타입과 연산 (Tuple Type and Operations)
+
+리스트와 함께 함수형 프로그래밍에서 필수적인 또 다른 데이터 구조가 있다: **튜플(tuple)**이다. 리스트가 같은 타입의 여러 원소를 가변 개수로 담는다면, 튜플은 서로 다른 타입의 원소들을 고정된 개수로 묶는다.
+
+### 튜플 vs 리스트: 근본적인 차이
+
+**List:**
+- 가변 개수 (0개부터 N개까지)
+- 동질적 (모든 원소가 같은 타입)
+- 런타임에 태그로 Nil/Cons 구분 필요
+- 패턴 매칭에서 여러 case 필요
+
+```fsharp
+// 리스트: 가변 길이, 같은 타입
+let numbers: int list = [1; 2; 3; 4; 5]
+let empty: int list = []
+let singleton: int list = [42]
+```
+
+**Tuple:**
+- 고정 개수 (컴파일 타임에 결정)
+- 이질적 (원소마다 다른 타입 가능)
+- 태그 불필요 (항상 같은 구조)
+- 패턴 매칭에서 단일 case (항상 매칭)
+
+```fsharp
+// 튜플: 고정 길이, 다른 타입 가능
+let pair: int * string = (42, "hello")
+let triple: int * float * bool = (1, 3.14, true)
+let person: string * int = ("Alice", 30)
+```
+
+**메모리 표현의 차이:**
+
+```
+List [1, 2, 3] (가변, 태그 필요):
+┌─────────┬─────────┐     ┌─────────┬─────────┐     ┌─────────┬─────────┐     ┌─────────┬─────────┐
+│ tag=1   │ ptr  ───────► │ head=1  │ tail ────────► │ head=2  │ tail ────────► │ head=3  │ tail=NULL │
+│ (Cons)  │         │     │         │         │     │         │         │     │         │         │
+└─────────┴─────────┘     └─────────┴─────────┘     └─────────┴─────────┘     └─────────┴─────────┘
+
+Tuple (1, "hello") (고정, 태그 불필요):
+┌─────────┬─────────┐
+│  int=1  │ ptr ────────► "hello"
+│ (slot0) │ (slot1) │
+└─────────┴─────────┘
+```
+
+### 튜플 타입 설계 (Tuple Type Design)
+
+FunLang에서 튜플 타입의 문법:
+
+```mlir
+// 2-tuple (pair)
+!funlang.tuple<i32, f64>
+
+// 3-tuple (triple)
+!funlang.tuple<i32, string, bool>
+
+// Nested tuple
+!funlang.tuple<!funlang.tuple<i32, i32>, f64>
+
+// Tuple of lists
+!funlang.tuple<!funlang.list<i32>, !funlang.list<f64>>
+```
+
+**타입 시스템에서의 특징:**
+
+1. **Arity가 타입에 인코딩**: `!funlang.tuple<i32>` (1-tuple)과 `!funlang.tuple<i32, i32>` (2-tuple)은 다른 타입
+2. **원소 타입 순서가 중요**: `!funlang.tuple<i32, f64>` ≠ `!funlang.tuple<f64, i32>`
+3. **Unit type**: 0-tuple `!funlang.tuple<>`은 unit type으로 사용 가능
+
+**LLVM으로의 lowering:**
+
+```mlir
+// FunLang tuple type
+!funlang.tuple<i32, f64>
+
+// LLVM struct type (no tag needed!)
+!llvm.struct<(i32, f64)>
+```
+
+리스트와 달리:
+- **태그 필요 없음**: 튜플은 항상 같은 구조
+- **포인터 indirection 없음**: 값 자체를 struct에 저장 (작은 튜플의 경우)
+- **스택 할당 가능**: escape하지 않으면 힙 할당 불필요
+
+### TableGen 정의 (TableGen Definition)
+
+**파일: `mlir/include/Dialect/FunLang/FunLangTypes.td`**
+
+```tablegen
+//===----------------------------------------------------------------------===//
+// Tuple Type
+//===----------------------------------------------------------------------===//
+
+def FunLang_TupleType : FunLang_Type<"Tuple", "tuple"> {
+  let summary = "FunLang tuple type";
+  let description = [{
+    A fixed-size product type with heterogeneous elements.
+    Unlike lists, tuples have a known arity at compile time.
+
+    Examples:
+    - `!funlang.tuple<i32, f64>` is a pair of integer and float
+    - `!funlang.tuple<i32, i32, i32>` is a triple of integers
+    - `!funlang.tuple<>` is the unit type (empty tuple)
+
+    Tuples are lowered to LLVM structs directly, without tags,
+    because they always have the same structure (no variants).
+  }];
+
+  let parameters = (ins
+    ArrayRefParameter<"mlir::Type", "element types">:$elementTypes
+  );
+
+  let assemblyFormat = "`<` $elementTypes `>`";
+
+  let extraClassDeclaration = [{
+    /// Get the number of elements in this tuple
+    size_t getNumElements() const { return getElementTypes().size(); }
+
+    /// Get the element type at the given index
+    mlir::Type getElementType(size_t index) const {
+      return getElementTypes()[index];
+    }
+
+    /// Check if this is a pair (2-tuple)
+    bool isPair() const { return getNumElements() == 2; }
+
+    /// Check if this is a unit type (0-tuple)
+    bool isUnit() const { return getNumElements() == 0; }
+  }];
+}
+```
+
+**핵심 요소 분석:**
+
+1. **`ArrayRefParameter`**: 가변 개수의 타입 파라미터
+   - `Variadic<Type>`이 아닌 `ArrayRefParameter<"mlir::Type">`
+   - TableGen이 자동으로 storage와 accessor 생성
+
+2. **`assemblyFormat`**: `<` 원소타입들 `>`
+   - `!funlang.tuple<i32, f64>` 형태로 파싱/프린팅
+
+3. **`extraClassDeclaration`**: 유틸리티 메서드
+   - `getNumElements()`, `getElementType(index)` 등
+
+**생성되는 C++ 코드:**
+
+```cpp
+// Auto-generated from TableGen
+class TupleType : public mlir::Type::TypeBase<TupleType,
+                                               mlir::Type,
+                                               detail::TupleTypeStorage> {
+public:
+  using Base::Base;
+
+  static TupleType get(mlir::MLIRContext *context,
+                       llvm::ArrayRef<mlir::Type> elementTypes);
+
+  llvm::ArrayRef<mlir::Type> getElementTypes() const;
+  size_t getNumElements() const { return getElementTypes().size(); }
+  mlir::Type getElementType(size_t index) const {
+    return getElementTypes()[index];
+  }
+  bool isPair() const { return getNumElements() == 2; }
+  bool isUnit() const { return getNumElements() == 0; }
+};
+```
+
+### funlang.make_tuple 연산 (make_tuple Operation)
+
+**파일: `mlir/include/Dialect/FunLang/FunLangOps.td`**
+
+```tablegen
+//===----------------------------------------------------------------------===//
+// make_tuple Operation
+//===----------------------------------------------------------------------===//
+
+def FunLang_MakeTupleOp : FunLang_Op<"make_tuple", [Pure]> {
+  let summary = "Create a tuple from values";
+  let description = [{
+    Constructs a tuple from the given element values.
+    The result type must match the types of the input elements.
+
+    Example:
+    ```mlir
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 3.14 : f64
+    %pair = funlang.make_tuple(%c1, %c2) : !funlang.tuple<i32, f64>
+    ```
+
+    The operation is marked Pure because it has no side effects.
+    This enables CSE (Common Subexpression Elimination) optimization.
+  }];
+
+  let arguments = (ins
+    Variadic<AnyType>:$elements
+  );
+
+  let results = (outs
+    FunLang_TupleType:$result
+  );
+
+  let assemblyFormat = [{
+    `(` $elements `)` attr-dict `:` type($result)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::ValueRange":$elements), [{
+      // Infer result type from element types
+      llvm::SmallVector<mlir::Type> elemTypes;
+      for (auto elem : elements)
+        elemTypes.push_back(elem.getType());
+
+      auto tupleType = TupleType::get($_builder.getContext(), elemTypes);
+      build($_builder, $_state, tupleType, elements);
+    }]>
+  ];
+
+  let hasVerifier = 1;
+}
+```
+
+**핵심 요소 분석:**
+
+1. **`Variadic<AnyType>`**: 0개 이상의 임의 타입 operands
+   - `make_tuple()` (unit), `make_tuple(%a)` (singleton), `make_tuple(%a, %b)` (pair) 모두 가능
+
+2. **`Pure` trait**: 순수 함수
+   - 부작용 없음, 같은 입력 → 같은 출력
+   - CSE 최적화 가능: 동일한 make_tuple 호출 합치기
+
+3. **Custom builder**: 타입 추론
+   - element 타입들로부터 결과 tuple 타입 자동 추론
+   - 사용자가 명시적으로 타입을 지정할 필요 없음
+
+4. **Verifier**: 타입 일관성 검증
+   - element 개수와 tuple 타입의 arity 일치
+   - 각 element 타입과 tuple의 대응 위치 타입 일치
+
+**Verifier 구현:**
+
+```cpp
+// FunLangOps.cpp
+LogicalResult MakeTupleOp::verify() {
+  auto tupleType = getType().cast<TupleType>();
+  auto elements = getElements();
+
+  // Check element count matches tuple arity
+  if (elements.size() != tupleType.getNumElements()) {
+    return emitOpError() << "expected " << tupleType.getNumElements()
+                         << " elements but got " << elements.size();
+  }
+
+  // Check each element type matches
+  for (size_t i = 0; i < elements.size(); ++i) {
+    Type expectedType = tupleType.getElementType(i);
+    Type actualType = elements[i].getType();
+    if (expectedType != actualType) {
+      return emitOpError() << "element " << i << " type mismatch: expected "
+                           << expectedType << " but got " << actualType;
+    }
+  }
+
+  return success();
+}
+```
+
+**사용 예제:**
+
+```mlir
+// Empty tuple (unit)
+%unit = funlang.make_tuple() : !funlang.tuple<>
+
+// Pair of int and float
+%c1 = arith.constant 42 : i32
+%c2 = arith.constant 3.14 : f64
+%pair = funlang.make_tuple(%c1, %c2) : !funlang.tuple<i32, f64>
+
+// Triple of ints
+%a = arith.constant 1 : i32
+%b = arith.constant 2 : i32
+%c = arith.constant 3 : i32
+%triple = funlang.make_tuple(%a, %b, %c) : !funlang.tuple<i32, i32, i32>
+
+// Nested tuple
+%inner = funlang.make_tuple(%a, %b) : !funlang.tuple<i32, i32>
+%outer = funlang.make_tuple(%inner, %c2) : !funlang.tuple<!funlang.tuple<i32, i32>, f64>
+
+// Tuple containing list
+%list = funlang.cons %c1, %nil : !funlang.list<i32>
+%mixed = funlang.make_tuple(%list, %c2) : !funlang.tuple<!funlang.list<i32>, f64>
+```
+
+### 튜플 로우어링 (Tuple Lowering)
+
+튜플의 lowering은 리스트보다 훨씬 간단하다. 태그 없이 직접 LLVM struct로 변환한다.
+
+**TypeConverter 확장:**
+
+```cpp
+// FunLangTypeConverter에 추가
+addConversion([](funlang::TupleType type) {
+  auto ctx = type.getContext();
+
+  // Convert each element type
+  llvm::SmallVector<mlir::Type> llvmTypes;
+  for (auto elemType : type.getElementTypes()) {
+    // Recursively convert element types
+    // (handles nested tuples, lists, etc.)
+    auto convertedType = convertType(elemType);
+    llvmTypes.push_back(convertedType);
+  }
+
+  // Create LLVM struct type
+  return LLVM::LLVMStructType::getLiteral(ctx, llvmTypes);
+});
+```
+
+**변환 예제:**
+
+```mlir
+// Before: FunLang types
+!funlang.tuple<i32, f64>
+!funlang.tuple<i32, i32, i32>
+!funlang.tuple<!funlang.list<i32>, f64>
+
+// After: LLVM types
+!llvm.struct<(i32, f64)>
+!llvm.struct<(i32, i32, i32)>
+!llvm.struct<(!llvm.struct<(i32, ptr)>, f64)>  // list becomes tagged union struct
+```
+
+**MakeTupleOpLowering 패턴:**
+
+```cpp
+class MakeTupleOpLowering : public OpConversionPattern<funlang::MakeTupleOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(funlang::MakeTupleOp op,
+                                 OpAdaptor adaptor,
+                                 ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto elements = adaptor.getElements();  // Already converted by TypeConverter
+
+    // Get the converted result type (LLVM struct)
+    auto resultType = getTypeConverter()->convertType(op.getType());
+    auto structType = resultType.cast<LLVM::LLVMStructType>();
+
+    // Start with undef struct
+    Value structVal = rewriter.create<LLVM::UndefOp>(loc, structType);
+
+    // Insert each element at its position
+    for (size_t i = 0; i < elements.size(); ++i) {
+      structVal = rewriter.create<LLVM::InsertValueOp>(
+          loc, structVal, elements[i], i);
+    }
+
+    // Replace make_tuple with the constructed struct
+    rewriter.replaceOp(op, structVal);
+    return success();
+  }
+};
+```
+
+**Lowering 과정 시각화:**
+
+```mlir
+// Before lowering
+%c1 = arith.constant 42 : i32
+%c2 = arith.constant 3.14 : f64
+%pair = funlang.make_tuple(%c1, %c2) : !funlang.tuple<i32, f64>
+
+// After lowering
+%c1 = arith.constant 42 : i32
+%c2 = arith.constant 3.14 : f64
+%0 = llvm.mlir.undef : !llvm.struct<(i32, f64)>
+%1 = llvm.insertvalue %c1, %0[0] : !llvm.struct<(i32, f64)>
+%pair = llvm.insertvalue %c2, %1[1] : !llvm.struct<(i32, f64)>
+```
+
+**리스트 vs 튜플 lowering 비교:**
+
+| 구분 | List | Tuple |
+|------|------|-------|
+| 태그 | 필요 (Nil=0, Cons=1) | 불필요 |
+| 힙 할당 | 필요 (GC_malloc) | 불필요 (값 의미론) |
+| 간접 참조 | 있음 (ptr → data) | 없음 (직접 저장) |
+| Lowering 복잡도 | 높음 | 낮음 |
+
+### C API 및 F# 바인딩 (C API and F# Bindings)
+
+**C API Shim:**
+
+```cpp
+// mlir/lib/Dialect/FunLang/CAPI/FunLangCAPI.cpp
+
+//===----------------------------------------------------------------------===//
+// Tuple Type
+//===----------------------------------------------------------------------===//
+
+extern "C" MlirType funlangTupleTypeGet(MlirContext ctx,
+                                        MlirType *elementTypes,
+                                        intptr_t numElements) {
+  llvm::SmallVector<mlir::Type> types;
+  for (intptr_t i = 0; i < numElements; ++i) {
+    types.push_back(unwrap(elementTypes[i]));
+  }
+  return wrap(funlang::TupleType::get(unwrap(ctx), types));
+}
+
+extern "C" intptr_t funlangTupleTypeGetNumElements(MlirType type) {
+  return unwrap(type).cast<funlang::TupleType>().getNumElements();
+}
+
+extern "C" MlirType funlangTupleTypeGetElementType(MlirType type, intptr_t index) {
+  return wrap(unwrap(type).cast<funlang::TupleType>().getElementType(index));
+}
+
+extern "C" bool funlangTypeIsATupleType(MlirType type) {
+  return unwrap(type).isa<funlang::TupleType>();
+}
+
+//===----------------------------------------------------------------------===//
+// make_tuple Operation
+//===----------------------------------------------------------------------===//
+
+extern "C" MlirOperation funlangMakeTupleOpCreate(MlirLocation loc,
+                                                   MlirType resultType,
+                                                   MlirValue *elements,
+                                                   intptr_t numElements,
+                                                   MlirBlock block) {
+  OpBuilder builder(unwrap(block)->getParent());
+  builder.setInsertionPointToEnd(unwrap(block));
+
+  llvm::SmallVector<mlir::Value> values;
+  for (intptr_t i = 0; i < numElements; ++i) {
+    values.push_back(unwrap(elements[i]));
+  }
+
+  auto tupleType = unwrap(resultType).cast<funlang::TupleType>();
+  auto op = builder.create<funlang::MakeTupleOp>(
+      unwrap(loc), tupleType, values);
+  return wrap(op.getOperation());
+}
+```
+
+**F# Bindings:**
+
+```fsharp
+// FunLang.Bindings/FunLangTypes.fs
+
+module FunLangTypes
+
+open System.Runtime.InteropServices
+
+[<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+extern MlirType funlangTupleTypeGet(MlirContext ctx, MlirType[] elementTypes, nativeint numElements)
+
+[<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+extern nativeint funlangTupleTypeGetNumElements(MlirType type_)
+
+[<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+extern MlirType funlangTupleTypeGetElementType(MlirType type_, nativeint index)
+
+[<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+extern bool funlangTypeIsATupleType(MlirType type_)
+
+type MLIRTypeExtensions =
+    /// Create a tuple type with the given element types
+    static member CreateTupleType(ctx: MlirContext, elementTypes: MlirType list) : MlirType =
+        let typesArray = elementTypes |> List.toArray
+        funlangTupleTypeGet(ctx, typesArray, nativeint typesArray.Length)
+
+    /// Check if a type is a tuple type
+    static member IsTupleType(t: MlirType) : bool =
+        funlangTypeIsATupleType(t)
+
+    /// Get the number of elements in a tuple type
+    static member GetTupleNumElements(t: MlirType) : int =
+        int (funlangTupleTypeGetNumElements(t))
+
+    /// Get an element type from a tuple type
+    static member GetTupleElementType(t: MlirType, index: int) : MlirType =
+        funlangTupleTypeGetElementType(t, nativeint index)
+```
+
+```fsharp
+// FunLang.Bindings/FunLangOps.fs
+
+module FunLangOps
+
+[<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+extern MlirOperation funlangMakeTupleOpCreate(
+    MlirLocation loc,
+    MlirType resultType,
+    MlirValue[] elements,
+    nativeint numElements,
+    MlirBlock block)
+
+type OpBuilderExtensions =
+    /// Create a make_tuple operation
+    member this.CreateMakeTupleOp(loc: MlirLocation, elements: MlirValue list) : MlirOperation =
+        // Infer tuple type from elements
+        let elementTypes = elements |> List.map (fun e -> e.GetType())
+        let tupleType = MLIRTypeExtensions.CreateTupleType(this.Context, elementTypes)
+        let elemArray = elements |> List.toArray
+        funlangMakeTupleOpCreate(loc, tupleType, elemArray, nativeint elemArray.Length, this.CurrentBlock)
+
+    /// Create a tuple and return its value
+    member this.CreateMakeTuple(loc: MlirLocation, elements: MlirValue list) : MlirValue =
+        let op = this.CreateMakeTupleOp(loc, elements)
+        op.GetResult(0)
+
+    /// Create a pair (2-tuple)
+    member this.CreatePair(loc: MlirLocation, first: MlirValue, second: MlirValue) : MlirValue =
+        this.CreateMakeTuple(loc, [first; second])
+```
+
+**사용 예제:**
+
+```fsharp
+// F# code using the bindings
+let createPointTuple (builder: OpBuilder) (x: MlirValue) (y: MlirValue) =
+    let loc = builder.GetUnknownLoc()
+
+    // Create pair using convenience method
+    let point = builder.CreatePair(loc, x, y)
+
+    // Or explicitly with CreateMakeTuple
+    let point' = builder.CreateMakeTuple(loc, [x; y])
+
+    point
+
+let createMixedTuple (builder: OpBuilder) (intVal: MlirValue) (floatVal: MlirValue) (listVal: MlirValue) =
+    let loc = builder.GetUnknownLoc()
+
+    // 3-tuple with mixed types
+    let mixed = builder.CreateMakeTuple(loc, [intVal; floatVal; listVal])
+
+    // Check the type
+    let tupleType = mixed.GetType()
+    assert (MLIRTypeExtensions.IsTupleType(tupleType))
+    assert (MLIRTypeExtensions.GetTupleNumElements(tupleType) = 3)
+
+    mixed
+```
+
+### Summary: 튜플 타입과 연산
+
+**구현 완료:**
+
+- [x] `!funlang.tuple<T1, T2, ...>` 타입 정의 (TableGen)
+- [x] ArrayRefParameter로 가변 개수 타입 파라미터
+- [x] `funlang.make_tuple` 연산 정의
+- [x] Pure trait (CSE 최적화 가능)
+- [x] TypeConverter에 튜플 → LLVM struct 변환 추가
+- [x] MakeTupleOpLowering 패턴
+- [x] C API shim 함수
+- [x] F# bindings
+
+**튜플의 특징:**
+
+| 특성 | 리스트 | 튜플 |
+|------|--------|------|
+| Arity | 가변 | 고정 |
+| 원소 타입 | 동질적 (T) | 이질적 (T1, T2, ...) |
+| 런타임 태그 | 필요 | 불필요 |
+| 메모리 할당 | 힙 (GC) | 스택/인라인 가능 |
+| 패턴 매칭 case | 다중 (Nil/Cons) | 단일 (항상 매칭) |
+| Lowering 대상 | `!llvm.struct<(i32, ptr)>` | `!llvm.struct<(T1, T2, ...)>` |
+
+**다음:**
+
+- Chapter 19에서 튜플 패턴 매칭 구현
+- extractvalue로 튜플 원소 추출
+- 중첩 패턴 (튜플 + 리스트 조합)
+
+---
+
 ## TypeConverter for List Types
 
 Chapter 16에서 우리는 **TypeConverter**를 배웠다. FunLang types를 LLVM types로 변환하는 규칙을 정의한다.
