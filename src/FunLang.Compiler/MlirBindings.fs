@@ -342,3 +342,103 @@ module MlirNative =
     /// Get the block an operation is in
     [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
     extern MlirBlock mlirOperationGetBlock(MlirOperation op)
+
+    //==========================================================================
+    // Region Management
+    //==========================================================================
+
+    /// Create a new region
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirRegion mlirRegionCreate()
+
+    /// Destroy a region (if not owned by an operation)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirRegionDestroy(MlirRegion region)
+
+    /// Append a block to a region (region takes ownership)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block)
+
+    /// Get the first block in a region
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirBlock mlirRegionGetFirstBlock(MlirRegion region)
+
+    //==========================================================================
+    // Block Management
+    //==========================================================================
+
+    /// Create a new block with arguments
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirBlock mlirBlockCreate(nativeint numArgs, nativeint argTypes, nativeint argLocs)
+
+    /// Destroy a block (if not owned by a region)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirBlockDestroy(MlirBlock block)
+
+    /// Append an operation to a block (block takes ownership)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation op)
+
+    /// Insert an operation into a block before a reference operation
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirBlockInsertOwnedOperationBefore(MlirBlock block, MlirOperation reference, MlirOperation op)
+
+    /// Get a block argument by index
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirValue mlirBlockGetArgument(MlirBlock block, nativeint pos)
+
+    /// Get the number of arguments a block has
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirBlockGetNumArguments(MlirBlock block)
+
+    /// Get the terminator operation of a block
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirOperation mlirBlockGetTerminator(MlirBlock block)
+
+    //==========================================================================
+    // Value
+    //==========================================================================
+
+    /// Check if a value is null
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern bool mlirValueIsNull(MlirValue value)
+
+    /// Get the type of a value
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirValueGetType(MlirValue value)
+
+    /// Check if two values are equal
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern bool mlirValueEqual(MlirValue v1, MlirValue v2)
+
+    //==========================================================================
+    // Attribute System
+    //==========================================================================
+
+    /// Create an integer attribute
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirAttribute mlirIntegerAttrGet(MlirType typ, int64 value)
+
+    /// Create a float attribute from double
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx, MlirType typ, float value)
+
+    /// Create a string attribute
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirAttribute mlirStringAttrGet(MlirContext ctx, MlirStringRef str)
+
+    /// Create a unit attribute (singleton attribute with no data)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirAttribute mlirUnitAttrGet(MlirContext ctx)
+
+    /// Create a flat symbol reference attribute
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol)
+
+    /// Create a named attribute
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name, MlirAttribute attr)
+
+    /// Check if an attribute is null
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern bool mlirAttributeIsNull(MlirAttribute attr)
