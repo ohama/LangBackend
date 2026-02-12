@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 8 of 11 (Core Expressions)
-Plan: 1 of 4 complete
+Plan: 2 of 4 complete
 Status: In progress
-Last activity: 2026-02-12 - Completed 08-01 (Comparison and Boolean Operators)
+Last activity: 2026-02-12 - Completed 08-02 (Let Bindings and Variables)
 
-Progress: [########░░░] 69% (25/36 plans complete)
+Progress: [#########░░] 72% (26/36 plans complete)
 
 ## Performance Metrics
 
@@ -49,10 +49,10 @@ Progress: [########░░░] 69% (25/36 plans complete)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 7 - Foundation Infrastructure | 4/4 | 12 min | 3 min |
-| 8 - Core Expressions | 1/4 | 6 min | 6 min |
+| 8 - Core Expressions | 2/4 | 10 min | 5 min |
 
 **Recent Trend (v2.0):**
-- Last plan: 08-01 (6 min, comparison and boolean operators)
+- Last plan: 08-02 (4 min, let bindings and variables)
 - Build passing, MLIR-C library required for test execution
 
 *Updated after each plan completion*
@@ -81,6 +81,8 @@ Recent decisions affecting v2.0 work:
 - [07-03]: NativePtr.toNativeInt for converting fixed array pointers in P/Invoke calls
 - [08-01]: Comparison predicates use i64 type attribute (MLIR ArithOps.td requirement)
 - [08-01]: Boolean operations use non-short-circuit evaluation (arith.andi/ori)
+- [08-02]: Immutable F# Map for environment - Map.Add handles shadowing naturally
+- [08-02]: Let compilation: compile binding, extend env, compile body with extended env
 
 ### Pending Todos
 
@@ -97,6 +99,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 08-01-PLAN.md
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
-Next: Execute Phase 8 Plan 02 (Let Bindings and Variables)
+Next: Execute Phase 8 Plan 03 (If-Then-Else Expressions)
