@@ -156,10 +156,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Comparison operators and boolean expressions (arith.cmpi, arith.andi/ori)
-- [ ] 08-02-PLAN.md — Let bindings with environment tracking (Env, Var, Let)
-- [ ] 08-03-PLAN.md — If-else expressions (scf.if with regions and scf.yield)
-- [ ] 08-04-PLAN.md — Comprehensive E2E tests for all Phase 8 features
+- [x] 08-01-PLAN.md — Comparison operators and boolean expressions (arith.cmpi, arith.andi/ori)
+- [x] 08-02-PLAN.md — Let bindings with environment tracking (Env, Var, Let)
+- [x] 08-03-PLAN.md — If-else expressions (scf.if with regions and scf.yield)
+- [x] 08-04-PLAN.md — Comprehensive E2E tests for all Phase 8 features
 
 #### Phase 9: Functions
 **Goal**: Developer can compile named function definitions, calls, and recursive functions to MLIR
@@ -229,7 +229,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 7. Foundation Infrastructure | 4/4 | Complete | 2026-02-12 |
-| 8. Core Expressions | 0/4 | Not started | - |
+| 8. Core Expressions | 4/4 | Complete | 2026-02-12 |
 | 9. Functions | 0/TBD | Not started | - |
 | 10. Closures | 0/TBD | Not started | - |
 | 11. Pipeline & Testing | 0/TBD | Not started | - |
