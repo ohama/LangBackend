@@ -120,7 +120,7 @@ Plans:
 
 </details>
 
-### 🚧 v2.0 Compiler Implementation (In Progress)
+### v2.0 Compiler Implementation (In Progress)
 
 **Milestone Goal:** Implement working FunLang → MLIR compiler supporting arithmetic, let bindings, if-else, functions, and closures
 
@@ -134,10 +134,13 @@ Plans:
   3. Developer can create simple MLIR modules programmatically using F# wrappers
   4. All wrapper types implement IDisposable for automatic resource cleanup
   5. Bindings work cross-platform (Linux, macOS, Windows via WSL)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 07-01: TBD during planning
+- [ ] 07-01-PLAN.md — Project setup, handle types, string marshalling, core P/Invoke declarations
+- [ ] 07-02-PLAN.md — Complete P/Invoke declarations (types, operations, regions, blocks)
+- [ ] 07-03-PLAN.md — IDisposable wrappers (Context, Module, Location) and fluent OpBuilder
+- [ ] 07-04-PLAN.md — Smoke tests and end-to-end validation
 
 #### Phase 8: Core Expressions
 **Goal**: Developer can compile arithmetic expressions, comparisons, booleans, let bindings, and if-else to MLIR
@@ -222,7 +225,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 7. Foundation Infrastructure | 0/TBD | Not started | - |
+| 7. Foundation Infrastructure | 0/4 | Planning complete | - |
 | 8. Core Expressions | 0/TBD | Not started | - |
 | 9. Functions | 0/TBD | Not started | - |
 | 10. Closures | 0/TBD | Not started | - |
