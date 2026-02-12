@@ -483,30 +483,43 @@ let env2 = env1.Add("x", %c10)
 
 ### 환경 전달 패턴
 
-컴파일러는 환경을 함수 인자로 전달한다:
+실제 구현에서는 환경을 `CompileContext` 레코드의 필드로 관리한다:
 
 ```fsharp
-let rec compileExpr (builder: OpBuilder) (expr: Expr) (env: Env) : MlirValue =
+/// Compilation context - 모든 컴파일 상태를 하나로 묶음
+type CompileContext = {
+    Context: Context
+    Builder: OpBuilder
+    Location: Location
+    Block: MlirBlock  // Current block to append operations to
+    Env: Map<string, MlirValue>  // Variable name -> SSA value mapping
+}
+
+let rec compileExpr (ctx: CompileContext) (expr: Expr) : MlirValue =
+  let builder = ctx.Builder
   match expr with
-  | IntLiteral n -> ...  // env 사용 안 함
-  | Var name ->
-      // env에서 변수 조회
-      match env.TryFind(name) with
-      | Some(value) -> value
+  | IntLiteral n -> ...  // ctx.Env 사용 안 함
+  | Var(name, _) ->
+      // ctx.Env에서 변수 조회
+      match ctx.Env.TryFind(name) with
+      | Some value -> value
       | None -> failwithf "Unbound variable: %s" name
-  | Let(name, binding, body) ->
-      // 1. binding 표현식 컴파일 (현재 env 사용)
-      let bindVal = compileExpr builder binding env
-      // 2. env 확장
-      let env' = env.Add(name, bindVal)
-      // 3. body 표현식 컴파일 (확장된 env' 사용)
-      compileExpr builder body env'
+  | Let(name, binding, body, _) ->
+      // 1. binding 표현식 컴파일 (현재 ctx 사용)
+      let bindVal = compileExpr ctx binding
+      // 2. ctx 확장 (immutable update)
+      let extendedEnv = ctx.Env.Add(name, bindVal)
+      let ctx' = { ctx with Env = extendedEnv }
+      // 3. body 표현식 컴파일 (확장된 ctx' 사용)
+      compileExpr ctx' body
   | BinaryOp(op, lhs, rhs) ->
-      // 재귀 호출에 env 전달
-      let lhsVal = compileExpr builder lhs env
-      let rhsVal = compileExpr builder rhs env
+      // 재귀 호출에 ctx 전달
+      let lhsVal = compileExpr ctx lhs
+      let rhsVal = compileExpr ctx rhs
       ...
 ```
+
+**핵심:** `{ ctx with Env = extendedEnv }` 패턴으로 불변 레코드를 업데이트한다. F#의 record update syntax는 새로운 레코드를 생성하므로 기존 ctx는 변경되지 않는다.
 
 **핵심 패턴:**
 - `compileExpr`이 `env` 파라미터를 받는다
@@ -725,38 +738,46 @@ module CodeGen =
             MlirNative.mlirBlockAppendOwnedOperation(block, extOp)
             builder.GetResult(extOp, 0)
 
-    /// 프로그램을 MLIR module로 컴파일
-    let translateToMlir (program: Program) : Module =
-        let ctx = new Context()
-        ctx.LoadDialect("arith")
-        ctx.LoadDialect("func")
-
-        let loc = Location.Unknown(ctx)
+    /// Compile a FunLang expression into a function that returns i32
+    let compileToFunction (ctx: Context) (funcName: string) (expr: Expr) : Module =
+        let loc = Location.Unknown ctx
         let mlirMod = new Module(ctx, loc)
-
         let builder = OpBuilder(ctx)
+
         let i32Type = builder.I32Type()
-
-        // main 함수 생성
         let funcType = builder.FunctionType([||], [| i32Type |])
-        let funcOp = builder.CreateFunction("main", funcType, loc)
 
-        let bodyRegion = MlirNative.mlirOperationGetRegion(funcOp, 0n)
-        let entryBlock = MlirNative.mlirBlockCreate(0n, nativeint 0, nativeint 0)
-        MlirNative.mlirRegionAppendOwnedBlock(bodyRegion, entryBlock)
+        // Create function body
+        let region = builder.CreateRegion()
+        let entryBlock = builder.CreateBlock([||], loc)
+        builder.AppendBlockToRegion(region, entryBlock)
 
-        // 빈 환경에서 시작
-        let env = Map.empty
+        // Compile expression into the entry block
+        let compileCtx = {
+            Context = ctx
+            Builder = builder
+            Location = loc
+            Block = entryBlock
+            Env = Map.empty  // 빈 환경에서 시작
+        }
+        let resultVal = compileExpr compileCtx expr
 
-        // 표현식 컴파일 (환경 전달)
-        let resultValue = compileExpr builder entryBlock loc program.expr env
+        // Return the result
+        let returnOp = builder.CreateOperation(
+            "func.return", loc,
+            [||], [| resultVal |], [||], [||])
+        builder.AppendOperationToBlock(entryBlock, returnOp)
 
-        // return operation 생성
-        let returnOp = builder.CreateReturn([| resultValue |], loc)
-        MlirNative.mlirBlockAppendOwnedOperation(entryBlock, returnOp)
-
-        // 함수를 module에 추가
-        MlirNative.mlirBlockAppendOwnedOperation(mlirMod.Body, funcOp)
+        // Create func.func with C interface for JIT
+        let unitAttr = MlirNative.mlirUnitAttrGet(ctx.Handle)
+        let funcOp = builder.CreateOperation(
+            "func.func", loc,
+            [||], [||],
+            [| builder.NamedAttr("sym_name", builder.StringAttr(funcName))
+               builder.NamedAttr("function_type", builder.TypeAttr(funcType))
+               builder.NamedAttr("llvm.emit_c_interface", unitAttr) |],
+            [| region |])
+        builder.AppendOperationToBlock(mlirMod.Body, funcOp)
 
         mlirMod
 

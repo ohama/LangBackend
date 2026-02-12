@@ -83,81 +83,80 @@ Comparison(LessThan,
 
 > **파서 노트:** 실제 파서는 연산자 우선순위를 처리해야 한다 (`*`가 `+`보다 높음). 이 장에서는 코드 생성에 집중하므로 파서 구현은 생략한다. LangTutorial의 파서를 재사용하거나 간단한 재귀 하강 파서를 작성하면 된다.
 
-## arith Dialect를 위한 P/Invoke 바인딩
+## arith Dialect 연산 생성
 
-Chapter 03에서 기본 MLIR C API 바인딩을 구축했다. 이제 `arith` dialect 연산을 위한 바인딩을 추가한다.
+Chapter 03-04에서 구축한 `OpBuilder.CreateOperation` 패턴을 사용하여 arith dialect 연산을 생성한다. 개별 P/Invoke 대신 generic operation builder를 사용하는 것이 더 유연하고 유지보수가 쉽다.
 
-**MlirBindings.fs**에 다음을 추가한다:
+**CodeGen.fs에서 연산 생성 헬퍼:**
 
 ```fsharp
-namespace FunLangCompiler
-
-open System
-open System.Runtime.InteropServices
-
-module MlirBindings =
-
-    // ... (기존 바인딩 코드)
-
-    // ===== arith dialect operations =====
-
-    /// arith.addi: 정수 덧셈 (SSA)
-    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
-    extern MlirOperation mlirArithAddiCreate(
-        MlirContext context,
-        MlirLocation location,
-        MlirValue lhs,
-        MlirValue rhs)
-
-    /// arith.subi: 정수 뺄셈 (SSA)
-    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
-    extern MlirOperation mlirArithSubiCreate(
-        MlirContext context,
-        MlirLocation location,
-        MlirValue lhs,
-        MlirValue rhs)
-
-    /// arith.muli: 정수 곱셈 (SSA)
-    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
-    extern MlirOperation mlirArithMuliCreate(
-        MlirContext context,
-        MlirLocation location,
-        MlirValue lhs,
-        MlirValue rhs)
-
-    /// arith.divsi: 부호 있는 정수 나눗셈 (SSA)
-    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
-    extern MlirOperation mlirArithDivSICreate(
-        MlirContext context,
-        MlirLocation location,
-        MlirValue lhs,
-        MlirValue rhs)
-
-    /// arith.cmpi: 정수 비교 (predicate 지정)
-    /// predicate 값:
-    ///   0 = eq (equal)
-    ///   1 = ne (not equal)
-    ///   2 = slt (signed less than)
-    ///   3 = sle (signed less or equal)
-    ///   4 = sgt (signed greater than)
-    ///   5 = sge (signed greater or equal)
-    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
-    extern MlirOperation mlirArithCmpiCreate(
-        MlirContext context,
-        MlirLocation location,
-        int predicate,
-        MlirValue lhs,
-        MlirValue rhs)
-
-    /// arith.constant: 상수 정수/boolean
-    /// (이미 Chapter 03에서 mlirArithConstantCreate가 있다고 가정.
-    /// 없다면 여기에 추가)
-    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
-    extern MlirOperation mlirArithConstantCreate(
-        MlirContext context,
-        MlirLocation location,
-        MlirAttribute value)
+/// Create operation, append to block, return result value
+let private emitOp (ctx: CompileContext) name resultTypes operands attrs regions =
+    let op = ctx.Builder.CreateOperation(name, ctx.Location, resultTypes, operands, attrs, regions)
+    ctx.Builder.AppendOperationToBlock(ctx.Block, op)
+    op
 ```
+
+**산술 연산 생성 예시:**
+
+```fsharp
+// arith.addi: 정수 덧셈
+| Add(left, right, _) ->
+    let leftVal = compileExpr ctx left
+    let rightVal = compileExpr ctx right
+    let i32Type = builder.I32Type()
+    let op = emitOp ctx "arith.addi" [| i32Type |] [| leftVal; rightVal |] [||] [||]
+    builder.GetResult(op, 0)
+
+// arith.subi: 정수 뺄셈
+| Subtract(left, right, _) ->
+    let leftVal = compileExpr ctx left
+    let rightVal = compileExpr ctx right
+    let op = emitOp ctx "arith.subi" [| i32Type |] [| leftVal; rightVal |] [||] [||]
+    builder.GetResult(op, 0)
+
+// arith.muli: 정수 곱셈
+| Multiply(left, right, _) ->
+    let leftVal = compileExpr ctx left
+    let rightVal = compileExpr ctx right
+    let op = emitOp ctx "arith.muli" [| i32Type |] [| leftVal; rightVal |] [||] [||]
+    builder.GetResult(op, 0)
+
+// arith.divsi: 부호 있는 정수 나눗셈
+| Divide(left, right, _) ->
+    let leftVal = compileExpr ctx left
+    let rightVal = compileExpr ctx right
+    let op = emitOp ctx "arith.divsi" [| i32Type |] [| leftVal; rightVal |] [||] [||]
+    builder.GetResult(op, 0)
+```
+
+**비교 연산 - arith.cmpi:**
+
+비교 연산은 predicate 속성이 필요하다. **중요:** predicate는 반드시 **i64 타입**의 IntegerAttr로 전달해야 한다:
+
+```fsharp
+// arith.cmpi predicate 값:
+//   0 = eq (equal)
+//   1 = ne (not equal)
+//   2 = slt (signed less than)
+//   3 = sle (signed less or equal)
+//   4 = sgt (signed greater than)
+//   5 = sge (signed greater or equal)
+
+| Equal(left, right, _) ->
+    let leftVal = compileExpr ctx left
+    let rightVal = compileExpr ctx right
+    let i64Type = builder.I64Type()  // 주의: i64 타입!
+    let predicateAttr = builder.IntegerAttr(0L, i64Type)  // eq = 0
+    let i1Type = builder.I1Type()  // 결과는 i1 (boolean)
+    let op = emitOp ctx "arith.cmpi" [| i1Type |]
+                [| leftVal; rightVal |]
+                [| builder.NamedAttr("predicate", predicateAttr) |]
+                [||]
+    builder.GetResult(op, 0)
+```
+
+> **핵심 발견:** MLIR의 ArithOps.td 정의에 따르면 predicate 속성은 i64 타입이어야 한다. i32를 사용하면 "attribute 'predicate' expected integer type of width 64" 에러가 발생한다.
 
 **연산자 매핑 표:**
 
@@ -193,82 +192,75 @@ module ArithCmpIPredicate =
     let uge = 9   // unsigned greater or equal
 ```
 
-## F# 래퍼 확장
+## Boolean 리터럴과 논리 연산자
 
-이제 Chapter 04의 `OpBuilder` 래퍼를 확장하여 산술 연산을 쉽게 생성하도록 한다.
+비교 연산 외에도 boolean 리터럴 (`true`, `false`)과 논리 연산자 (`&&`, `||`)를 지원해야 한다.
 
-**MlirWrapper.fs**에 `OpBuilder` 타입 확장:
+### Boolean 리터럴 컴파일
+
+Boolean 값은 i1 타입 (1-bit integer)으로 표현된다:
 
 ```fsharp
-namespace FunLangCompiler
-
-open MlirBindings
-
-/// OpBuilder 확장: 산술 연산 생성
-type OpBuilder with
-
-    /// arith.addi 생성 (정수 덧셈)
-    member this.CreateArithAddi(lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
-        let loc = location.Handle
-        MlirNative.mlirArithAddiCreate(this.Context.Handle, loc, lhs, rhs)
-
-    /// arith.subi 생성 (정수 뺄셈)
-    member this.CreateArithSubi(lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
-        let loc = location.Handle
-        MlirNative.mlirArithSubiCreate(this.Context.Handle, loc, lhs, rhs)
-
-    /// arith.muli 생성 (정수 곱셈)
-    member this.CreateArithMuli(lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
-        let loc = location.Handle
-        MlirNative.mlirArithMuliCreate(this.Context.Handle, loc, lhs, rhs)
-
-    /// arith.divsi 생성 (부호 있는 정수 나눗셈)
-    member this.CreateArithDivSI(lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
-        let loc = location.Handle
-        MlirNative.mlirArithDivSICreate(this.Context.Handle, loc, lhs, rhs)
-
-    /// arith.cmpi 생성 (정수 비교)
-    member this.CreateArithCmpi(predicate: int, lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
-        let loc = location.Handle
-        MlirNative.mlirArithCmpiCreate(this.Context.Handle, loc, predicate, lhs, rhs)
-
-    /// 이진 연산 헬퍼: Operator -> arith operation
-    member this.CreateArithBinaryOp(op: Operator, lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
-        match op with
-        | Add -> this.CreateArithAddi(lhs, rhs, location)
-        | Subtract -> this.CreateArithSubi(lhs, rhs, location)
-        | Multiply -> this.CreateArithMuli(lhs, rhs, location)
-        | Divide -> this.CreateArithDivSI(lhs, rhs, location)
-
-    /// 비교 헬퍼: CompareOp -> arith.cmpi with predicate
-    member this.CreateArithCompare(compareOp: CompareOp, lhs: MlirValue, rhs: MlirValue, location: Location) : MlirOperation =
-        let predicate =
-            match compareOp with
-            | LessThan -> ArithCmpIPredicate.slt
-            | GreaterThan -> ArithCmpIPredicate.sgt
-            | LessEqual -> ArithCmpIPredicate.sle
-            | GreaterEqual -> ArithCmpIPredicate.sge
-            | Equal -> ArithCmpIPredicate.eq
-            | NotEqual -> ArithCmpIPredicate.ne
-        this.CreateArithCmpi(predicate, lhs, rhs, location)
-
-    /// 단항 부정 헬퍼: -expr = 0 - expr
-    member this.CreateArithNegate(value: MlirValue, location: Location) : MlirOperation =
-        // 상수 0 생성
-        let i32Type = this.I32Type()
-        let zeroAttr = this.Context.GetIntegerAttr(i32Type, 0L)
-        let zeroOp = this.CreateConstant(zeroAttr, location)
-        let zeroVal = this.GetResult(zeroOp, 0)
-
-        // 0 - value
-        this.CreateArithSubi(zeroVal, value, location)
+| Bool(b, _) ->
+    let i1Type = builder.I1Type()
+    let value = if b then 1L else 0L
+    let valueAttr = builder.IntegerAttr(value, i1Type)
+    let op = emitOp ctx "arith.constant" [| i1Type |] [||]
+                [| builder.NamedAttr("value", valueAttr) |] [||]
+    builder.GetResult(op, 0)
 ```
+
+**생성된 MLIR IR:**
+
+```mlir
+%true = arith.constant true    // 또는 arith.constant 1 : i1
+%false = arith.constant false  // 또는 arith.constant 0 : i1
+```
+
+### 논리 AND/OR 연산자
+
+논리 연산자는 `arith.andi`와 `arith.ori`를 사용한다:
+
+```fsharp
+| And(left, right, _) ->
+    let leftVal = compileExpr ctx left
+    let rightVal = compileExpr ctx right
+    let i1Type = builder.I1Type()
+    let op = emitOp ctx "arith.andi" [| i1Type |] [| leftVal; rightVal |] [||] [||]
+    builder.GetResult(op, 0)
+
+| Or(left, right, _) ->
+    let leftVal = compileExpr ctx left
+    let rightVal = compileExpr ctx right
+    let i1Type = builder.I1Type()
+    let op = emitOp ctx "arith.ori" [| i1Type |] [| leftVal; rightVal |] [||] [||]
+    builder.GetResult(op, 0)
+```
+
+> **주의:** 이 구현은 **비단락 평가 (non-short-circuit evaluation)**이다. 양쪽 피연산자가 항상 평가된다. 진정한 단락 평가를 위해서는 `scf.if`를 사용해야 한다 (Chapter 08 참조).
+
+**생성된 MLIR IR:**
+
+```mlir
+// true && false
+%a = arith.constant true
+%b = arith.constant false
+%result = arith.andi %a, %b : i1  // 결과: false
+
+// true || false
+%result = arith.ori %a, %b : i1   // 결과: true
+```
+
+## 코드 생성 패턴
+
+실제 구현에서는 개별 P/Invoke 대신 generic `CreateOperation` 패턴을 사용한다. 이것이 더 유지보수하기 쉽고 확장성이 좋다.
 
 **설계 결정:**
 
-- **헬퍼 메서드**: `CreateArithBinaryOp`은 Operator를 받아 적절한 arith 연산으로 매핑한다. 코드 생성 로직이 단순해진다.
-- **부정 구현**: `-expr`은 `0 - expr`로 변환한다. 별도의 arith.negate 연산이 없으므로 이것이 표준 방법이다.
-- **타입 안전성**: CompareOp -> predicate 매핑은 타입 세이프하다. 잘못된 predicate 값을 생성할 수 없다.
+- **Generic 패턴**: `CreateOperation(name, resultTypes, operands, attrs, regions)` 형식으로 모든 연산을 생성할 수 있다
+- **emitOp 헬퍼**: CompileContext를 받아 operation 생성, block에 추가, operation 반환을 하나로 묶는다
+- **부정 구현**: `-expr`은 `0 - expr`로 변환한다. 별도의 arith.negate 연산이 없으므로 이것이 표준 방법이다
+- **타입 일관성**: 모든 정수는 i32, 모든 boolean은 i1로 컴파일한다
 
 ## 공통 에러 (1부)
 
@@ -963,16 +955,56 @@ MlirStringRef.WithString "convert-arith-to-llvm" (fun passName ->
 3. `reconcile-unrealized-casts`
 4. 그 다음 `mlirTranslateModuleToLLVMIR`
 
+## 구현 시 주의사항 (Common Pitfalls)
+
+실제 구현에서 발견된 중요한 주의사항들:
+
+### 1. arith.cmpi predicate는 i64 타입이어야 한다
+
+```fsharp
+// WRONG: i32 타입 predicate
+let predicateAttr = builder.IntegerAttr(0L, builder.I32Type())
+
+// CORRECT: i64 타입 predicate
+let predicateAttr = builder.IntegerAttr(0L, builder.I64Type())
+```
+
+MLIR ArithOps.td 정의에서 predicate는 64비트 정수 속성으로 정의되어 있다. i32를 사용하면 검증 에러가 발생한다.
+
+### 2. 비교 연산 결과는 i1, 정수 연산 결과는 i32
+
+```fsharp
+// 비교 연산: i1 결과
+let op = emitOp ctx "arith.cmpi" [| builder.I1Type() |] ...
+
+// 산술 연산: i32 결과
+let op = emitOp ctx "arith.addi" [| builder.I32Type() |] ...
+```
+
+### 3. Boolean 리터럴은 i1 타입의 arith.constant
+
+```fsharp
+// Boolean true/false
+let i1Type = builder.I1Type()
+let value = if b then 1L else 0L
+let valueAttr = builder.IntegerAttr(value, i1Type)  // i1 타입으로 생성
+```
+
+### 4. 비단락 평가에 주의
+
+`arith.andi`와 `arith.ori`는 양쪽 피연산자를 모두 평가한다. 부수 효과가 있는 표현식에서 문제가 될 수 있다. 진정한 단락 평가가 필요하면 `scf.if`를 사용한다.
+
 ## 장 요약
 
 이 장에서 다음을 성취했다:
 
-1. **확장된 AST**: 이진 연산자, 비교, 단항 부정을 지원하는 표현식 타입
-2. **P/Invoke 바인딩**: arith dialect의 addi, subi, muli, divsi, cmpi 연산
-3. **F# 래퍼 확장**: OpBuilder에 편리한 헬퍼 메서드 추가
-4. **재귀 코드 생성**: SSA 형태를 유지하며 복잡한 표현식 컴파일
-5. **출력 기능**: printf를 통한 결과 출력
-6. **완전한 예제**: MLIR IR 출력을 보여주는 실행 가능한 코드
+1. **확장된 AST**: 이진 연산자, 비교, 단항 부정, boolean 리터럴, 논리 연산자를 지원하는 표현식 타입
+2. **Generic 연산 생성**: `CreateOperation` 패턴으로 arith dialect 연산 생성
+3. **비교 연산**: arith.cmpi와 i64 predicate 속성
+4. **Boolean 지원**: i1 타입, arith.andi/ori 논리 연산자
+5. **재귀 코드 생성**: SSA 형태를 유지하며 복잡한 표현식 컴파일
+6. **출력 기능**: printf를 통한 결과 출력
+7. **완전한 예제**: MLIR IR 출력을 보여주는 실행 가능한 코드
 
 **독자가 할 수 있는 것:**
 - `10 + 3 * 4` 컴파일 → 네이티브 바이너리 → 실행 → 결과: 22 ✓
