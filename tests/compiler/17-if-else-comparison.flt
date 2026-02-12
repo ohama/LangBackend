@@ -1,0 +1,6 @@
+// Test: if-else with comparison condition
+// --- Command: dotnet run --project src/FunLang.Compiler.Cli -- %input
+// --- Input:
+if 10 >= 5 then 100 else 200
+// --- Output:
+100

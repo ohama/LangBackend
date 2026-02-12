@@ -1,0 +1,6 @@
+// Test: if-else with true condition
+// --- Command: dotnet run --project src/FunLang.Compiler.Cli -- %input
+// --- Input:
+if true then 42 else 0
+// --- Output:
+42

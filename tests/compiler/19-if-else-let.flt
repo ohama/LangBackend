@@ -1,0 +1,6 @@
+// Test: if-else with let binding
+// --- Command: dotnet run --project src/FunLang.Compiler.Cli -- %input
+// --- Input:
+let x = 5 in if x < 10 then x * 2 else x
+// --- Output:
+10

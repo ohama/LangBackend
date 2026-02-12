@@ -1,0 +1,6 @@
+// Test: nested if-else
+// --- Command: dotnet run --project src/FunLang.Compiler.Cli -- %input
+// --- Input:
+if true then (if false then 1 else 2) else 3
+// --- Output:
+2
