@@ -268,6 +268,45 @@ let booleanTests =
     ]
 
 [<Tests>]
+let letBindingTests =
+    testList "LetBindings" [
+        test "compile and run simple let binding" {
+            let result = CodeGen.compileAndRun "let x = 5 in x"
+            Expect.equal result 5 "let x = 5 in x should return 5"
+        }
+
+        test "compile and run let with arithmetic in body" {
+            let result = CodeGen.compileAndRun "let x = 5 in x + 10"
+            Expect.equal result 15 "let x = 5 in x + 10 should return 15"
+        }
+
+        test "compile and run let with arithmetic binding" {
+            let result = CodeGen.compileAndRun "let x = 2 + 3 in x * 2"
+            Expect.equal result 10 "let x = 2 + 3 in x * 2 should return 10"
+        }
+
+        test "compile and run nested let bindings" {
+            let result = CodeGen.compileAndRun "let x = 5 in let y = 10 in x + y"
+            Expect.equal result 15 "nested let should return 15"
+        }
+
+        test "compile and run let with shadowing" {
+            let result = CodeGen.compileAndRun "let x = 5 in let x = 10 in x"
+            Expect.equal result 10 "shadowed let should return 10"
+        }
+
+        test "compile and run let shadowing with outer reference" {
+            let result = CodeGen.compileAndRun "let x = 5 in let y = x in let x = 10 in y"
+            Expect.equal result 5 "y captures outer x before shadow"
+        }
+
+        test "compile and run complex nested let" {
+            let result = CodeGen.compileAndRun "let a = 1 in let b = 2 in let c = 3 in a + b + c"
+            Expect.equal result 6 "a + b + c should return 6"
+        }
+    ]
+
+[<Tests>]
 let e2eTests =
     testList "E2E" [
         test "can build function, lower to LLVM, and JIT execute" {
