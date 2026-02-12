@@ -169,6 +169,24 @@ module CodeGen =
             let op = emitOp ctx "arith.ori" [| i1Type |] [| leftVal; rightVal |] [||] [||]
             builder.GetResult(op, 0)
 
+        // Variables and let bindings
+        | Var(name, _) ->
+            // Look up variable in environment
+            match ctx.Env.TryFind(name) with
+            | Some value -> value
+            | None -> failwithf "Unbound variable: %s" name
+
+        | Let(name, expr1, expr2, _) ->
+            // Compile the binding expression
+            let value = compileExpr ctx expr1
+
+            // Create extended environment with new binding (shadowing handled naturally)
+            let extendedEnv = ctx.Env.Add(name, value)
+            let ctx' = { ctx with Env = extendedEnv }
+
+            // Compile body expression in extended environment
+            compileExpr ctx' expr2
+
         | _ ->
             failwithf "CodeGen: unsupported expression type"
 
