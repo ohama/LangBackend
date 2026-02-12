@@ -17,18 +17,19 @@ type Context() =
     /// Raw MLIR context handle
     member _.Handle = handle
 
-    /// Load a dialect by name (e.g., "func", "arith", "scf", "llvm")
-    member _.LoadDialect(dialectName: string) =
+    /// Register and load a dialect handle with this context
+    member _.LoadDialect(dialectHandle: MlirDialectHandle) =
         if disposed then raise (ObjectDisposedException("Context"))
-        MlirStringRef.WithString(dialectName, fun nameRef ->
-            MlirNative.mlirContextGetOrLoadDialect(handle, nameRef) |> ignore)
+        MlirNative.mlirDialectHandleRegisterDialect(dialectHandle, handle)
+        MlirNative.mlirDialectHandleLoadDialect(dialectHandle, handle) |> ignore
 
     /// Load standard dialects needed for FunLang compilation
     member this.LoadStandardDialects() =
-        this.LoadDialect("func")
-        this.LoadDialect("arith")
-        this.LoadDialect("scf")
-        this.LoadDialect("llvm")
+        this.LoadDialect(MlirNative.mlirGetDialectHandle__func__())
+        this.LoadDialect(MlirNative.mlirGetDialectHandle__arith__())
+        this.LoadDialect(MlirNative.mlirGetDialectHandle__scf__())
+        this.LoadDialect(MlirNative.mlirGetDialectHandle__cf__())
+        this.LoadDialect(MlirNative.mlirGetDialectHandle__llvm__())
 
     interface IDisposable with
         member _.Dispose() =
@@ -199,23 +200,101 @@ type OpBuilder(context: Context) =
         attributes: MlirNamedAttribute[],
         regions: MlirRegion[]) =
 
-        let mutable state = MlirStringRef.WithString(name, fun nameRef ->
-            MlirNative.mlirOperationStateGet(nameRef, location.Handle))
+        // Allocate string - MUST stay alive until mlirOperationCreate returns
+        let nameRef = MlirStringRef.FromString(name)
+        try
+            let mutable state = MlirNative.mlirOperationStateGet(nameRef, location.Handle)
+            state.EnableResultTypeInference <- false  // Explicit: don't infer types
 
-        if resultTypes.Length > 0 then
-            use typesPin = fixed resultTypes
-            MlirNative.mlirOperationStateAddResults(&state, nativeint resultTypes.Length, NativePtr.toNativeInt typesPin)
+            if resultTypes.Length > 0 then
+                use typesPin = fixed resultTypes
+                MlirNative.mlirOperationStateAddResults(&state, nativeint resultTypes.Length, NativePtr.toNativeInt typesPin)
 
-        if operands.Length > 0 then
-            use operandsPin = fixed operands
-            MlirNative.mlirOperationStateAddOperands(&state, nativeint operands.Length, NativePtr.toNativeInt operandsPin)
+            if operands.Length > 0 then
+                use operandsPin = fixed operands
+                MlirNative.mlirOperationStateAddOperands(&state, nativeint operands.Length, NativePtr.toNativeInt operandsPin)
 
-        if attributes.Length > 0 then
-            use attrsPin = fixed attributes
-            MlirNative.mlirOperationStateAddAttributes(&state, nativeint attributes.Length, NativePtr.toNativeInt attrsPin)
+            if attributes.Length > 0 then
+                use attrsPin = fixed attributes
+                MlirNative.mlirOperationStateAddAttributes(&state, nativeint attributes.Length, NativePtr.toNativeInt attrsPin)
 
-        if regions.Length > 0 then
-            use regionsPin = fixed regions
-            MlirNative.mlirOperationStateAddOwnedRegions(&state, nativeint regions.Length, NativePtr.toNativeInt regionsPin)
+            if regions.Length > 0 then
+                use regionsPin = fixed regions
+                MlirNative.mlirOperationStateAddOwnedRegions(&state, nativeint regions.Length, NativePtr.toNativeInt regionsPin)
 
-        MlirNative.mlirOperationCreate(&state)
+            MlirNative.mlirOperationCreate(&state)
+        finally
+            nameRef.Free()
+
+    /// Create type attribute
+    member _.TypeAttr(typ: MlirType) =
+        MlirNative.mlirTypeAttrGet(typ)
+
+//=============================================================================
+// PassManager - Runs optimization and lowering passes
+//=============================================================================
+
+/// MLIR Pass Manager for running transformation passes.
+type PassManager(context: Context) =
+    let handle = MlirNative.mlirPassManagerCreate(context.Handle)
+    let contextRef = context
+    let mutable disposed = false
+
+    do MlirNative.mlirRegisterAllPasses()
+
+    /// Add a pass pipeline from string (e.g., "builtin.module(convert-func-to-llvm)")
+    member _.AddPipeline(pipeline: string) =
+        if disposed then raise (ObjectDisposedException("PassManager"))
+        let errorMsg = System.Text.StringBuilder()
+        let errorCallback = MlirStringCallback(fun strRef _ ->
+            let bytes = Array.zeroCreate<byte>(int strRef.Length)
+            Marshal.Copy(strRef.Data, bytes, 0, int strRef.Length)
+            errorMsg.Append(System.Text.Encoding.UTF8.GetString(bytes)) |> ignore)
+        let result = MlirStringRef.WithString(pipeline, fun pipelineRef ->
+            MlirNative.mlirParsePassPipeline(handle, pipelineRef, errorCallback, nativeint 0))
+        // MlirLogicalResult: 0 = failure, 1 = success
+        if result = nativeint 0 then
+            failwithf "Failed to parse pipeline '%s': %s" pipeline (errorMsg.ToString())
+
+    /// Run passes on a module
+    member _.Run(mlirMod: Module) =
+        if disposed then raise (ObjectDisposedException("PassManager"))
+        let result = MlirNative.mlirPassManagerRunOnOp(handle, mlirMod.Operation)
+        result <> nativeint 0  // MlirLogicalResult: 0 = failure, non-zero = success
+
+    interface IDisposable with
+        member _.Dispose() =
+            if not disposed then
+                MlirNative.mlirPassManagerDestroy(handle)
+                disposed <- true
+
+//=============================================================================
+// ExecutionEngine - JIT compilation and execution
+//=============================================================================
+
+/// MLIR Execution Engine for JIT compilation.
+type ExecutionEngine(mlirMod: Module, optLevel: int) =
+    let handle = MlirNative.mlirExecutionEngineCreate(mlirMod.Handle, optLevel, 0, nativeint 0, false)
+    let mutable disposed = false
+
+    do
+        if handle = nativeint 0 then
+            failwith "Failed to create ExecutionEngine - ensure module is lowered to LLVM dialect"
+
+    /// Invoke a function by name with packed arguments
+    member _.InvokePacked(name: string, args: nativeint) =
+        if disposed then raise (ObjectDisposedException("ExecutionEngine"))
+        MlirStringRef.WithString(name, fun nameRef ->
+            MlirNative.mlirExecutionEngineInvokePacked(handle, nameRef, args))
+
+    /// Lookup function pointer by name
+    member _.Lookup(name: string) =
+        if disposed then raise (ObjectDisposedException("ExecutionEngine"))
+        MlirStringRef.WithString(name, fun nameRef ->
+            MlirNative.mlirExecutionEngineLookupPacked(handle, nameRef))
+
+    interface IDisposable with
+        member _.Dispose() =
+            if not disposed then
+                MlirNative.mlirExecutionEngineDestroy(handle)
+                disposed <- true

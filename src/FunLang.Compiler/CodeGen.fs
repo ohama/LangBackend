@@ -292,8 +292,14 @@ module CodeGen =
         use mlirMod = compileToFunction ctx "main" expr
 
         // Lower to LLVM
+        // Conversion order:
+        // 1. convert-scf-to-cf - Convert scf.if to cf.br/cf.cond_br
+        // 2. convert-arith-to-llvm - Convert arith ops to LLVM dialect
+        // 3. convert-cf-to-llvm - Convert cf branches to LLVM dialect
+        // 4. convert-func-to-llvm - Convert func dialect to LLVM dialect
+        // 5. reconcile-unrealized-casts - Clean up any unrealized casts
         use pm = new PassManager(ctx)
-        pm.AddPipeline("builtin.module(convert-arith-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)")
+        pm.AddPipeline("builtin.module(convert-scf-to-cf,convert-arith-to-llvm,convert-cf-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)")
         if not (pm.Run(mlirMod)) then
             failwith "Pass pipeline failed"
 

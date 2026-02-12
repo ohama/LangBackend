@@ -143,6 +143,7 @@ type MlirOperationState =
     val mutable Successors: nativeint   // MlirBlock*
     val mutable NumAttributes: nativeint
     val mutable Attributes: nativeint   // MlirNamedAttribute*
+    [<MarshalAs(UnmanagedType.U1)>]
     val mutable EnableResultTypeInference: bool
 
 //=============================================================================
@@ -191,6 +192,10 @@ module MlirNative =
     [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
     extern MlirDialectHandle mlirGetDialectHandle__scf__()
 
+    /// Get dialect handle for the 'cf' (control flow) dialect
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirDialectHandle mlirGetDialectHandle__cf__()
+
     /// Get dialect handle for the 'llvm' dialect
     [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
     extern MlirDialectHandle mlirGetDialectHandle__llvm__()
@@ -198,6 +203,10 @@ module MlirNative =
     /// Register a dialect with a context
     [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
     extern void mlirDialectHandleRegisterDialect(MlirDialectHandle handle, MlirContext ctx)
+
+    /// Load a dialect into the context (must be registered first)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirDialectHandleLoadDialect(MlirDialectHandle handle, MlirContext ctx)
 
     //==========================================================================
     // Module Management
@@ -442,3 +451,67 @@ module MlirNative =
     /// Check if an attribute is null
     [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
     extern bool mlirAttributeIsNull(MlirAttribute attr)
+
+    /// Create a type attribute
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirAttribute mlirTypeAttrGet(MlirType typ)
+
+    //==========================================================================
+    // Pass Manager
+    //==========================================================================
+
+    /// Create a pass manager
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirPassManagerCreate(MlirContext ctx)
+
+    /// Destroy a pass manager
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirPassManagerDestroy(nativeint pm)
+
+    /// Run passes on a module (returns LogicalResult: 0 = success)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirPassManagerRunOnOp(nativeint pm, MlirOperation op)
+
+    /// Get nested pass manager for a specific operation name
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirPassManagerGetNestedUnder(nativeint pm, MlirStringRef operationName)
+
+    /// Add a pass to an op pass manager
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirOpPassManagerAddOwnedPass(nativeint pm, nativeint pass)
+
+    /// Parse a pass pipeline and add to pass manager
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirParsePassPipeline(nativeint pm, MlirStringRef pipeline, MlirStringCallback callback, nativeint userData)
+
+    //==========================================================================
+    // Execution Engine
+    //==========================================================================
+
+    /// Create an execution engine from a module
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirExecutionEngineCreate(MlirModule m, int32 optLevel, int32 numPaths, nativeint sharedLibPaths, bool enableObjectDump)
+
+    /// Destroy an execution engine
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirExecutionEngineDestroy(nativeint ee)
+
+    /// Lookup a function in the execution engine
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirExecutionEngineLookupPacked(nativeint ee, MlirStringRef name)
+
+    /// Invoke a packed function
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirExecutionEngineInvokePacked(nativeint ee, MlirStringRef name, nativeint arguments)
+
+    //==========================================================================
+    // Conversion Passes Registration
+    //==========================================================================
+
+    /// Register all MLIR passes
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirRegisterAllPasses()
+
+    /// Register all LLVM lowering passes
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirRegisterAllLLVMTranslations(MlirContext ctx)
