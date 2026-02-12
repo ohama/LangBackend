@@ -125,6 +125,27 @@ type MlirNamedAttribute =
     val Attribute: MlirAttribute
 
 //=============================================================================
+// Operation State
+//=============================================================================
+
+/// MLIR operation state - used to construct operations
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type MlirOperationState =
+    val mutable Name: MlirStringRef
+    val mutable Location: MlirLocation
+    val mutable NumResults: nativeint
+    val mutable Results: nativeint      // MlirType*
+    val mutable NumOperands: nativeint
+    val mutable Operands: nativeint     // MlirValue*
+    val mutable NumRegions: nativeint
+    val mutable Regions: nativeint      // MlirRegion*
+    val mutable NumSuccessors: nativeint
+    val mutable Successors: nativeint   // MlirBlock*
+    val mutable NumAttributes: nativeint
+    val mutable Attributes: nativeint   // MlirNamedAttribute*
+    val mutable EnableResultTypeInference: bool
+
+//=============================================================================
 // Callback Delegates
 //=============================================================================
 
@@ -273,3 +294,51 @@ module MlirNative =
     /// Check if two types are equal
     [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
     extern bool mlirTypeEqual(MlirType t1, MlirType t2)
+
+    //==========================================================================
+    // Operation Building
+    //==========================================================================
+
+    /// Create an operation state
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirOperationState mlirOperationStateGet(MlirStringRef name, MlirLocation loc)
+
+    /// Add results to an operation state
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirOperationStateAddResults(MlirOperationState& state, nativeint n, nativeint results)
+
+    /// Add operands to an operation state
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirOperationStateAddOperands(MlirOperationState& state, nativeint n, nativeint operands)
+
+    /// Add owned regions to an operation state
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirOperationStateAddOwnedRegions(MlirOperationState& state, nativeint n, nativeint regions)
+
+    /// Add attributes to an operation state
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirOperationStateAddAttributes(MlirOperationState& state, nativeint n, nativeint attributes)
+
+    /// Create an operation from an operation state
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirOperation mlirOperationCreate(MlirOperationState& state)
+
+    /// Destroy an operation (if not owned by a block)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern void mlirOperationDestroy(MlirOperation op)
+
+    /// Get a result value from an operation by index
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirValue mlirOperationGetResult(MlirOperation op, nativeint pos)
+
+    /// Get the number of results an operation produces
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern nativeint mlirOperationGetNumResults(MlirOperation op)
+
+    /// Get a region from an operation by index
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirRegion mlirOperationGetRegion(MlirOperation op, nativeint pos)
+
+    /// Get the block an operation is in
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirBlock mlirOperationGetBlock(MlirOperation op)
