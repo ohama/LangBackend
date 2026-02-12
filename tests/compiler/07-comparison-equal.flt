@@ -1,0 +1,6 @@
+// Test: equality comparison
+// --- Command: dotnet run --project src/FunLang.Compiler.Cli -- %input
+// --- Input:
+if 5 = 5 then 1 else 0
+// --- Output:
+1
