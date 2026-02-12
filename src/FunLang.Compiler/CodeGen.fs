@@ -187,6 +187,55 @@ module CodeGen =
             // Compile body expression in extended environment
             compileExpr ctx' expr2
 
+        // If-then-else expressions - compile to scf.if with regions
+        | If(cond, thenExpr, elseExpr, _) ->
+            // 1. Compile condition (must be i1 type)
+            let condVal = compileExpr ctx cond
+
+            // 2. Determine result type (assume i32 for now - FunLang is well-typed)
+            let resultType = i32Type
+
+            // 3. Create THEN region
+            let thenRegion = builder.CreateRegion()
+            let thenBlock = builder.CreateBlock([||], ctx.Location)
+            builder.AppendBlockToRegion(thenRegion, thenBlock)
+
+            // Compile then expression in new block context
+            let thenCtx = { ctx with Block = thenBlock }
+            let thenVal = compileExpr thenCtx thenExpr
+
+            // Add scf.yield terminator to then block
+            let thenYieldOp = builder.CreateOperation(
+                "scf.yield", ctx.Location,
+                [||], [| thenVal |], [||], [||])
+            builder.AppendOperationToBlock(thenBlock, thenYieldOp)
+
+            // 4. Create ELSE region
+            let elseRegion = builder.CreateRegion()
+            let elseBlock = builder.CreateBlock([||], ctx.Location)
+            builder.AppendBlockToRegion(elseRegion, elseBlock)
+
+            // Compile else expression in new block context
+            let elseCtx = { ctx with Block = elseBlock }
+            let elseVal = compileExpr elseCtx elseExpr
+
+            // Add scf.yield terminator to else block
+            let elseYieldOp = builder.CreateOperation(
+                "scf.yield", ctx.Location,
+                [||], [| elseVal |], [||], [||])
+            builder.AppendOperationToBlock(elseBlock, elseYieldOp)
+
+            // 5. Create scf.if operation
+            let ifOp = builder.CreateOperation(
+                "scf.if", ctx.Location,
+                [| resultType |],              // result types
+                [| condVal |],                 // operands (condition only)
+                [||],                          // no attributes
+                [| thenRegion; elseRegion |])  // regions: then, else
+
+            builder.AppendOperationToBlock(ctx.Block, ifOp)
+            builder.GetResult(ifOp, 0)
+
         | _ ->
             failwithf "CodeGen: unsupported expression type"
 
