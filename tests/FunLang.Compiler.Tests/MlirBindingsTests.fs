@@ -307,6 +307,65 @@ let letBindingTests =
     ]
 
 [<Tests>]
+let ifElseTests =
+    testList "IfElse" [
+        test "compile and run if-else with true condition" {
+            let result = CodeGen.compileAndRun "if true then 1 else 2"
+            Expect.equal result 1 "if true then 1 else 2 should return 1"
+        }
+
+        test "compile and run if-else with false condition" {
+            let result = CodeGen.compileAndRun "if false then 1 else 2"
+            Expect.equal result 2 "if false then 1 else 2 should return 2"
+        }
+
+        test "compile and run if-else with comparison condition" {
+            let result = CodeGen.compileAndRun "if 1 < 2 then 10 else 20"
+            Expect.equal result 10 "if 1 < 2 then 10 else 20 should return 10"
+        }
+
+        test "compile and run if-else with equality condition" {
+            let result = CodeGen.compileAndRun "if 5 = 5 then 100 else 200"
+            Expect.equal result 100 "if 5 = 5 then ... should return 100"
+        }
+
+        test "compile and run if-else with inequality condition false" {
+            let result = CodeGen.compileAndRun "if 3 > 5 then 1 else 0"
+            Expect.equal result 0 "if 3 > 5 then 1 else 0 should return 0"
+        }
+
+        test "compile and run nested if-else" {
+            let result = CodeGen.compileAndRun "if true then (if false then 1 else 2) else 3"
+            Expect.equal result 2 "nested if-else should return 2"
+        }
+
+        test "compile and run if-else with let binding" {
+            let result = CodeGen.compileAndRun "let x = 5 in if x < 10 then x + 1 else x - 1"
+            Expect.equal result 6 "let x = 5 in if x < 10 then x + 1 else x - 1 should return 6"
+        }
+
+        test "compile and run if-else with let in branches" {
+            let result = CodeGen.compileAndRun "if true then let x = 1 in x + 2 else let y = 3 in y + 4"
+            Expect.equal result 3 "if true then let x = 1 in x + 2 should return 3"
+        }
+
+        test "compile and run if-else with complex arithmetic" {
+            let result = CodeGen.compileAndRun "if (2 + 3) = 5 then 100 * 2 else 0"
+            Expect.equal result 200 "complex if-else should return 200"
+        }
+
+        test "compile and run if-else with logical AND condition" {
+            let result = CodeGen.compileAndRun "if true && true then 1 else 0"
+            Expect.equal result 1 "true && true should be true"
+        }
+
+        test "compile and run if-else with logical OR condition" {
+            let result = CodeGen.compileAndRun "if false || true then 1 else 0"
+            Expect.equal result 1 "false || true should be true"
+        }
+    ]
+
+[<Tests>]
 let e2eTests =
     testList "E2E" [
         test "can build function, lower to LLVM, and JIT execute" {
