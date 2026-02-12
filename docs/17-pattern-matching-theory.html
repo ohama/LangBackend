@@ -1,0 +1,2556 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 17: Pattern Matching Theory - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-2a27a2f4.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-d20149da.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./17-pattern-matching-theory.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-17-pattern-matching-theory-pattern-matching-theory"><a class="header" href="#chapter-17-pattern-matching-theory-pattern-matching-theory">Chapter 17: Pattern Matching Theory (Pattern Matching Theory)</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p><strong>Phase 6이 시작된다.</strong> Phase 5에서 커스텀 MLIR dialect를 구축했다. <code>funlang.closure</code>와 <code>funlang.apply</code>로 클로저를 추상화했고, lowering pass로 LLVM dialect로 변환했다. 이제 <strong>함수형 언어의 핵심 기능</strong>을 추가할 시간이다: **패턴 매칭(pattern matching)**과 <strong>데이터 구조(data structures)</strong>.</p>
+<h3 id="phase-6-로드맵"><a class="header" href="#phase-6-로드맵">Phase 6 로드맵</a></h3>
+<p><strong>Phase 6: Pattern Matching &amp; Data Structures</strong></p>
+<p>이번 phase에서 구현할 내용:</p>
+<ol>
+<li><strong>Chapter 17 (현재)</strong>: Pattern matching 이론 - Decision tree 알고리즘</li>
+<li><strong>Chapter 18</strong>: List operations - <code>funlang.nil</code>, <code>funlang.cons</code> 구현</li>
+<li><strong>Chapter 19</strong>: Match compilation - <code>funlang.match</code> operation과 lowering</li>
+<li><strong>Chapter 20</strong>: Functional programs - 실전 예제 (map, filter, fold)</li>
+</ol>
+<p><strong>왜 이 순서인가?</strong></p>
+<ul>
+<li><strong>이론 먼저:</strong> Decision tree 알고리즘을 이해해야 MLIR 구현이 명확해진다</li>
+<li><strong>데이터 구조 다음:</strong> List operations가 있어야 패턴 매칭할 대상이 생긴다</li>
+<li><strong>매칭 구현:</strong> <code>funlang.match</code> operation으로 decision tree를 MLIR로 표현한다</li>
+<li><strong>실전 활용:</strong> 지금까지 배운 모든 기능을 종합해서 함수형 프로그램을 작성한다</li>
+</ul>
+<h3 id="phase-5-복습-왜-패턴-매칭이-필요한가"><a class="header" href="#phase-5-복습-왜-패턴-매칭이-필요한가">Phase 5 복습: 왜 패턴 매칭이 필요한가?</a></h3>
+<p>Phase 5까지 우리는 이런 코드를 작성할 수 있게 되었다:</p>
+<pre><code class="language-fsharp">// F# compiler input
+let make_adder n =
+    fun x -&gt; x + n
+
+let add_5 = make_adder 5
+let result = add_5 10  // 15
+</code></pre>
+<pre><code class="language-mlir">// Phase 5 MLIR output (FunLang dialect)
+%closure = funlang.closure @lambda_adder, %n : !funlang.closure
+%result = funlang.apply %closure(%x) : (i32) -&gt; i32
+</code></pre>
+<p><strong>하지만 함수형 언어의 진짜 힘은 데이터 구조와 패턴 매칭의 조합이다:</strong></p>
+<pre><code class="language-fsharp">// F#에서 list 패턴 매칭
+let rec sum_list lst =
+    match lst with
+    | [] -&gt; 0
+    | head :: tail -&gt; head + sum_list tail
+
+sum_list [1; 2; 3]  // 6
+</code></pre>
+<pre><code class="language-ocaml">(* OCaml에서 패턴 매칭 *)
+let rec length = function
+  | [] -&gt; 0
+  | _ :: tail -&gt; 1 + length tail
+</code></pre>
+<p><strong>패턴 매칭이 제공하는 것:</strong></p>
+<ol>
+<li><strong>구조적 분해(structural decomposition)</strong>: 데이터를 한 번에 분해하고 변수에 바인딩</li>
+<li><strong>Exhaustiveness checking</strong>: 컴파일러가 모든 경우를 다뤘는지 검증</li>
+<li><strong>효율적인 분기</strong>: 각 subterm을 최대 한 번만 테스트하는 코드 생성</li>
+<li><strong>가독성</strong>: if-else 체인보다 선언적이고 명확한 코드</li>
+</ol>
+<h3 id="pattern-matching-compilation의-도전"><a class="header" href="#pattern-matching-compilation의-도전">Pattern Matching Compilation의 도전</a></h3>
+<p><strong>Naive한 접근:</strong></p>
+<pre><code class="language-mlir">// 잘못된 방법: if-else 체인으로 번역
+%is_nil = // list가 nil인지 테스트
+scf.if %is_nil {
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+} else {
+    %is_cons = // list가 cons인지 테스트 (중복!)
+    scf.if %is_cons {
+        %head = // head 추출
+        %tail = // tail 추출
+        %sum_tail = func.call @sum_list(%tail) : (!funlang.list&lt;i32&gt;) -&gt; i32
+        %result = arith.addi %head, %sum_tail : i32
+        scf.yield %result : i32
+    }
+}
+</code></pre>
+<p><strong>문제점:</strong></p>
+<ol>
+<li><strong>중복 테스트</strong>: Nil 테스트 실패 후 Cons 테스트는 중복이다 (list는 Nil 아니면 Cons)</li>
+<li><strong>비효율적 코드</strong>: Nested patterns에서 exponential blowup 발생</li>
+<li><strong>Exhaustiveness 검증 어려움</strong>: 모든 case를 다뤘는지 확인이 복잡하다</li>
+</ol>
+<p><strong>올바른 접근: Decision Tree Compilation</strong></p>
+<p>Luc Maranget의 decision tree 알고리즘 (2008)을 사용하면:</p>
+<ul>
+<li>각 subterm을 <strong>최대 한 번</strong>만 테스트</li>
+<li>Pattern matrix representation으로 체계적 변환</li>
+<li>Exhaustiveness checking이 자연스럽게 통합됨</li>
+<li>최적화된 분기 코드 생성</li>
+</ul>
+<h3 id="chapter-17-목표"><a class="header" href="#chapter-17-목표">Chapter 17 목표</a></h3>
+<p>이 장을 마치면:</p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>Pattern matrix 표현법</strong>을 이해한다</li>
+<li><input disabled="" type="checkbox"> <strong>Decision tree 알고리즘</strong>의 동작 원리를 안다</li>
+<li><input disabled="" type="checkbox"> <strong>Specialization</strong>과 <strong>defaulting</strong> 연산을 설명할 수 있다</li>
+<li><input disabled="" type="checkbox"> <strong>Exhaustiveness checking</strong>이 어떻게 동작하는지 안다</li>
+<li><input disabled="" type="checkbox"> Chapter 18-19에서 MLIR 구현을 시작할 준비가 된다</li>
+</ul>
+<p><strong>이론 중심 장(theory-focused chapter):</strong></p>
+<p>이 장은 구현 코드가 없다. <strong>알고리즘 설명과 예제</strong>에 집중한다. 왜냐하면:</p>
+<ol>
+<li>Decision tree 알고리즘은 MLIR과 독립적이다 (OCaml, Haskell, Rust 등 모든 함수형 언어에서 사용)</li>
+<li>알고리즘을 먼저 이해하면 MLIR lowering 구현이 명확해진다</li>
+<li>Pattern matrix 표기법은 Chapter 19의 <code>funlang.match</code> operation 설계 기반이 된다</li>
+</ol>
+<h3 id="성공-기준"><a class="header" href="#성공-기준">성공 기준</a></h3>
+<p>이 장을 이해했다면:</p>
+<ol>
+<li>Pattern matrix에서 rows/columns가 무엇을 의미하는지 설명할 수 있다</li>
+<li>Specialization 연산이 pattern을 어떻게 분해하는지 예시를 들 수 있다</li>
+<li>Default 연산이 wildcard rows를 어떻게 처리하는지 설명할 수 있다</li>
+<li>Empty pattern matrix가 왜 non-exhaustive match를 의미하는지 안다</li>
+<li>Decision tree가 if-else chain보다 효율적인 이유를 설명할 수 있다</li>
+</ol>
+<p><strong>Let’s begin.</strong></p>
+<hr>
+<h2 id="pattern-matching-문제-정의"><a class="header" href="#pattern-matching-문제-정의">Pattern Matching 문제 정의</a></h2>
+<p>패턴 매칭 컴파일의 핵심 문제를 정의하자.</p>
+<h3 id="ml-계열-언어의-패턴-매칭"><a class="header" href="#ml-계열-언어의-패턴-매칭">ML 계열 언어의 패턴 매칭</a></h3>
+<p><strong>OCaml/F# syntax:</strong></p>
+<pre><code class="language-ocaml">(* OCaml *)
+match expr with
+| pattern1 -&gt; action1
+| pattern2 -&gt; action2
+| pattern3 -&gt; action3
+</code></pre>
+<pre><code class="language-fsharp">// F#
+match expr with
+| pattern1 -&gt; action1
+| pattern2 -&gt; action2
+| pattern3 -&gt; action3
+</code></pre>
+<p><strong>Example: List length function</strong></p>
+<pre><code class="language-ocaml">let rec length lst =
+  match lst with
+  | [] -&gt; 0
+  | _ :: tail -&gt; 1 + length tail
+</code></pre>
+<p><strong>구성 요소:</strong></p>
+<ol>
+<li><strong>Scrutinee</strong> (<code>lst</code>): 매칭 대상 expression</li>
+<li><strong>Patterns</strong> (<code>[]</code>, <code>_ :: tail</code>): 구조 템플릿</li>
+<li><strong>Actions</strong> (<code>0</code>, <code>1 + length tail</code>): 패턴이 매칭되면 실행할 코드</li>
+<li><strong>Pattern variables</strong> (<code>tail</code>): 패턴 내부에서 값을 바인딩</li>
+</ol>
+<h3 id="funlang-패턴-매칭-구문"><a class="header" href="#funlang-패턴-매칭-구문">FunLang 패턴 매칭 구문</a></h3>
+<p><strong>FunLang의 제안 syntax</strong> (Phase 6 구현 목표):</p>
+<pre><code class="language-fsharp">// match expression
+match list with
+| Nil -&gt; 0
+| Cons(head, tail) -&gt; head + sum tail
+</code></pre>
+<p><strong>Pattern types:</strong></p>
+<ol>
+<li><strong>Wildcard pattern</strong> (<code>_</code>): 모든 값과 매칭, 변수 바인딩 없음</li>
+<li><strong>Variable pattern</strong> (<code>x</code>, <code>tail</code>): 모든 값과 매칭, 변수에 바인딩</li>
+<li><strong>Constructor pattern</strong> (<code>Nil</code>, <code>Cons(x, xs)</code>): 특정 constructor와 매칭</li>
+<li><strong>Literal pattern</strong> (<code>0</code>, <code>true</code>): 특정 상수 값과 매칭</li>
+</ol>
+<p><strong>Constructor patterns의 subpatterns:</strong></p>
+<pre><code class="language-fsharp">// Nested constructor patterns
+match list with
+| Nil -&gt; "empty"
+| Cons(x, Nil) -&gt; "singleton"  // tail is Nil
+| Cons(x, Cons(y, rest)) -&gt; "at least two elements"
+</code></pre>
+<p><code>Cons(x, Nil)</code>에서:</p>
+<ul>
+<li><code>Cons</code>는 constructor</li>
+<li><code>x</code>는 head subpattern (variable)</li>
+<li><code>Nil</code>은 tail subpattern (constructor)</li>
+</ul>
+<h3 id="컴파일-문제-patterns--efficient-branching-code"><a class="header" href="#컴파일-문제-patterns--efficient-branching-code">컴파일 문제: Patterns → Efficient Branching Code</a></h3>
+<p><strong>Input:</strong> Pattern clauses (scrutinee, patterns, actions)</p>
+<pre><code class="language-fsharp">match list with
+| Nil -&gt; 0
+| Cons(head, tail) -&gt; head + sum tail
+</code></pre>
+<p><strong>Output:</strong> Efficient branching code (MLIR IR)</p>
+<pre><code class="language-mlir">%tag = llvm.extractvalue %list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%is_nil = arith.cmpi eq, %tag, %c0 : i32
+
+%result = scf.if %is_nil -&gt; (i32) {
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+} else {
+    // Cons case: extract head and tail
+    %data = llvm.extractvalue %list[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    %head = llvm.load %data[0] : !llvm.ptr -&gt; i32
+    %tail = llvm.load %data[1] : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+    %sum_tail = func.call @sum(%tail) : (!funlang.list&lt;i32&gt;) -&gt; i32
+    %result_val = arith.addi %head, %sum_tail : i32
+    scf.yield %result_val : i32
+}
+</code></pre>
+<p><strong>핵심 요구사항:</strong></p>
+<ol>
+<li><strong>Correctness</strong>: 패턴 순서를 존중 (첫 번째 매칭 패턴이 선택됨)</li>
+<li><strong>Efficiency</strong>: 각 subterm을 최대 한 번만 테스트</li>
+<li><strong>Exhaustiveness</strong>: 모든 가능한 값이 처리되는지 검증</li>
+<li><strong>Optimization</strong>: 불필요한 테스트 제거 (Nil 아니면 자동으로 Cons)</li>
+</ol>
+<h3 id="naive-컴파일의-문제점"><a class="header" href="#naive-컴파일의-문제점">Naive 컴파일의 문제점</a></h3>
+<p><strong>If-else chain으로 직접 번역하면?</strong></p>
+<pre><code class="language-mlir">// Pattern 1: Nil
+%is_nil = // test if tag == 0
+scf.if %is_nil {
+    scf.yield %zero : i32
+} else {
+    // Pattern 2: Cons(head, tail)
+    %is_cons = // test if tag == 1 (redundant!)
+    scf.if %is_cons {
+        // extract head, tail, compute result
+    } else {
+        // No more patterns -&gt; error!
+    }
+}
+</code></pre>
+<p><strong>문제 1: 중복 테스트</strong></p>
+<p>Nil 테스트가 false면 자동으로 Cons다 (list는 Nil 또는 Cons만 존재). 하지만 naive 번역은 다시 Cons를 테스트한다.</p>
+<p><strong>문제 2: Nested patterns의 exponential blowup</strong></p>
+<pre><code class="language-fsharp">match (list1, list2) with
+| (Nil, Nil) -&gt; 0
+| (Nil, Cons(_, _)) -&gt; 1
+| (Cons(_, _), Nil) -&gt; 2
+| (Cons(x, _), Cons(y, _)) -&gt; x + y
+</code></pre>
+<p>두 개의 scrutinee를 독립적으로 테스트하면:</p>
+<pre><code>list1 test -&gt; list2 test (중복!)
+            -&gt; list2 test (중복!)
+-&gt; list1 test (중복!)
+            -&gt; list2 test (중복!)
+            -&gt; list2 test (중복!)
+</code></pre>
+<p>4개의 패턴이 8번의 테스트를 발생시킨다. Patterns이 늘어나면 <code>2^n</code> 테스트가 필요하다.</p>
+<p><strong>문제 3: Exhaustiveness 검증 복잡도</strong></p>
+<p>If-else tree를 분석해서 모든 경로가 종료되는지 확인해야 한다. 복잡한 중첩 패턴에서는 거의 불가능하다.</p>
+<h3 id="해결책-decision-tree-compilation"><a class="header" href="#해결책-decision-tree-compilation">해결책: Decision Tree Compilation</a></h3>
+<p><strong>Key insight (Maranget 2008):</strong></p>
+<blockquote>
+<p>“패턴 매칭은 <strong>search problem</strong>이다. Pattern clauses를 <strong>structured representation</strong> (pattern matrix)로 변환하면, systematic하게 optimal decision tree를 구성할 수 있다.”</p>
+</blockquote>
+<p><strong>Decision tree 특징:</strong></p>
+<ol>
+<li><strong>각 internal node는 하나의 test</strong> (constructor tag, literal value)</li>
+<li><strong>각 edge는 test outcome</strong> (Nil vs Cons, 0 vs 1 vs 2)</li>
+<li><strong>각 leaf는 action</strong> (실행할 코드)</li>
+<li><strong>Root에서 leaf까지 경로는 unique test sequence</strong></li>
+</ol>
+<p><strong>장점:</strong></p>
+<ul>
+<li>각 subterm을 최대 한 번만 테스트 (no redundancy)</li>
+<li>Test 순서를 최적화 가능 (heuristic으로 선택)</li>
+<li>Exhaustiveness checking이 자연스러움 (leaf가 없는 경로 = missing pattern)</li>
+</ul>
+<p><strong>다음 섹션에서:</strong> Pattern matrix 표기법과 decision tree 구성 알고리즘을 자세히 살펴본다.</p>
+<hr>
+<h2 id="pattern-matrix-표현법"><a class="header" href="#pattern-matrix-표현법">Pattern Matrix 표현법</a></h2>
+<p>Decision tree 알고리즘의 핵심은 <strong>pattern matrix</strong>라는 structured representation이다.</p>
+<h3 id="pattern-matrix-정의"><a class="header" href="#pattern-matrix-정의">Pattern Matrix 정의</a></h3>
+<p><strong>Pattern matrix는 2차원 테이블이다:</strong></p>
+<ul>
+<li><strong>Rows</strong>: Pattern clauses (각 row는 하나의 <code>pattern -&gt; action</code>)</li>
+<li><strong>Columns</strong>: Scrutinees (매칭 대상 values)</li>
+<li><strong>Cells</strong>: Patterns (wildcard, constructor, literal)</li>
+</ul>
+<p><strong>Notation:</strong></p>
+<pre><code>P = | p11  p12  ...  p1m  →  a1
+    | p21  p22  ...  p2m  →  a2
+    | ...
+    | pn1  pn2  ...  pnm  →  an
+</code></pre>
+<ul>
+<li><code>P</code>: Pattern matrix (n rows × m columns)</li>
+<li><code>pij</code>: Row i, column j의 pattern</li>
+<li><code>ai</code>: Row i의 action</li>
+<li><code>m</code>: Scrutinee 개수</li>
+<li><code>n</code>: Pattern clause 개수</li>
+</ul>
+<h3 id="example-1-단일-scrutinee-list-length"><a class="header" href="#example-1-단일-scrutinee-list-length">Example 1: 단일 Scrutinee (List Length)</a></h3>
+<p><strong>FunLang code:</strong></p>
+<pre><code class="language-fsharp">match list with
+| Nil -&gt; 0
+| Cons(head, tail) -&gt; 1 + length tail
+</code></pre>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>Scrutinee: [list]
+
+Matrix:
+| Nil             →  0
+| Cons(head, tail) →  1 + length tail
+</code></pre>
+<p><strong>설명:</strong></p>
+<ul>
+<li>1개의 scrutinee column: <code>list</code></li>
+<li>2개의 pattern rows:
+<ul>
+<li>Row 1: <code>Nil</code> pattern → action은 <code>0</code></li>
+<li>Row 2: <code>Cons(head, tail)</code> pattern → action은 <code>1 + length tail</code></li>
+</ul>
+</li>
+</ul>
+<p><strong>Constructor patterns의 subpatterns:</strong></p>
+<p><code>Cons(head, tail)</code>은 2개의 subpatterns를 가진다:</p>
+<ul>
+<li><code>head</code>: variable pattern (head 값에 바인딩)</li>
+<li><code>tail</code>: variable pattern (tail 값에 바인딩)</li>
+</ul>
+<p>나중에 이 subpatterns가 <strong>새로운 columns</strong>로 확장된다 (specialization).</p>
+<h3 id="example-2-다중-scrutinee-pair-matching"><a class="header" href="#example-2-다중-scrutinee-pair-matching">Example 2: 다중 Scrutinee (Pair Matching)</a></h3>
+<p><strong>FunLang code:</strong></p>
+<pre><code class="language-fsharp">match (list1, list2) with
+| (Nil, Nil) -&gt; 0
+| (Nil, Cons(x, _)) -&gt; 1
+| (Cons(_, _), Nil) -&gt; 2
+| (Cons(x, _), Cons(y, _)) -&gt; x + y
+</code></pre>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>Scrutinee: [list1, list2]
+
+Matrix:
+| Nil         Nil          →  0
+| Nil         Cons(x, _)   →  1
+| Cons(_, _)  Nil          →  2
+| Cons(x, _)  Cons(y, _)   →  x + y
+</code></pre>
+<p><strong>설명:</strong></p>
+<ul>
+<li>2개의 scrutinee columns: <code>list1</code>, <code>list2</code></li>
+<li>4개의 pattern rows</li>
+<li>각 cell은 해당 scrutinee의 pattern</li>
+</ul>
+<p><strong>Wildcard pattern <code>_</code>:</strong></p>
+<p>값을 바인딩하지 않는 pattern. 모든 값과 매칭된다.</p>
+<p><strong>Variable pattern <code>x</code>, <code>y</code>:</strong></p>
+<p>값을 변수에 바인딩하는 pattern. 모든 값과 매칭되지만 이름을 부여한다.</p>
+<blockquote>
+<p><strong>Wildcard vs Variable</strong>: Semantically 둘 다 모든 값과 매칭된다. Variable은 추가로 바인딩을 생성한다. Pattern matrix 관점에서는 동일하게 취급된다 (irrefutable pattern).</p>
+</blockquote>
+<h3 id="example-3-nested-pattern-list-prefix"><a class="header" href="#example-3-nested-pattern-list-prefix">Example 3: Nested Pattern (List Prefix)</a></h3>
+<p><strong>FunLang code:</strong></p>
+<pre><code class="language-fsharp">match list with
+| Nil -&gt; "empty"
+| Cons(x, Nil) -&gt; "singleton"
+| Cons(x, Cons(y, rest)) -&gt; "at least two"
+</code></pre>
+<p><strong>Initial pattern matrix:</strong></p>
+<pre><code>Scrutinee: [list]
+
+Matrix:
+| Nil                   →  "empty"
+| Cons(x, Nil)          →  "singleton"
+| Cons(x, Cons(y, rest)) →  "at least two"
+</code></pre>
+<p><strong>Nested constructor <code>Cons(y, rest)</code>:</strong></p>
+<p>Row 3의 tail subpattern <code>Cons(y, rest)</code>는 또 다른 constructor pattern이다. 이게 <strong>nested pattern</strong>이다.</p>
+<p><strong>Compilation strategy:</strong></p>
+<ol>
+<li>먼저 <code>list</code>의 constructor (Nil vs Cons) 테스트</li>
+<li>Cons인 경우, head와 tail 추출</li>
+<li>이제 <code>tail</code>에 대해 다시 pattern matching (Nil vs Cons)</li>
+</ol>
+<p><strong>Specialization 후 matrix는 확장된다</strong> (나중에 자세히 설명).</p>
+<h3 id="occurrence-vectors"><a class="header" href="#occurrence-vectors">Occurrence Vectors</a></h3>
+<p><strong>Pattern matrix와 함께 occurrence vectors를 유지한다.</strong></p>
+<p><strong>Occurrence vector (π):</strong></p>
+<p>Scrutinee values에 <strong>어떻게 접근하는지</strong> 나타내는 경로(path) 목록.</p>
+<p><strong>Initial occurrences:</strong></p>
+<pre><code>π = [o1, o2, ..., om]
+</code></pre>
+<ul>
+<li><code>o1</code>: First scrutinee (예: <code>list</code>)</li>
+<li><code>o2</code>: Second scrutinee (예: <code>list2</code>)</li>
+</ul>
+<p><strong>Example: Single scrutinee</strong></p>
+<pre><code>π = [list]
+</code></pre>
+<p><strong>Example: Pair of scrutinees</strong></p>
+<pre><code>π = [list1, list2]
+</code></pre>
+<p><strong>Specialization 시 occurrences 확장:</strong></p>
+<p>Constructor pattern <code>Cons(x, xs)</code>를 specialize하면:</p>
+<pre><code>π = [list]
+  → [list.head, list.tail]
+</code></pre>
+<p><code>list.head</code>와 <code>list.tail</code>은 <strong>subterm access path</strong>를 의미한다 (MLIR에서는 <code>llvm.extractvalue</code> operations).</p>
+<p><strong>왜 occurrence vectors가 필요한가?</strong></p>
+<p>Decision tree를 생성할 때, 각 test가 <strong>어느 값을 검사하는지</strong> 알아야 한다.</p>
+<ul>
+<li>Initial: <code>list</code> 자체를 테스트</li>
+<li>After specialization: <code>list.head</code>, <code>list.tail</code>을 테스트</li>
+</ul>
+<p>Occurrence vectors는 <strong>code generation의 기반</strong>이다.</p>
+<h3 id="pattern-matrix-properties"><a class="header" href="#pattern-matrix-properties">Pattern Matrix Properties</a></h3>
+<p><strong>Irrefutable row:</strong></p>
+<p>Row의 모든 patterns가 wildcard 또는 variable이면 <strong>irrefutable</strong>이다 (항상 매칭).</p>
+<pre><code>| _  _  _  →  action  // Irrefutable
+</code></pre>
+<p><strong>Exhaustive matrix:</strong></p>
+<p>Matrix가 <strong>exhaustive</strong>하면 모든 가능한 input values가 어떤 row와 매칭된다.</p>
+<p><strong>Non-exhaustive matrix:</strong></p>
+<p>어떤 input value도 매칭되지 않는 경우가 있으면 <strong>non-exhaustive</strong>.</p>
+<p><strong>Empty matrix (P = ∅):</strong></p>
+<p>Row가 하나도 없는 matrix. <strong>항상 non-exhaustive</strong>다.</p>
+<p><strong>Example: Non-exhaustive pattern</strong></p>
+<pre><code class="language-fsharp">match list with
+| Nil -&gt; 0
+// Missing: Cons case!
+</code></pre>
+<p>Matrix:</p>
+<pre><code>| Nil  →  0
+</code></pre>
+<p>Input <code>Cons(1, Nil)</code>은 어떤 row와도 매칭 안 됨 → <strong>non-exhaustive</strong>.</p>
+<h3 id="pattern-matrix-compilation-goal"><a class="header" href="#pattern-matrix-compilation-goal">Pattern Matrix Compilation Goal</a></h3>
+<p><strong>Compilation algorithm의 목표:</strong></p>
+<p>Pattern matrix <code>P</code>와 occurrence vector <code>π</code>를 입력받아서:</p>
+<ol>
+<li><strong>Decision tree를 생성</strong>한다 (efficient branching code)</li>
+<li><strong>Exhaustiveness를 검증</strong>한다 (empty matrix 체크)</li>
+<li><strong>Optimal test sequence</strong>를 선택한다 (heuristic)</li>
+</ol>
+<p><strong>Next section:</strong> Decision tree의 구조와 pattern matrix의 관계를 살펴본다.</p>
+<hr>
+<h2 id="decision-tree-개념"><a class="header" href="#decision-tree-개념">Decision Tree 개념</a></h2>
+<p>Pattern matrix를 compile하면 <strong>decision tree</strong>가 생성된다. 이 섹션에서 decision tree의 구조와 특징을 이해한다.</p>
+<h3 id="decision-tree-구조"><a class="header" href="#decision-tree-구조">Decision Tree 구조</a></h3>
+<p><strong>Decision tree는 다음 요소로 구성된다:</strong></p>
+<ol>
+<li><strong>Internal nodes (decision nodes)</strong>: Test operations
+<ul>
+<li>Constructor test: “Is this value Nil or Cons?”</li>
+<li>Literal test: “Is this value 0 or 1 or 2?”</li>
+</ul>
+</li>
+<li><strong>Edges</strong>: Test outcomes (branches)
+<ul>
+<li>Constructor edges: Nil branch, Cons branch</li>
+<li>Literal edges: 0 branch, 1 branch, default branch</li>
+</ul>
+</li>
+<li><strong>Leaf nodes</strong>: Actions
+<ul>
+<li>Success leaf: Execute action (return value)</li>
+<li>Failure leaf: Match failure (non-exhaustive error)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Tree traversal:</strong></p>
+<ul>
+<li>Root에서 시작</li>
+<li>각 internal node에서 test 실행</li>
+<li>Test outcome에 따라 edge 선택</li>
+<li>Leaf에 도달하면 종료 (action 실행 또는 failure)</li>
+</ul>
+<h3 id="example-list-length-decision-tree"><a class="header" href="#example-list-length-decision-tree">Example: List Length Decision Tree</a></h3>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>| Nil             →  a1 (return 0)
+| Cons(head, tail) →  a2 (return 1 + length tail)
+</code></pre>
+<p><strong>Decision tree:</strong></p>
+<pre><code>       [list]
+         |
+    Test: constructor
+       /   \
+     Nil   Cons
+     /       \
+   Leaf     [head, tail]
+   a1          |
+             Leaf
+              a2
+</code></pre>
+<p><strong>Tree 설명:</strong></p>
+<ol>
+<li><strong>Root node</strong>: <code>list</code>의 constructor 테스트</li>
+<li><strong>Nil edge</strong>: Nil constructor → Leaf (action a1)</li>
+<li><strong>Cons edge</strong>: Cons constructor → Intermediate node (head, tail 추출)</li>
+<li><strong>Cons leaf</strong>: Action a2 실행</li>
+</ol>
+<p><strong>왜 [head, tail] node가 필요한가?</strong></p>
+<p>Cons pattern <code>Cons(head, tail)</code>은 subpatterns를 가진다. Cons case에서:</p>
+<ul>
+<li><code>head</code> 값을 추출해서 변수 <code>head</code>에 바인딩</li>
+<li><code>tail</code> 값을 추출해서 변수 <code>tail</code>에 바인딩</li>
+</ul>
+<p>이 바인딩들이 action a2에서 사용된다.</p>
+<p><strong>Simplified view (bindings 생략):</strong></p>
+<pre><code>       [list]
+         |
+    Test: constructor
+       /   \
+     Nil   Cons
+     /       \
+   a1        a2
+</code></pre>
+<p>구현에서는 Cons branch에서 head/tail 추출 코드를 삽입한다.</p>
+<h3 id="example-nested-pattern-decision-tree"><a class="header" href="#example-nested-pattern-decision-tree">Example: Nested Pattern Decision Tree</a></h3>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>| Nil                   →  a1 ("empty")
+| Cons(x, Nil)          →  a2 ("singleton")
+| Cons(x, Cons(y, rest)) →  a3 ("at least two")
+</code></pre>
+<p><strong>Decision tree:</strong></p>
+<pre><code>          [list]
+            |
+       Test: constructor
+         /   \
+       Nil   Cons
+       /       \
+     a1      [head, tail]
+                |
+          Test: tail constructor
+              /   \
+            Nil   Cons
+            /       \
+          a2      [y, rest]
+                     |
+                    a3
+</code></pre>
+<p><strong>Tree traversal example:</strong></p>
+<p>Input: <code>Cons(1, Cons(2, Nil))</code></p>
+<ol>
+<li>Root: Test <code>list</code> constructor → Cons</li>
+<li>Extract <code>head = 1</code>, <code>tail = Cons(2, Nil)</code></li>
+<li>Test <code>tail</code> constructor → Cons</li>
+<li>Extract <code>y = 2</code>, <code>rest = Nil</code></li>
+<li>Leaf a3 (“at least two”)</li>
+</ol>
+<p><strong>Key property: 각 subterm을 한 번만 테스트</strong></p>
+<ul>
+<li><code>list</code> constructor: 1번 테스트</li>
+<li><code>tail</code> constructor: 1번 테스트</li>
+</ul>
+<p>Naive if-else chain은 <code>list</code> constructor를 여러 번 테스트할 수 있다.</p>
+<h3 id="comparison-decision-tree-vs-if-else-chain"><a class="header" href="#comparison-decision-tree-vs-if-else-chain">Comparison: Decision Tree vs If-Else Chain</a></h3>
+<p><strong>If-Else chain (naive compilation):</strong></p>
+<pre><code class="language-mlir">// Pattern 1: Nil
+%is_nil = arith.cmpi eq, %tag, %c0 : i32
+scf.if %is_nil {
+    scf.yield %a1 : i32
+} else {
+    // Pattern 2: Cons(x, Nil)
+    %is_cons = arith.cmpi eq, %tag, %c1 : i32  // Redundant test!
+    scf.if %is_cons {
+        %tail = // extract tail
+        %tail_tag = llvm.extractvalue %tail[0] : !llvm.struct&lt;(i32, ptr)&gt;
+        %tail_is_nil = arith.cmpi eq, %tail_tag, %c0 : i32
+        scf.if %tail_is_nil {
+            scf.yield %a2 : i32
+        } else {
+            // Pattern 3: Cons(x, Cons(y, rest))
+            // ... (more tests)
+        }
+    }
+}
+</code></pre>
+<p><strong>문제:</strong></p>
+<ol>
+<li><code>%is_cons</code> test는 중복 (Nil이 아니면 자동으로 Cons)</li>
+<li>Nested if-else는 depth가 깊어진다</li>
+<li>각 level에서 동일한 값을 반복 테스트</li>
+</ol>
+<p><strong>Decision tree (optimal compilation):</strong></p>
+<pre><code class="language-mlir">// Test list constructor once
+%tag = llvm.extractvalue %list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%result = scf.index_switch %tag : i32 -&gt; i32
+case 0 {  // Nil
+    scf.yield %a1 : i32
+}
+case 1 {  // Cons
+    %data = llvm.extractvalue %list[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    %head = llvm.load %data[0] : !llvm.ptr -&gt; i32
+    %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Test tail constructor once
+    %tail_tag = llvm.extractvalue %tail[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %tail_result = scf.index_switch %tail_tag : i32 -&gt; i32
+    case 0 {  // Nil
+        scf.yield %a2 : i32
+    }
+    case 1 {  // Cons
+        %tail_data = llvm.extractvalue %tail[1] : !llvm.struct&lt;(i32, ptr)&gt;
+        %y = llvm.load %tail_data[0] : !llvm.ptr -&gt; i32
+        %rest_ptr = llvm.getelementptr %tail_data[1] : (!llvm.ptr) -&gt; !llvm.ptr
+        %rest = llvm.load %rest_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+        scf.yield %a3 : i32
+    }
+    scf.yield %tail_result : i32
+}
+</code></pre>
+<p><strong>장점:</strong></p>
+<ol>
+<li>각 constructor tag를 정확히 한 번만 테스트 (<code>scf.index_switch</code>)</li>
+<li>불필요한 비교 연산 제거</li>
+<li>Structured control flow (SCF dialect)로 최적화 기회 제공</li>
+</ol>
+<h3 id="decision-tree-benefits"><a class="header" href="#decision-tree-benefits">Decision Tree Benefits</a></h3>
+<p><strong>1. Efficiency: O(d) tests (d = pattern depth)</strong></p>
+<p>Nested pattern의 depth가 d면, 최대 d번의 test만 필요하다.</p>
+<ul>
+<li>Flat pattern (<code>Nil</code>, <code>Cons(_, _)</code>): 1번 test</li>
+<li>Nested pattern (<code>Cons(_, Cons(_, _))</code>): 2번 test (outer, inner)</li>
+</ul>
+<p>If-else chain은 worst case O(n × d) tests (n = pattern 개수).</p>
+<p><strong>2. Exhaustiveness checking: Leaf coverage</strong></p>
+<p>모든 가능한 input이 어떤 leaf에 도달하면 exhaustive.</p>
+<p>Leaf에 도달하지 않는 경로가 있으면 non-exhaustive.</p>
+<p><strong>Example: Non-exhaustive detection</strong></p>
+<pre><code>Pattern matrix:
+| Nil  →  a1
+// Missing Cons case
+</code></pre>
+<p>Decision tree:</p>
+<pre><code>    [list]
+      |
+  Test: constructor
+    /   \
+  Nil   Cons
+  /       \
+a1      FAILURE  // No action for Cons
+</code></pre>
+<p>Cons branch가 Failure leaf로 이어진다 → Compile error: “non-exhaustive match”</p>
+<p><strong>3. Optimization opportunities</strong></p>
+<p>Decision tree는 structured representation이라서:</p>
+<ul>
+<li>Common subexpression elimination (같은 test를 여러 번 안 함)</li>
+<li>Dead code elimination (도달 불가능한 patterns 제거)</li>
+<li>Branch prediction hints (frequent cases 먼저 테스트)</li>
+</ul>
+<h3 id="relationship-pattern-matrix--decision-tree"><a class="header" href="#relationship-pattern-matrix--decision-tree">Relationship: Pattern Matrix → Decision Tree</a></h3>
+<p><strong>Compilation function:</strong></p>
+<pre><code>compile : PatternMatrix × OccurrenceVector → DecisionTree
+</code></pre>
+<p><strong>Input:</strong></p>
+<ul>
+<li>Pattern matrix <code>P</code> (n rows × m columns)</li>
+<li>Occurrence vector <code>π</code> (m elements)</li>
+</ul>
+<p><strong>Output:</strong></p>
+<ul>
+<li>Decision tree <code>T</code></li>
+</ul>
+<p><strong>Recursive algorithm:</strong></p>
+<pre><code>function compile(P, π):
+    if P is empty:
+        return Failure  // Non-exhaustive
+
+    if first row is irrefutable:
+        return Success(action)  // Found match
+
+    column = select_column(P)
+    constructors = get_constructors(P, column)
+
+    branches = {}
+    for each constructor c:
+        P_c = specialize(P, column, c)
+        π_c = specialize_occurrences(π, column, c)
+        branches[c] = compile(P_c, π_c)
+
+    P_default = default(P, column)
+    π_default = default_occurrences(π, column)
+    default_branch = compile(P_default, π_default)
+
+    return Switch(π[column], branches, default_branch)
+</code></pre>
+<p><strong>핵심 operations:</strong></p>
+<ol>
+<li><strong><code>select_column</code></strong>: 어느 column을 먼저 테스트할지 선택 (heuristic)</li>
+<li><strong><code>specialize</code></strong>: Constructor와 매칭되는 rows만 남기고, subpatterns 확장</li>
+<li><strong><code>default</code></strong>: Wildcard rows만 남기고, 테스트한 column 제거</li>
+</ol>
+<p><strong>Next sections:</strong> Specialization과 defaulting을 자세히 설명한다.</p>
+<hr>
+<h2 id="specialization-연산"><a class="header" href="#specialization-연산">Specialization 연산</a></h2>
+<p>Specialization은 decision tree 알고리즘의 <strong>핵심 operation</strong>이다. Constructor test가 성공했을 때 pattern matrix를 어떻게 변환하는지 정의한다.</p>
+<h3 id="specialization-정의"><a class="header" href="#specialization-정의">Specialization 정의</a></h3>
+<p><strong>Specialization (S):</strong></p>
+<pre><code>S(c, i, P) = Specialized pattern matrix
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>c</code>: Constructor (예: <code>Cons</code>, <code>Nil</code>)</li>
+<li><code>i</code>: Column index (어느 scrutinee를 테스트하는가)</li>
+<li><code>P</code>: Original pattern matrix</li>
+</ul>
+<p><strong>Operation:</strong></p>
+<ol>
+<li>Column <code>i</code>의 pattern이 constructor <code>c</code>와 <strong>호환되는</strong> rows만 유지</li>
+<li>호환되는 patterns를 <strong>subpatterns로 확장</strong> (constructor decomposition)</li>
+<li>Column <code>i</code>를 제거하고 subpattern columns를 삽입</li>
+</ol>
+<h3 id="example-1-simple-list-specialization-cons"><a class="header" href="#example-1-simple-list-specialization-cons">Example 1: Simple List Specialization (Cons)</a></h3>
+<p><strong>Original pattern matrix:</strong></p>
+<pre><code>Column: [list]
+
+| Nil             →  a1
+| Cons(head, tail) →  a2
+| _               →  a3
+</code></pre>
+<p><strong>Specialize on column 0, constructor Cons:</strong></p>
+<p><code>S(Cons, 0, P)</code>:</p>
+<p><strong>Step 1: Filter compatible rows</strong></p>
+<ul>
+<li>Row 1 (<code>Nil</code>): Incompatible with Cons → 제거</li>
+<li>Row 2 (<code>Cons(head, tail)</code>): Compatible → 유지</li>
+<li>Row 3 (<code>_</code>): Wildcard, compatible → 유지</li>
+</ul>
+<p><strong>Step 2: Decompose patterns</strong></p>
+<ul>
+<li>Row 2: <code>Cons(head, tail)</code> → expand to <code>[head, tail]</code></li>
+<li>Row 3: <code>_</code> → expand to <code>[_, _]</code> (wildcard for each subpattern)</li>
+</ul>
+<p><strong>Step 3: Replace column 0 with subpattern columns</strong></p>
+<pre><code>Columns: [head, tail]
+
+| head  tail  →  a2
+| _     _     →  a3
+</code></pre>
+<p><strong>Occurrence vector update:</strong></p>
+<pre><code>Before: π = [list]
+After:  π = [list.head, list.tail]
+</code></pre>
+<h3 id="example-2-specialization-on-nil"><a class="header" href="#example-2-specialization-on-nil">Example 2: Specialization on Nil</a></h3>
+<p><strong>Original pattern matrix:</strong></p>
+<pre><code>Column: [list]
+
+| Nil             →  a1
+| Cons(head, tail) →  a2
+| _               →  a3
+</code></pre>
+<p><strong>Specialize on column 0, constructor Nil:</strong></p>
+<p><code>S(Nil, 0, P)</code>:</p>
+<p><strong>Step 1: Filter compatible rows</strong></p>
+<ul>
+<li>Row 1 (<code>Nil</code>): Compatible → 유지</li>
+<li>Row 2 (<code>Cons(head, tail)</code>): Incompatible with Nil → 제거</li>
+<li>Row 3 (<code>_</code>): Wildcard, compatible → 유지</li>
+</ul>
+<p><strong>Step 2: Decompose patterns</strong></p>
+<p>Nil constructor는 <strong>subpatterns가 없다</strong> (nullary constructor).</p>
+<ul>
+<li>Row 1: <code>Nil</code> → no subpatterns</li>
+<li>Row 3: <code>_</code> → no subpatterns</li>
+</ul>
+<p><strong>Step 3: Remove column 0 (no subpatterns to add)</strong></p>
+<pre><code>Columns: [] (empty)
+
+| →  a1
+| →  a3
+</code></pre>
+<p><strong>Occurrence vector update:</strong></p>
+<pre><code>Before: π = [list]
+After:  π = [] (empty)
+</code></pre>
+<p>Empty occurrence vector는 <strong>모든 tests가 완료</strong>되었음을 의미. 이제 첫 번째 row의 action을 선택한다.</p>
+<h3 id="example-3-nested-pattern-specialization"><a class="header" href="#example-3-nested-pattern-specialization">Example 3: Nested Pattern Specialization</a></h3>
+<p><strong>Original pattern matrix:</strong></p>
+<pre><code>Column: [list]
+
+| Cons(x, Nil)          →  a1
+| Cons(x, Cons(y, rest)) →  a2
+</code></pre>
+<p><strong>Specialize on column 0, constructor Cons:</strong></p>
+<p><code>S(Cons, 0, P)</code>:</p>
+<p><strong>Step 1: Filter compatible rows</strong></p>
+<p>Both rows have <code>Cons</code> → 둘 다 유지</p>
+<p><strong>Step 2: Decompose patterns</strong></p>
+<ul>
+<li>Row 1: <code>Cons(x, Nil)</code> → subpatterns <code>[x, Nil]</code></li>
+<li>Row 2: <code>Cons(x, Cons(y, rest))</code> → subpatterns <code>[x, Cons(y, rest)]</code></li>
+</ul>
+<p><strong>Step 3: Replace column 0 with subpattern columns</strong></p>
+<pre><code>Columns: [head, tail]
+
+| x  Nil              →  a1
+| x  Cons(y, rest)    →  a2
+</code></pre>
+<p><strong>Occurrence vector update:</strong></p>
+<pre><code>Before: π = [list]
+After:  π = [list.head, list.tail]
+</code></pre>
+<p><strong>이제 column 1 (tail)에 대해 다시 specialization:</strong></p>
+<p>Matrix after first specialization:</p>
+<pre><code>| x  Nil              →  a1
+| x  Cons(y, rest)    →  a2
+</code></pre>
+<p>Specialize on column 1, constructor Nil:</p>
+<pre><code>Columns: [head]
+
+| x  →  a1
+</code></pre>
+<p>Specialize on column 1, constructor Cons:</p>
+<pre><code>Columns: [head, y, rest]
+
+| x  y  rest  →  a2
+</code></pre>
+<p><strong>Nested patterns는 여러 번의 specialization으로 처리된다.</strong></p>
+<h3 id="wildcard-expansion-rule"><a class="header" href="#wildcard-expansion-rule">Wildcard Expansion Rule</a></h3>
+<p><strong>Wildcard pattern <code>_</code>의 specialization:</strong></p>
+<p>Constructor <code>c</code>가 arity <code>n</code> (subpatterns 개수)를 가지면:</p>
+<pre><code>_ → [_, _, ..., _]  (n개의 wildcards)
+</code></pre>
+<p><strong>Example: Cons constructor (arity 2)</strong></p>
+<pre><code>_ → [_, _]  // head wildcard, tail wildcard
+</code></pre>
+<p><strong>Example: Nil constructor (arity 0)</strong></p>
+<pre><code>_ → []  // No subpatterns
+</code></pre>
+<p><strong>왜 wildcard를 확장하는가?</strong></p>
+<p>Wildcard는 “모든 값과 매칭“을 의미한다. Constructor <code>c</code>와 매칭되면, <code>c</code>의 모든 subpatterns도 wildcard로 매칭된다.</p>
+<pre><code class="language-fsharp">// Original pattern
+| _ -&gt; action
+
+// After specialization on Cons
+// Equivalent to:
+| Cons(_, _) -&gt; action
+</code></pre>
+<h3 id="variable-pattern-specialization"><a class="header" href="#variable-pattern-specialization">Variable Pattern Specialization</a></h3>
+<p><strong>Variable pattern <code>x</code>의 specialization:</strong></p>
+<p>Variable은 wildcard와 동일하게 확장되지만, <strong>binding name을 유지</strong>한다.</p>
+<pre><code>x → [_, _, ..., _]  // Subpatterns, 하지만 x는 여전히 전체 값에 바인딩됨
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code class="language-fsharp">match list with
+| xs -&gt; length xs  // xs는 전체 list에 바인딩
+</code></pre>
+<p>Specialize on Cons:</p>
+<pre><code>Columns: [head, tail]
+
+| _  _  →  length (Cons head tail)
+</code></pre>
+<p><code>xs</code> 바인딩은 <strong>original occurrence</strong>에 남는다. Specialization 후에도 <code>xs</code>는 사용 가능하다.</p>
+<blockquote>
+<p><strong>Implementation note:</strong> Variable bindings는 pattern matrix에 직접 저장되지 않고, <strong>occurrence vector와 함께 관리</strong>된다. Action에서 variable을 사용할 때 occurrence path로 접근한다.</p>
+</blockquote>
+<h3 id="specialization-pseudocode"><a class="header" href="#specialization-pseudocode">Specialization Pseudocode</a></h3>
+<p><strong>Algorithm: specialize(P, column, constructor)</strong></p>
+<pre><code class="language-python">def specialize(P, column, constructor):
+    """
+    P: Pattern matrix (n rows × m columns)
+    column: Column index to specialize
+    constructor: Constructor to match (e.g., Cons, Nil)
+
+    Returns: Specialized matrix
+    """
+    result_rows = []
+    arity = get_arity(constructor)  // Subpattern 개수
+
+    for row in P:
+        pattern = row[column]
+
+        if matches_constructor(pattern, constructor):
+            # Compatible pattern
+            if pattern.is_constructor and pattern.name == constructor:
+                # Extract subpatterns
+                subpatterns = pattern.subpatterns  // e.g., [head, tail]
+            elif pattern.is_wildcard or pattern.is_variable:
+                # Expand to wildcard subpatterns
+                subpatterns = [Wildcard] * arity  // e.g., [_, _]
+            else:
+                # Incompatible (different constructor)
+                continue  # Skip this row
+
+            # Build new row: columns before + subpatterns + columns after
+            new_row = (
+                row[:column] +
+                subpatterns +
+                row[column+1:]
+            )
+            result_rows.append((new_row, row.action))
+
+    return PatternMatrix(result_rows)
+
+def matches_constructor(pattern, constructor):
+    """Check if pattern is compatible with constructor"""
+    if pattern.is_wildcard or pattern.is_variable:
+        return True  # Wildcard matches everything
+    if pattern.is_constructor and pattern.name == constructor:
+        return True  # Same constructor
+    return False  # Different constructor
+</code></pre>
+<h3 id="visual-example-specialization-flow"><a class="header" href="#visual-example-specialization-flow">Visual Example: Specialization Flow</a></h3>
+<p><strong>Original:</strong></p>
+<pre><code>   [list]
+     |
+| Nil        →  a1
+| Cons(x, y) →  a2
+| _          →  a3
+</code></pre>
+<p><strong>After S(Cons, 0, P):</strong></p>
+<pre><code>   [x, y]  (head, tail)
+     |
+| x  y  →  a2  (from Cons(x, y))
+| _  _  →  a3  (from _)
+</code></pre>
+<p>Row 1 (<code>Nil</code>) 제거됨 (incompatible).</p>
+<p><strong>After S(Nil, 0, P) on original:</strong></p>
+<pre><code>   []  (no occurrences)
+    |
+| →  a1  (from Nil)
+| →  a3  (from _)
+</code></pre>
+<p>Rows 2 (<code>Cons</code>) 제거됨 (incompatible).</p>
+<h3 id="key-insight-specialization--assumption--decomposition"><a class="header" href="#key-insight-specialization--assumption--decomposition">Key Insight: Specialization = Assumption + Decomposition</a></h3>
+<p><strong>Specialization의 의미:</strong></p>
+<blockquote>
+<p>“Column <code>i</code>의 constructor가 <code>c</code>라고 <strong>가정</strong>하면, pattern matrix는 어떻게 변하는가?”</p>
+</blockquote>
+<p><strong>Assumption:</strong></p>
+<ul>
+<li>Constructor test가 성공했다 (e.g., <code>list</code>가 <code>Cons</code>)</li>
+<li>이제 <code>c</code>의 subpatterns에 접근 가능 (e.g., <code>head</code>, <code>tail</code>)</li>
+</ul>
+<p><strong>Decomposition:</strong></p>
+<ul>
+<li>호환되지 않는 rows 제거 (Nil patterns)</li>
+<li>호환되는 rows의 patterns를 subpatterns로 확장</li>
+</ul>
+<p><strong>Next:</strong> Defaulting 연산은 반대 상황을 다룬다 (constructor test 실패).</p>
+<hr>
+<h2 id="defaulting-연산"><a class="header" href="#defaulting-연산">Defaulting 연산</a></h2>
+<p>Defaulting은 specialization의 <strong>complement</strong>다. Constructor test가 <strong>실패</strong>했을 때 (또는 테스트하지 않고 default case로 가려 할 때) pattern matrix를 어떻게 변환하는지 정의한다.</p>
+<h3 id="defaulting-정의"><a class="header" href="#defaulting-정의">Defaulting 정의</a></h3>
+<p><strong>Defaulting (D):</strong></p>
+<pre><code>D(i, P) = Default pattern matrix
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>i</code>: Column index</li>
+<li><code>P</code>: Original pattern matrix</li>
+</ul>
+<p><strong>Operation:</strong></p>
+<ol>
+<li>Column <code>i</code>의 pattern이 <strong>wildcard 또는 variable</strong>인 rows만 유지</li>
+<li>Column <code>i</code>를 <strong>제거</strong> (더 이상 테스트 안 함)</li>
+<li>나머지 columns는 유지</li>
+</ol>
+<p><strong>의미:</strong></p>
+<blockquote>
+<p>“Column <code>i</code>에 대한 모든 constructor tests가 실패했다. Wildcard rows만 남는다.”</p>
+</blockquote>
+<h3 id="example-1-simple-list-defaulting"><a class="header" href="#example-1-simple-list-defaulting">Example 1: Simple List Defaulting</a></h3>
+<p><strong>Original pattern matrix:</strong></p>
+<pre><code>Column: [list]
+
+| Nil             →  a1
+| Cons(head, tail) →  a2
+| _               →  a3
+</code></pre>
+<p><strong>Default on column 0:</strong></p>
+<p><code>D(0, P)</code>:</p>
+<p><strong>Step 1: Filter wildcard rows</strong></p>
+<ul>
+<li>Row 1 (<code>Nil</code>): Constructor pattern → 제거</li>
+<li>Row 2 (<code>Cons(head, tail)</code>): Constructor pattern → 제거</li>
+<li>Row 3 (<code>_</code>): Wildcard → 유지</li>
+</ul>
+<p><strong>Step 2: Remove column 0</strong></p>
+<pre><code>Columns: [] (empty)
+
+| →  a3
+</code></pre>
+<p><strong>Occurrence vector update:</strong></p>
+<pre><code>Before: π = [list]
+After:  π = [] (empty)
+</code></pre>
+<p>Empty matrix with one row → Irrefutable → Select action a3.</p>
+<h3 id="example-2-empty-default-matrix"><a class="header" href="#example-2-empty-default-matrix">Example 2: Empty Default Matrix</a></h3>
+<p><strong>Original pattern matrix:</strong></p>
+<pre><code>Column: [list]
+
+| Nil             →  a1
+| Cons(head, tail) →  a2
+</code></pre>
+<p><strong>Default on column 0:</strong></p>
+<p><code>D(0, P)</code>:</p>
+<p><strong>Step 1: Filter wildcard rows</strong></p>
+<ul>
+<li>Row 1 (<code>Nil</code>): Constructor pattern → 제거</li>
+<li>Row 2 (<code>Cons(head, tail)</code>): Constructor pattern → 제거</li>
+</ul>
+<p><strong>Result: Empty matrix</strong></p>
+<pre><code>Columns: []
+
+(no rows)
+</code></pre>
+<p><strong>의미: Non-exhaustive match!</strong></p>
+<p>모든 rows가 constructor patterns이면, defaulting은 empty matrix를 생성한다. 즉, wildcard case가 없다 → Non-exhaustive.</p>
+<p><strong>Compiler action:</strong></p>
+<p>Empty default matrix는 <strong>compile error</strong>를 발생시킨다:</p>
+<pre><code>Error: Non-exhaustive pattern match
+Missing case: (other constructors or wildcard)
+</code></pre>
+<h3 id="example-3-multiple-columns-defaulting"><a class="header" href="#example-3-multiple-columns-defaulting">Example 3: Multiple Columns Defaulting</a></h3>
+<p><strong>Original pattern matrix:</strong></p>
+<pre><code>Columns: [list1, list2]
+
+| Nil         Nil          →  a1
+| Nil         Cons(x, _)   →  a2
+| Cons(_, _)  Nil          →  a3
+| Cons(x, _)  Cons(y, _)   →  a4
+| _           _            →  a5
+</code></pre>
+<p><strong>Default on column 0:</strong></p>
+<p><code>D(0, P)</code>:</p>
+<p><strong>Step 1: Filter wildcard rows on column 0</strong></p>
+<ul>
+<li>Row 1 (<code>Nil</code>): Constructor → 제거</li>
+<li>Row 2 (<code>Nil</code>): Constructor → 제거</li>
+<li>Row 3 (<code>Cons(_, _)</code>): Constructor → 제거</li>
+<li>Row 4 (<code>Cons(x, _)</code>): Constructor → 제거</li>
+<li>Row 5 (<code>_</code>): Wildcard → 유지</li>
+</ul>
+<p><strong>Step 2: Remove column 0</strong></p>
+<pre><code>Columns: [list2]
+
+| _  →  a5
+</code></pre>
+<p><strong>Occurrence vector update:</strong></p>
+<pre><code>Before: π = [list1, list2]
+After:  π = [list2]
+</code></pre>
+<p><strong>이제 column 0 (이전 list2)에 대해 specialization 또는 defaulting을 계속할 수 있다.</strong></p>
+<h3 id="defaulting-vs-specialization-when-to-use"><a class="header" href="#defaulting-vs-specialization-when-to-use">Defaulting vs Specialization: When to Use</a></h3>
+<p><strong>Specialization:</strong></p>
+<p>Constructor test가 <strong>성공</strong>했을 때.</p>
+<pre><code>if (tag == CONS) {
+    // Specialize on Cons
+    S(Cons, 0, P)
+}
+</code></pre>
+<p><strong>Defaulting:</strong></p>
+<p>모든 constructor tests가 <strong>실패</strong>했을 때.</p>
+<pre><code>if (tag == NIL) {
+    S(Nil, 0, P)
+} else if (tag == CONS) {
+    S(Cons, 0, P)
+} else {
+    // Default case
+    D(0, P)
+}
+</code></pre>
+<p><strong>하지만 list는 Nil 또는 Cons만 존재한다!</strong></p>
+<p>완전한 constructor set (Nil, Cons)을 모두 테스트하면 default case는 unreachable이다.</p>
+<p><strong>Defaulting이 필요한 경우:</strong></p>
+<ol>
+<li><strong>Extensible constructors</strong>: Open constructor sets (예: integers)</li>
+<li><strong>Incomplete specialization</strong>: 일부 constructors만 테스트</li>
+<li><strong>Wildcard-only rows</strong>: 모든 constructors 후 남은 wildcard 처리</li>
+</ol>
+<p><strong>List의 경우 (closed constructor set):</strong></p>
+<pre><code>if (tag == NIL) {
+    S(Nil, 0, P)
+} else {
+    // Must be CONS (only two constructors)
+    S(Cons, 0, P)
+}
+</code></pre>
+<p>Default branch는 필요 없다. 하지만 algorithm에서는 여전히 defaulting을 계산해서 <strong>exhaustiveness를 체크</strong>한다.</p>
+<h3 id="defaulting-empty-matrix-detection"><a class="header" href="#defaulting-empty-matrix-detection">Defaulting Empty Matrix Detection</a></h3>
+<p><strong>Defaulting의 중요한 역할: Exhaustiveness checking</strong></p>
+<p><strong>Case 1: Non-empty default matrix</strong></p>
+<pre><code>Pattern matrix:
+| Cons(x, xs)  →  a1
+| _            →  a2  // Wildcard exists
+</code></pre>
+<p>Default on column 0:</p>
+<pre><code>| →  a2  // Non-empty
+</code></pre>
+<p><strong>Result: Exhaustive</strong> (wildcard catches everything)</p>
+<p><strong>Case 2: Empty default matrix</strong></p>
+<pre><code>Pattern matrix:
+| Cons(x, xs)  →  a1
+// No wildcard
+</code></pre>
+<p>Default on column 0:</p>
+<pre><code>(empty matrix)
+</code></pre>
+<p><strong>Result: Non-exhaustive</strong> (missing Nil case and wildcard)</p>
+<p><strong>Compiler error:</strong></p>
+<pre><code>Error: Non-exhaustive pattern match
+Missing case: Nil
+</code></pre>
+<h3 id="defaulting-pseudocode"><a class="header" href="#defaulting-pseudocode">Defaulting Pseudocode</a></h3>
+<p><strong>Algorithm: default(P, column)</strong></p>
+<pre><code class="language-python">def default(P, column):
+    """
+    P: Pattern matrix (n rows × m columns)
+    column: Column index to default
+
+    Returns: Default matrix (wildcard rows only, column removed)
+    """
+    result_rows = []
+
+    for row in P:
+        pattern = row[column]
+
+        if pattern.is_wildcard or pattern.is_variable:
+            # Wildcard row: keep it, remove column
+            new_row = row[:column] + row[column+1:]
+            result_rows.append((new_row, row.action))
+        else:
+            # Constructor pattern: remove this row
+            continue
+
+    return PatternMatrix(result_rows)
+</code></pre>
+<p><strong>Simplicity:</strong></p>
+<p>Defaulting은 specialization보다 간단하다:</p>
+<ul>
+<li>No subpattern expansion</li>
+<li>Just filter wildcard rows and remove column</li>
+</ul>
+<h3 id="visual-example-defaulting-flow"><a class="header" href="#visual-example-defaulting-flow">Visual Example: Defaulting Flow</a></h3>
+<p><strong>Original:</strong></p>
+<pre><code>   [list]
+     |
+| Nil        →  a1
+| Cons(x, y) →  a2
+| _          →  a3
+</code></pre>
+<p><strong>After D(0, P):</strong></p>
+<pre><code>   []  (no occurrences)
+    |
+| →  a3  (from _)
+</code></pre>
+<p>Rows 1 (<code>Nil</code>) and 2 (<code>Cons</code>) 제거됨 (constructor patterns).</p>
+<p><strong>Empty default example:</strong></p>
+<pre><code>   [list]
+     |
+| Nil        →  a1
+| Cons(x, y) →  a2
+</code></pre>
+<p><strong>After D(0, P):</strong></p>
+<pre><code>   []
+    |
+(empty - no wildcard rows)
+</code></pre>
+<p><strong>Compiler:</strong> “Error: Non-exhaustive match”</p>
+<h3 id="key-insight-defaulting--catch-all-case"><a class="header" href="#key-insight-defaulting--catch-all-case">Key Insight: Defaulting = Catch-All Case</a></h3>
+<p><strong>Defaulting의 의미:</strong></p>
+<blockquote>
+<p>“모든 명시적 constructor tests가 실패했다. 남은 rows는 wildcard만 있다. Wildcard는 <strong>catch-all</strong>이다.”</p>
+</blockquote>
+<p><strong>Properties:</strong></p>
+<ol>
+<li><strong>Default matrix는 항상 wildcards만 포함</strong> (constructors 제거됨)</li>
+<li><strong>Empty default matrix = non-exhaustive</strong> (catch-all 없음)</li>
+<li><strong>Default 후 irrefutable row가 남으면 항상 매칭</strong> (first wildcard row 선택)</li>
+</ol>
+<p><strong>Next:</strong> Specialization과 defaulting을 결합해서 complete compilation algorithm을 만든다.</p>
+<hr>
+<h2 id="complete-compilation-algorithm"><a class="header" href="#complete-compilation-algorithm">Complete Compilation Algorithm</a></h2>
+<p>이제 specialization과 defaulting을 결합해서 <strong>complete decision tree compilation algorithm</strong>을 구성한다.</p>
+<h3 id="algorithm-overview"><a class="header" href="#algorithm-overview">Algorithm Overview</a></h3>
+<p><strong>Recursive function:</strong></p>
+<pre><code>compile : PatternMatrix × OccurrenceVector → DecisionTree
+</code></pre>
+<p><strong>Input:</strong></p>
+<ul>
+<li>Pattern matrix <code>P</code> (n rows × m columns)</li>
+<li>Occurrence vector <code>π</code> (m elements, scrutinee access paths)</li>
+</ul>
+<p><strong>Output:</strong></p>
+<ul>
+<li>Decision tree <code>T</code></li>
+</ul>
+<p><strong>Strategy:</strong></p>
+<ol>
+<li><strong>Base cases</strong>: Empty matrix, irrefutable first row</li>
+<li><strong>Recursive case</strong>: Select column, specialize on constructors, recurse</li>
+<li><strong>Default case</strong>: Default on column, recurse</li>
+</ol>
+<h3 id="base-case-1-empty-matrix"><a class="header" href="#base-case-1-empty-matrix">Base Case 1: Empty Matrix</a></h3>
+<p><strong>Condition:</strong></p>
+<pre><code class="language-python">if P.is_empty():
+</code></pre>
+<p><strong>Meaning:</strong></p>
+<p>No pattern rows remain. 어떤 pattern도 매칭되지 않는다.</p>
+<p><strong>Action:</strong></p>
+<pre><code class="language-python">return FailureLeaf()
+</code></pre>
+<p><strong>MLIR equivalent:</strong></p>
+<pre><code class="language-mlir">// Non-exhaustive match error
+llvm.call @match_failure() : () -&gt; ()
+llvm.unreachable
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code>Pattern matrix:
+(empty)
+</code></pre>
+<p>Input: <code>Cons(1, Nil)</code></p>
+<p>No patterns → <strong>match failure</strong></p>
+<h3 id="base-case-2-irrefutable-first-row"><a class="header" href="#base-case-2-irrefutable-first-row">Base Case 2: Irrefutable First Row</a></h3>
+<p><strong>Condition:</strong></p>
+<pre><code class="language-python">if all(p.is_wildcard or p.is_variable for p in P[0]):
+</code></pre>
+<p><strong>Meaning:</strong></p>
+<p>첫 번째 row의 모든 patterns가 wildcard 또는 variable이다. 이 row는 <strong>항상 매칭</strong>된다.</p>
+<p><strong>Action:</strong></p>
+<pre><code class="language-python">return SuccessLeaf(P[0].action)
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code>Pattern matrix:
+| _  _  →  a1
+| ... (more rows, but unreachable)
+</code></pre>
+<p>Any input → <strong>select action a1</strong></p>
+<p><strong>Unreachable rows:</strong></p>
+<p>첫 번째 irrefutable row 이후의 rows는 <strong>절대 실행 안 됨</strong>.</p>
+<pre><code class="language-fsharp">match list with
+| _ -&gt; 0
+| Nil -&gt; 1  // Warning: Unreachable pattern
+</code></pre>
+<p>Compiler warning: “Unreachable pattern (row 2)”</p>
+<h3 id="recursive-case-constructor-test"><a class="header" href="#recursive-case-constructor-test">Recursive Case: Constructor Test</a></h3>
+<p><strong>Condition:</strong></p>
+<pre><code class="language-python">if P is not empty and first row has constructors:
+</code></pre>
+<p><strong>Steps:</strong></p>
+<ol>
+<li><strong>Select column</strong>: 어느 occurrence를 테스트할지 선택</li>
+<li><strong>Get constructors</strong>: 그 column에 등장하는 constructors 수집</li>
+<li><strong>Specialize</strong>: 각 constructor에 대해 specialized matrix 생성, recurse</li>
+<li><strong>Default</strong>: Wildcard rows로 default matrix 생성, recurse</li>
+</ol>
+<p><strong>Pseudocode:</strong></p>
+<pre><code class="language-python">def compile(P, π):
+    # Base case 1: Empty matrix
+    if not P:
+        return Failure()
+
+    # Base case 2: Irrefutable first row
+    if is_irrefutable(P[0]):
+        return Success(P[0].action)
+
+    # Recursive case: Constructor test
+    column = select_column(P, π)
+    constructors = get_constructors(P, column)
+
+    # Build switch node
+    branches = {}
+    for c in constructors:
+        # Specialize on constructor c
+        P_c = specialize(P, column, c)
+        π_c = specialize_occurrences(π, column, c)
+        branches[c] = compile(P_c, π_c)
+
+    # Default branch (wildcard rows)
+    P_default = default(P, column)
+    π_default = default_occurrences(π, column)
+    default_branch = compile(P_default, π_default)
+
+    return Switch(π[column], branches, default_branch)
+</code></pre>
+<h3 id="column-selection-heuristic"><a class="header" href="#column-selection-heuristic">Column Selection Heuristic</a></h3>
+<p><strong>문제:</strong> 여러 columns가 있을 때, 어느 column을 먼저 테스트하는가?</p>
+<p><strong>Heuristic 1: Left-to-right (simple)</strong></p>
+<pre><code class="language-python">def select_column(P, π):
+    return 0  # Always test first column
+</code></pre>
+<p><strong>장점:</strong> 간단, 예측 가능
+<strong>단점:</strong> 비효율적일 수 있음 (redundant tests)</p>
+<p><strong>Heuristic 2: Needed by most rows (Maranget)</strong></p>
+<pre><code class="language-python">def select_column(P, π):
+    """Select column needed by most rows (first constructor pattern)"""
+    for col in range(len(π)):
+        needed_count = sum(1 for row in P if not row[col].is_wildcard)
+        if needed_count &gt; 0:
+            return col
+    return 0  # All wildcards, any column works
+</code></pre>
+<p><strong>의미:</strong></p>
+<ul>
+<li>Constructor pattern이 가장 많은 column 선택</li>
+<li>Wildcards는 어떤 constructor도 요구 안 함 (skip 가능)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>Columns: [c1, c2]
+
+| _     Cons(x, _)  →  a1  // c1 not needed, c2 needed
+| Nil   _           →  a2  // c1 needed, c2 not needed
+| _     _           →  a3  // neither needed
+</code></pre>
+<ul>
+<li>c1 needed by: 1 row</li>
+<li>c2 needed by: 1 row</li>
+<li>Tie → select c1 (left-to-right tie-breaker)</li>
+</ul>
+<p><strong>Heuristic 3: Minimize combined row count (optimal)</strong></p>
+<pre><code class="language-python">def select_column(P, π):
+    """Select column that minimizes total specialized matrix sizes"""
+    best_column = 0
+    min_cost = float('inf')
+
+    for col in range(len(π)):
+        constructors = get_constructors(P, col)
+        cost = sum(len(specialize(P, col, c)) for c in constructors)
+        if cost &lt; min_cost:
+            min_cost = cost
+            best_column = col
+
+    return best_column
+</code></pre>
+<p><strong>의미:</strong> Specialized matrices의 크기 합이 최소인 column 선택</p>
+<p><strong>Tradeoff:</strong> 계산 비용이 높음 (모든 columns에 대해 specialize 시뮬레이션)</p>
+<p><strong>FunLang Phase 6 choice: Heuristic 1 (left-to-right)</strong></p>
+<p>간단하고 예측 가능. 대부분의 FunLang patterns는 단순해서 heuristic 차이가 크지 않다.</p>
+<h3 id="occurrence-specialization"><a class="header" href="#occurrence-specialization">Occurrence Specialization</a></h3>
+<p><strong>Specialization 후 occurrence vector 업데이트:</strong></p>
+<p><strong>Example: Cons specialization</strong></p>
+<pre><code class="language-python">Before: π = [list]
+Constructor: Cons (arity 2)
+
+After: π = [list.head, list.tail]
+</code></pre>
+<p><strong>Pseudocode:</strong></p>
+<pre><code class="language-python">def specialize_occurrences(π, column, constructor):
+    """Expand occurrence at column into suboccurrences"""
+    arity = get_arity(constructor)
+    suboccurrences = [
+        Occurrence(π[column].path + f".{i}")
+        for i in range(arity)
+    ]
+
+    # Replace column with suboccurrences
+    return π[:column] + suboccurrences + π[column+1:]
+</code></pre>
+<p><strong>Occurrence paths:</strong></p>
+<ul>
+<li><code>list</code> → <code>list.0</code> (head), <code>list.1</code> (tail)</li>
+<li><code>list.tail</code> → <code>list.1.0</code> (tail’s head), <code>list.1.1</code> (tail’s tail)</li>
+</ul>
+<p><strong>MLIR code generation:</strong></p>
+<pre><code class="language-mlir">// π = [list]
+%list = ...
+
+// π = [list.0, list.1]
+%head = llvm.extractvalue %list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%tail_ptr = llvm.getelementptr %list[1] : (!llvm.ptr) -&gt; !llvm.ptr
+%tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<p>Occurrence paths는 <strong>extraction code를 생성하는 template</strong>이다.</p>
+<h3 id="occurrence-defaulting"><a class="header" href="#occurrence-defaulting">Occurrence Defaulting</a></h3>
+<p><strong>Defaulting 후 occurrence vector 업데이트:</strong></p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">Before: π = [list, other]
+Default on column 0:
+
+After: π = [other]
+</code></pre>
+<p><strong>Pseudocode:</strong></p>
+<pre><code class="language-python">def default_occurrences(π, column):
+    """Remove occurrence at column"""
+    return π[:column] + π[column+1:]
+</code></pre>
+<p>Defaulting은 column을 제거한다 (더 이상 테스트 안 함).</p>
+<h3 id="complete-example-list-length-compilation"><a class="header" href="#complete-example-list-length-compilation">Complete Example: List Length Compilation</a></h3>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>π = [list]
+
+| Nil             →  0
+| Cons(head, tail) →  1 + length tail
+</code></pre>
+<p><strong>Step 1: compile(P, [list])</strong></p>
+<ul>
+<li>Not empty</li>
+<li>First row not irrefutable (Nil is constructor)</li>
+<li>Select column 0</li>
+</ul>
+<p><strong>Step 2: Get constructors</strong></p>
+<pre><code class="language-python">constructors = [Nil, Cons]
+</code></pre>
+<p><strong>Step 3: Specialize on Nil</strong></p>
+<pre><code class="language-python">P_nil = specialize(P, 0, Nil)
+π_nil = [list] → []
+</code></pre>
+<p>Result:</p>
+<pre><code>π = []
+
+| →  0
+</code></pre>
+<p>Irrefutable → <code>Success(0)</code></p>
+<p><strong>Step 4: Specialize on Cons</strong></p>
+<pre><code class="language-python">P_cons = specialize(P, 0, Cons)
+π_cons = [list] → [list.head, list.tail]
+</code></pre>
+<p>Result:</p>
+<pre><code>π = [list.head, list.tail]
+
+| head  tail  →  1 + length tail
+</code></pre>
+<p>Irrefutable → <code>Success(1 + length tail)</code></p>
+<p><strong>Step 5: Default</strong></p>
+<pre><code class="language-python">P_default = default(P, 0)
+</code></pre>
+<p>Result: Empty (no wildcard rows)</p>
+<p><code>compile(P_default, []) = Failure()</code></p>
+<p>하지만 Nil + Cons가 complete constructor set이므로 default branch는 unreachable.</p>
+<p><strong>Generated decision tree:</strong></p>
+<pre><code>Switch(list, {
+    Nil: Success(0),
+    Cons: Success(1 + length tail)
+}, Failure())
+</code></pre>
+<p><strong>MLIR output:</strong></p>
+<pre><code class="language-mlir">%tag = llvm.extractvalue %list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%result = scf.index_switch %tag : i32 -&gt; i32
+case 0 {  // Nil
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+}
+case 1 {  // Cons
+    %data = llvm.extractvalue %list[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    %head = llvm.load %data[0] : !llvm.ptr -&gt; i32
+    %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+    %one = arith.constant 1 : i32
+    %len_tail = func.call @length(%tail) : (!funlang.list&lt;i32&gt;) -&gt; i32
+    %result_val = arith.addi %one, %len_tail : i32
+    scf.yield %result_val : i32
+}
+default {
+    llvm.unreachable  // Should never reach (exhaustive)
+}
+</code></pre>
+<h3 id="example-2-nested-pattern-compilation"><a class="header" href="#example-2-nested-pattern-compilation">Example 2: Nested Pattern Compilation</a></h3>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>π = [list]
+
+| Cons(x, Nil)          →  "singleton"
+| Cons(x, Cons(y, rest)) →  "at least two"
+| _                     →  "other"
+</code></pre>
+<p><strong>Step 1: compile(P, [list])</strong></p>
+<p>Select column 0, constructors = [Cons]</p>
+<p><strong>Step 2: Specialize on Cons</strong></p>
+<pre><code class="language-python">P_cons = specialize(P, 0, Cons)
+π_cons = [list.head, list.tail]
+</code></pre>
+<p>Result:</p>
+<pre><code>π = [list.head, list.tail]
+
+| x  Nil              →  "singleton"
+| x  Cons(y, rest)    →  "at least two"
+| _  _                →  "other"
+</code></pre>
+<p><strong>Step 3: compile(P_cons, [list.head, list.tail])</strong></p>
+<p>First row not irrefutable (column 1 has Nil constructor).</p>
+<p>Select column 1 (tail), constructors = [Nil, Cons]</p>
+<p><strong>Step 4: Specialize on Nil (column 1)</strong></p>
+<pre><code class="language-python">P_cons_nil = specialize(P_cons, 1, Nil)
+π_cons_nil = [list.head]
+</code></pre>
+<p>Result:</p>
+<pre><code>π = [list.head]
+
+| x  →  "singleton"
+| _  →  "other"
+</code></pre>
+<p>First row irrefutable → <code>Success("singleton")</code></p>
+<p><strong>Step 5: Specialize on Cons (column 1)</strong></p>
+<pre><code class="language-python">P_cons_cons = specialize(P_cons, 1, Cons)
+π_cons_cons = [list.head, list.tail.head, list.tail.tail]
+</code></pre>
+<p>Result:</p>
+<pre><code>π = [list.head, list.tail.head, list.tail.tail]
+
+| x  y  rest  →  "at least two"
+| _  _  _     →  "other"
+</code></pre>
+<p>First row irrefutable → <code>Success("at least two")</code></p>
+<p><strong>Step 6: Default (column 1)</strong></p>
+<pre><code class="language-python">P_cons_default = default(P_cons, 1)
+π_cons_default = [list.head]
+</code></pre>
+<p>Result:</p>
+<pre><code>π = [list.head]
+
+| _  →  "other"
+</code></pre>
+<p>Irrefutable → <code>Success("other")</code></p>
+<p><strong>Step 7: Default on column 0 (original)</strong></p>
+<pre><code class="language-python">P_default = default(P, 0)
+π_default = []
+</code></pre>
+<p>Result:</p>
+<pre><code>π = []
+
+| →  "other"
+</code></pre>
+<p>Irrefutable → <code>Success("other")</code></p>
+<p><strong>Generated decision tree:</strong></p>
+<pre><code>Switch(list, {
+    Cons: Switch(list.tail, {
+        Nil: Success("singleton"),
+        Cons: Success("at least two")
+    }, Success("other"))
+}, Success("other"))
+</code></pre>
+<p><strong>Nested structure:</strong> Cons branch 안에 또 다른 switch (tail test).</p>
+<hr>
+<h2 id="exhaustiveness-checking"><a class="header" href="#exhaustiveness-checking">Exhaustiveness Checking</a></h2>
+<p>Exhaustiveness checking은 decision tree 알고리즘에 <strong>자연스럽게 통합</strong>된다.</p>
+<h3 id="exhaustiveness-정의"><a class="header" href="#exhaustiveness-정의">Exhaustiveness 정의</a></h3>
+<p><strong>Exhaustive pattern match:</strong></p>
+<p>모든 가능한 input values가 어떤 pattern과 매칭된다.</p>
+<p><strong>Non-exhaustive pattern match:</strong></p>
+<p>어떤 input value는 어떤 pattern과도 매칭되지 않는다.</p>
+<p><strong>Example: Exhaustive</strong></p>
+<pre><code class="language-fsharp">match list with
+| Nil -&gt; 0
+| Cons(_, _) -&gt; 1
+</code></pre>
+<p>모든 list는 Nil 또는 Cons다 → Exhaustive.</p>
+<p><strong>Example: Non-exhaustive</strong></p>
+<pre><code class="language-fsharp">match list with
+| Nil -&gt; 0
+// Missing: Cons case
+</code></pre>
+<p>Input <code>Cons(1, Nil)</code>은 매칭 안 됨 → Non-exhaustive.</p>
+<h3 id="empty-matrix--non-exhaustive"><a class="header" href="#empty-matrix--non-exhaustive">Empty Matrix = Non-Exhaustive</a></h3>
+<p><strong>Key insight:</strong></p>
+<p>Empty pattern matrix는 <strong>어떤 input도 매칭 안 됨</strong>을 의미한다.</p>
+<p><strong>Compilation algorithm:</strong></p>
+<pre><code class="language-python">def compile(P, π):
+    if not P:
+        return Failure()  # Non-exhaustive!
+</code></pre>
+<p><strong>Detection points:</strong></p>
+<ol>
+<li><strong>Initial matrix empty</strong>: 아예 patterns가 없음</li>
+<li><strong>Specialization 후 empty</strong>: 특정 constructor case가 없음</li>
+<li><strong>Default 후 empty</strong>: Wildcard case가 없음</li>
+</ol>
+<h3 id="example-1-missing-constructor-case"><a class="header" href="#example-1-missing-constructor-case">Example 1: Missing Constructor Case</a></h3>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>π = [list]
+
+| Nil  →  0
+</code></pre>
+<p><strong>Compile:</strong></p>
+<ul>
+<li>Specialize on Nil: <code>Success(0)</code></li>
+<li>Specialize on Cons: <code>specialize(P, 0, Cons)</code> → <strong>empty matrix</strong>
+<ul>
+<li>No Cons patterns in original matrix</li>
+<li>Result: <code>Failure()</code></li>
+</ul>
+</li>
+</ul>
+<p><strong>Decision tree:</strong></p>
+<pre><code>Switch(list, {
+    Nil: Success(0),
+    Cons: Failure()  // Non-exhaustive!
+}, Failure())
+</code></pre>
+<p><strong>Compiler error:</strong></p>
+<pre><code>Error: Non-exhaustive pattern match
+Location: match list with ...
+Missing case: Cons(_, _)
+</code></pre>
+<h3 id="example-2-missing-wildcard"><a class="header" href="#example-2-missing-wildcard">Example 2: Missing Wildcard</a></h3>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>π = [list]
+
+| Nil         →  0
+| Cons(x, xs) →  1
+</code></pre>
+<p><strong>Compile:</strong></p>
+<ul>
+<li>Specialize on Nil: <code>Success(0)</code></li>
+<li>Specialize on Cons: <code>Success(1)</code></li>
+<li>Default: <code>default(P, 0)</code> → <strong>empty matrix</strong>
+<ul>
+<li>No wildcard rows</li>
+<li>Result: <code>Failure()</code></li>
+</ul>
+</li>
+</ul>
+<p><strong>하지만 이 경우는 실제로 exhaustive다!</strong></p>
+<p>Nil + Cons가 <strong>complete constructor set</strong>이므로 default branch는 unreachable.</p>
+<p><strong>Optimization:</strong></p>
+<p>Complete constructor set일 때 default branch를 생략할 수 있다.</p>
+<pre><code class="language-python">def compile(P, π):
+    # ...
+    constructors = get_constructors(P, column)
+    if is_complete_set(constructors):
+        # No default branch needed
+        return Switch(π[column], branches, None)
+    else:
+        # Default branch for incomplete sets
+        default_branch = compile(default(P, column), ...)
+        return Switch(π[column], branches, default_branch)
+</code></pre>
+<p><strong>Complete constructor sets:</strong></p>
+<ul>
+<li>List: <code>{Nil, Cons}</code></li>
+<li>Bool: <code>{True, False}</code></li>
+<li>Option: <code>{None, Some}</code></li>
+</ul>
+<h3 id="example-3-nested-non-exhaustiveness"><a class="header" href="#example-3-nested-non-exhaustiveness">Example 3: Nested Non-Exhaustiveness</a></h3>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>π = [list]
+
+| Cons(x, Nil)  →  "singleton"
+// Missing: Cons(x, Cons(y, rest))
+// Missing: Nil
+</code></pre>
+<p><strong>Compile:</strong></p>
+<ol>
+<li>
+<p>Specialize on Cons:</p>
+<pre><code>π = [list.head, list.tail]
+
+| x  Nil  →  "singleton"
+</code></pre>
+</li>
+<li>
+<p>Specialize on Nil (column 1):</p>
+<pre><code>π = [list.head]
+
+| x  →  "singleton"
+</code></pre>
+<p>Result: <code>Success("singleton")</code></p>
+</li>
+<li>
+<p>Specialize on Cons (column 1):</p>
+<pre><code>(empty matrix)  // No Cons(x, Cons(...)) pattern
+</code></pre>
+<p>Result: <code>Failure()</code> → <strong>Non-exhaustive</strong></p>
+</li>
+<li>
+<p>Default on column 0:</p>
+<pre><code>(empty matrix)  // No wildcard or Nil pattern
+</code></pre>
+<p>Result: <code>Failure()</code> → <strong>Non-exhaustive</strong></p>
+</li>
+</ol>
+<p><strong>Decision tree:</strong></p>
+<pre><code>Switch(list, {
+    Cons: Switch(list.tail, {
+        Nil: Success("singleton"),
+        Cons: Failure()  // Missing!
+    }, Failure()),
+}, Failure())  // Missing Nil!
+</code></pre>
+<p><strong>Compiler error:</strong></p>
+<pre><code>Error: Non-exhaustive pattern match
+Missing cases:
+  - Nil
+  - Cons(_, Cons(_, _))
+</code></pre>
+<h3 id="exhaustiveness-error-reporting"><a class="header" href="#exhaustiveness-error-reporting">Exhaustiveness Error Reporting</a></h3>
+<p><strong>Basic approach: Failure leaf</strong></p>
+<p>Compile 중 empty matrix 발견 시 error 발생:</p>
+<pre><code class="language-python">def compile(P, π):
+    if not P:
+        raise CompileError("Non-exhaustive pattern match")
+</code></pre>
+<p><strong>Advanced approach: Missing pattern reconstruction</strong></p>
+<p>Empty matrix가 발생한 경로를 추적해서 missing pattern 생성:</p>
+<pre><code class="language-python">def compile(P, π, path=[]):
+    if not P:
+        missing = reconstruct_pattern(path)
+        raise CompileError(f"Missing case: {missing}")
+
+    # ...
+    for c in constructors:
+        P_c = specialize(P, column, c)
+        compile(P_c, π_c, path + [(column, c)])
+</code></pre>
+<p><strong>Example path:</strong></p>
+<pre><code>path = [(0, Cons), (1, Cons)]
+→ Missing pattern: Cons(_, Cons(_, _))
+</code></pre>
+<p><strong>FunLang Phase 6 approach:</strong></p>
+<p>간단한 error message만 제공:</p>
+<pre><code>Error: Non-exhaustive pattern match at line X
+Consider adding a wildcard pattern: | _ -&gt; ...
+</code></pre>
+<p>자세한 missing case 분석은 나중 phase 또는 bonus 섹션에서 다룬다.</p>
+<h3 id="exhaustiveness-check가-자연스러운-이유"><a class="header" href="#exhaustiveness-check가-자연스러운-이유">Exhaustiveness Check가 자연스러운 이유</a></h3>
+<p><strong>Decision tree 알고리즘의 장점:</strong></p>
+<blockquote>
+<p>“Exhaustiveness checking은 <strong>별도의 분석 pass가 아니다</strong>. Compilation 과정에서 자동으로 발견된다.”</p>
+</blockquote>
+<p><strong>왜 자연스러운가?</strong></p>
+<ol>
+<li><strong>Empty matrix는 명확한 신호</strong>: No patterns left = no matches possible</li>
+<li><strong>Recursive structure</strong>: 각 specialization/default 단계에서 independently 체크</li>
+<li><strong>Complete constructor sets</strong>: 간단한 rule로 false positives 제거 가능</li>
+</ol>
+<p><strong>Contrast with if-else chain analysis:</strong></p>
+<p>If-else tree를 분석하려면:</p>
+<ul>
+<li>모든 경로를 traverse</li>
+<li>각 경로가 종료되는지 확인</li>
+<li>Missing 경로를 역으로 추론</li>
+</ul>
+<p>Decision tree는 construction 과정에서 바로 확인된다.</p>
+<hr>
+<h2 id="리터럴-패턴과-와일드카드-최적화"><a class="header" href="#리터럴-패턴과-와일드카드-최적화">리터럴 패턴과 와일드카드 최적화</a></h2>
+<p>지금까지 constructor patterns (Nil, Cons)를 중심으로 설명했다. 하지만 실제 프로그래밍에서는 <strong>리터럴 패턴</strong>과 <strong>와일드카드 패턴</strong>도 매우 중요하다.</p>
+<h3 id="리터럴-패턴-컴파일-literal-pattern-compilation"><a class="header" href="#리터럴-패턴-컴파일-literal-pattern-compilation">리터럴 패턴 컴파일 (Literal Pattern Compilation)</a></h3>
+<p><strong>리터럴 패턴이란?</strong></p>
+<p>리터럴 패턴은 특정 <strong>상수 값</strong>과 매칭되는 패턴이다:</p>
+<pre><code class="language-fsharp">// 정수 리터럴 패턴
+match x with
+| 0 -&gt; "zero"
+| 1 -&gt; "one"
+| 2 -&gt; "two"
+| _ -&gt; "other"
+
+// 문자열 리터럴 패턴 (문자열 타입이 있다면)
+match color with
+| "red" -&gt; 0xFF0000
+| "green" -&gt; 0x00FF00
+| "blue" -&gt; 0x0000FF
+| _ -&gt; 0x000000
+</code></pre>
+<p><strong>Constructor patterns와의 차이:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>특성</th><th>Constructor Pattern</th><th>Literal Pattern</th></tr>
+</thead>
+<tbody>
+<tr><td>예제</td><td><code>Nil</code>, <code>Cons(x, xs)</code></td><td><code>0</code>, <code>1</code>, <code>42</code></td></tr>
+<tr><td>분해</td><td>Subpatterns 있음</td><td>Subpatterns 없음</td></tr>
+<tr><td>값의 개수</td><td>유한 (finite set)</td><td>무한 (infinite set)</td></tr>
+<tr><td>테스트 방법</td><td>Tag switch</td><td>Equality comparison</td></tr>
+<tr><td>MLIR operation</td><td><code>scf.index_switch</code></td><td><code>arith.cmpi</code> + <code>scf.if</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>리터럴 패턴의 특징:</strong></p>
+<ol>
+<li><strong>분해되지 않음:</strong> <code>Cons(x, xs)</code>는 <code>x</code>와 <code>xs</code>로 분해되지만, <code>42</code>는 그 자체로 atomic하다</li>
+<li><strong>무한 가능성:</strong> 정수는 무한히 많으므로 모든 case를 나열할 수 없다</li>
+<li><strong>등호 테스트:</strong> Constructor tag가 아니라 값 자체를 비교해야 한다</li>
+</ol>
+<h3 id="리터럴-패턴의-pattern-matrix"><a class="header" href="#리터럴-패턴의-pattern-matrix">리터럴 패턴의 Pattern Matrix</a></h3>
+<p><strong>Example: Modulo 3 classification</strong></p>
+<pre><code class="language-fsharp">let classify_mod3 n =
+    match n % 3 with
+    | 0 -&gt; "divisible by 3"
+    | 1 -&gt; "remainder 1"
+    | 2 -&gt; "remainder 2"
+    | _ -&gt; "unexpected"  // 논리적으로 unreachable
+</code></pre>
+<p><strong>Pattern matrix:</strong></p>
+<pre><code>Scrutinee: [x]  (where x = n % 3)
+
+Matrix:
+| 0   →  "divisible by 3"
+| 1   →  "remainder 1"
+| 2   →  "remainder 2"
+| _   →  "unexpected"
+</code></pre>
+<p><strong>리터럴 패턴의 specialization:</strong></p>
+<p>리터럴 <code>lit</code>에 대한 specialization <code>S(lit, 0, P)</code>:</p>
+<pre><code>S(0, 0, P):
+| →  "divisible by 3"   (from 0 pattern)
+| →  "unexpected"       (from _ pattern)
+</code></pre>
+<p><strong>리터럴 0과 호환되는 rows만 남는다:</strong></p>
+<ul>
+<li>Row 1 (<code>0</code>): 리터럴 0과 일치 → 유지</li>
+<li>Row 2 (<code>1</code>): 리터럴 1 ≠ 0 → 제거</li>
+<li>Row 3 (<code>2</code>): 리터럴 2 ≠ 0 → 제거</li>
+<li>Row 4 (<code>_</code>): Wildcard는 모든 값과 호환 → 유지</li>
+</ul>
+<p><strong>리터럴 specialization 후에는 column이 사라진다</strong> (리터럴은 subpatterns가 없음).</p>
+<h3 id="리터럴-패턴-vs-constructor-패턴-컴파일"><a class="header" href="#리터럴-패턴-vs-constructor-패턴-컴파일">리터럴 패턴 vs Constructor 패턴 컴파일</a></h3>
+<p><strong>Constructor patterns (유한 set):</strong></p>
+<pre><code class="language-mlir">// List patterns: {Nil, Cons} = complete set
+%tag = llvm.extractvalue %list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%result = scf.index_switch %tag : i32 -&gt; i32
+case 0 { /* Nil */ }
+case 1 { /* Cons */ }
+default { /* unreachable */ }
+</code></pre>
+<p><strong>O(1) dispatch:</strong> Tag 값으로 바로 jump.</p>
+<p><strong>Literal patterns (무한 set):</strong></p>
+<pre><code class="language-mlir">// Integer patterns: 0, 1, 2, ... = infinite set
+%is_zero = arith.cmpi eq, %x, %c0 : i32
+%result = scf.if %is_zero -&gt; i32 {
+    scf.yield %zero_result : i32
+} else {
+    %is_one = arith.cmpi eq, %x, %c1 : i32
+    %result1 = scf.if %is_one -&gt; i32 {
+        scf.yield %one_result : i32
+    } else {
+        %is_two = arith.cmpi eq, %x, %c2 : i32
+        %result2 = scf.if %is_two -&gt; i32 {
+            scf.yield %two_result : i32
+        } else {
+            scf.yield %default_result : i32
+        }
+        scf.yield %result2 : i32
+    }
+    scf.yield %result1 : i32
+}
+</code></pre>
+<p><strong>O(n) sequential tests:</strong> 각 리터럴을 순서대로 비교.</p>
+<h3 id="decision-tree-for-literal-patterns"><a class="header" href="#decision-tree-for-literal-patterns">Decision Tree for Literal Patterns</a></h3>
+<p><strong>Example: FizzBuzz remainder check</strong></p>
+<pre><code class="language-fsharp">match (n % 3, n % 5) with
+| (0, 0) -&gt; "FizzBuzz"
+| (0, _) -&gt; "Fizz"
+| (_, 0) -&gt; "Buzz"
+| (_, _) -&gt; string_of_int n
+</code></pre>
+<p><strong>Decision tree:</strong></p>
+<pre><code>       [n % 3]
+          |
+    Test: == 0?
+      /      \
+   Yes        No
+   /            \
+ [n % 5]      [n % 5]
+   |            |
+ == 0?        == 0?
+  / \          / \
+Yes  No      Yes  No
+ |    |       |    |
+FB   Fizz   Buzz  n
+</code></pre>
+<p><strong>생성된 코드:</strong></p>
+<pre><code class="language-mlir">%mod3 = arith.remsi %n, %c3 : i32
+%mod5 = arith.remsi %n, %c5 : i32
+
+%is_div3 = arith.cmpi eq, %mod3, %c0 : i32
+%result = scf.if %is_div3 -&gt; !llvm.ptr&lt;i8&gt; {
+    // First column is 0
+    %is_div5 = arith.cmpi eq, %mod5, %c0 : i32
+    %inner = scf.if %is_div5 -&gt; !llvm.ptr&lt;i8&gt; {
+        scf.yield %fizzbuzz : !llvm.ptr&lt;i8&gt;
+    } else {
+        scf.yield %fizz : !llvm.ptr&lt;i8&gt;
+    }
+    scf.yield %inner : !llvm.ptr&lt;i8&gt;
+} else {
+    // First column is not 0
+    %is_div5_2 = arith.cmpi eq, %mod5, %c0 : i32
+    %inner2 = scf.if %is_div5_2 -&gt; !llvm.ptr&lt;i8&gt; {
+        scf.yield %buzz : !llvm.ptr&lt;i8&gt;
+    } else {
+        %str = func.call @int_to_string(%n) : (i32) -&gt; !llvm.ptr&lt;i8&gt;
+        scf.yield %str : !llvm.ptr&lt;i8&gt;
+    }
+    scf.yield %inner2 : !llvm.ptr&lt;i8&gt;
+}
+</code></pre>
+<h3 id="와일드카드-최적화-wildcard-optimization"><a class="header" href="#와일드카드-최적화-wildcard-optimization">와일드카드 최적화 (Wildcard Optimization)</a></h3>
+<p><strong>와일드카드 패턴 <code>_</code>의 핵심 특성:</strong></p>
+<blockquote>
+<p>Wildcard는 <strong>어떤 런타임 테스트도 생성하지 않는다.</strong></p>
+</blockquote>
+<p><strong>Example 1: Wildcard in constructor pattern</strong></p>
+<pre><code class="language-fsharp">match list with
+| Cons(_, tail) -&gt; length tail + 1
+| Nil -&gt; 0
+</code></pre>
+<p><strong><code>_</code> vs named variable:</strong></p>
+<pre><code class="language-fsharp">// Case A: Wildcard (no extraction)
+| Cons(_, tail) -&gt; ...
+
+// Case B: Named variable (extraction needed)
+| Cons(head, tail) -&gt; ...
+</code></pre>
+<p><strong>생성된 코드 비교:</strong></p>
+<pre><code class="language-mlir">// Case A: Wildcard - head 추출 안 함
+case 1 {  // Cons
+    // %head = 추출 안 함! (unused)
+    %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+    // ...
+}
+
+// Case B: Named variable - head 추출 필요
+case 1 {  // Cons
+    %head = llvm.load %data : !llvm.ptr -&gt; i32  // 추출함
+    %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+    // ...
+}
+</code></pre>
+<p><strong>Wildcard 최적화 효과:</strong></p>
+<ul>
+<li><strong>메모리 접근 감소:</strong> 불필요한 load 제거</li>
+<li><strong>레지스터 절약:</strong> 사용하지 않는 값을 저장 안 함</li>
+<li><strong>Dead code elimination 촉진:</strong> 컴파일러가 더 쉽게 최적화</li>
+</ul>
+<p><strong>Example 2: Wildcard as default case</strong></p>
+<pre><code class="language-fsharp">match color_code with
+| 0 -&gt; "black"
+| 1 -&gt; "white"
+| _ -&gt; "unknown"
+</code></pre>
+<p><strong>Wildcard default는 테스트를 생성하지 않는다:</strong></p>
+<pre><code class="language-mlir">%is_black = arith.cmpi eq, %color, %c0 : i32
+%result = scf.if %is_black -&gt; !llvm.ptr&lt;i8&gt; {
+    scf.yield %black_str : !llvm.ptr&lt;i8&gt;
+} else {
+    %is_white = arith.cmpi eq, %color, %c1 : i32
+    %result1 = scf.if %is_white -&gt; !llvm.ptr&lt;i8&gt; {
+        scf.yield %white_str : !llvm.ptr&lt;i8&gt;
+    } else {
+        // _ case: NO TEST, just yield
+        scf.yield %unknown_str : !llvm.ptr&lt;i8&gt;
+    }
+    scf.yield %result1 : !llvm.ptr&lt;i8&gt;
+}
+</code></pre>
+<p><strong>Default branch에서는 equality test가 없다!</strong></p>
+<p>이전 tests가 모두 실패했으면 자동으로 default case가 실행된다.</p>
+<h3 id="생성-코드-비교-generated-code-comparison"><a class="header" href="#생성-코드-비교-generated-code-comparison">생성 코드 비교 (Generated Code Comparison)</a></h3>
+<p><strong>패턴 종류별 MLIR operation mapping:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Pattern Type</th><th>Test Operation</th><th>Dispatch Method</th><th>Branch Count</th></tr>
+</thead>
+<tbody>
+<tr><td>Constructor (closed)</td><td><code>llvm.extractvalue</code> (tag)</td><td><code>scf.index_switch</code></td><td>O(1)</td></tr>
+<tr><td>Constructor (open)</td><td><code>llvm.extractvalue</code> (tag)</td><td><code>scf.index_switch</code> + default</td><td>O(1)</td></tr>
+<tr><td>Literal</td><td><code>arith.cmpi eq</code></td><td><code>scf.if</code> chain</td><td>O(n) sequential</td></tr>
+<tr><td>Wildcard</td><td>None</td><td>Fallthrough</td><td>0 (no test)</td></tr>
+<tr><td>Variable</td><td>None</td><td>Binding only</td><td>0 (no test)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Complete example: Mixed patterns</strong></p>
+<pre><code class="language-fsharp">match (list, n) with
+| (Nil, _) -&gt; 0
+| (Cons(x, _), 0) -&gt; x
+| (Cons(x, xs), n) -&gt; x + process xs (n - 1)
+</code></pre>
+<p><strong>Decision tree structure:</strong></p>
+<pre><code>        [list]
+           |
+      Constructor test
+        /        \
+      Nil       Cons
+       |          |
+    yield 0    [n]
+              Literal test
+                /    \
+            n==0    n!=0
+              |        |
+          yield x  yield x + ...
+</code></pre>
+<p><strong>생성된 MLIR (simplified):</strong></p>
+<pre><code class="language-mlir">// Step 1: Constructor test on list
+%list_tag = llvm.extractvalue %list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%tag_index = arith.index_cast %list_tag : i32 to index
+
+%result = scf.index_switch %tag_index : index -&gt; i32
+case 0 {  // Nil
+    // Wildcard _ on n: NO TEST
+    %zero = arith.constant 0 : i32
+    scf.yield %zero : i32
+}
+case 1 {  // Cons
+    %data = llvm.extractvalue %list[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    %x = llvm.load %data : !llvm.ptr -&gt; i32
+
+    // Step 2: Literal test on n
+    %is_zero = arith.cmpi eq, %n, %c0 : i32
+    %inner = scf.if %is_zero -&gt; i32 {
+        // Literal 0 matched, wildcard _ on tail: NO extraction
+        scf.yield %x : i32
+    } else {
+        // Default case, extract tail for recursion
+        %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -&gt; !llvm.ptr
+        %xs = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+        %n_minus_1 = arith.subi %n, %c1 : i32
+        %rest = func.call @process(%xs, %n_minus_1) : (...) -&gt; i32
+        %sum = arith.addi %x, %rest : i32
+        scf.yield %sum : i32
+    }
+    scf.yield %inner : i32
+}
+</code></pre>
+<h3 id="리터럴-패턴-최적화-기회"><a class="header" href="#리터럴-패턴-최적화-기회">리터럴 패턴 최적화 기회</a></h3>
+<p><strong>1. Jump table for dense ranges</strong></p>
+<p>리터럴이 0, 1, 2, …와 같이 연속적일 때:</p>
+<pre><code class="language-mlir">// Before: Sequential tests
+%is_0 = arith.cmpi eq, %x, %c0
+scf.if %is_0 { ... } else {
+    %is_1 = arith.cmpi eq, %x, %c1
+    scf.if %is_1 { ... } else { ... }
+}
+
+// After: Range check + index_switch
+%in_range = arith.cmpi ult, %x, %c3 : i32
+scf.if %in_range {
+    %idx = arith.index_cast %x : i32 to index
+    scf.index_switch %idx {
+        case 0 { ... }
+        case 1 { ... }
+        case 2 { ... }
+    }
+} else {
+    // default
+}
+</code></pre>
+<p><strong>2. LLVM switch optimization</strong></p>
+<p>LLVM backend는 sequential comparisons를 자동으로 switch instruction으로 변환할 수 있다:</p>
+<pre><code class="language-llvm">; Input: sequential icmp + br
+%cmp0 = icmp eq i32 %x, 0
+br i1 %cmp0, label %case0, label %check1
+check1:
+%cmp1 = icmp eq i32 %x, 1
+br i1 %cmp1, label %case1, label %default
+
+; Optimized: switch instruction
+switch i32 %x, label %default [
+    i32 0, label %case0
+    i32 1, label %case1
+]
+</code></pre>
+<p><strong>3. Guard patterns (future)</strong></p>
+<p>리터럴 테스트와 predicate guard를 결합:</p>
+<pre><code class="language-fsharp">match x with
+| n when n &gt; 0 &amp;&amp; n &lt; 100 -&gt; "small positive"
+| n when n &gt;= 100 -&gt; "large positive"
+| _ -&gt; "non-positive"
+</code></pre>
+<p>이런 guard patterns는 Phase 7 이후에 다룰 수 있다.</p>
+<h3 id="wildcard-specialization-규칙-상세"><a class="header" href="#wildcard-specialization-규칙-상세">Wildcard Specialization 규칙 상세</a></h3>
+<p><strong>Wildcard expansion for different constructor arities:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Constructor</th><th>Arity</th><th>Wildcard Expansion</th></tr>
+</thead>
+<tbody>
+<tr><td>Nil</td><td>0</td><td><code>[]</code> (empty)</td></tr>
+<tr><td>Cons</td><td>2</td><td><code>[_, _]</code></td></tr>
+<tr><td>Some</td><td>1</td><td><code>[_]</code></td></tr>
+<tr><td>Pair</td><td>2</td><td><code>[_, _]</code></td></tr>
+<tr><td>Triple</td><td>3</td><td><code>[_, _, _]</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Example: Option type</strong></p>
+<pre><code class="language-fsharp">type 'a option = None | Some of 'a
+
+match opt with
+| Some x -&gt; x + 1
+| _ -&gt; 0
+</code></pre>
+<p><strong>Specialization of <code>_</code> on <code>Some</code>:</strong></p>
+<pre><code>Original:
+| Some x  →  x + 1
+| _       →  0
+
+S(Some, 0, P):
+| x  →  x + 1    (from Some x)
+| _  →  0        (from _, expanded to Some _)
+</code></pre>
+<p><strong>Wildcard는 어떤 constructor와도 호환된다!</strong></p>
+<h3 id="key-takeaways"><a class="header" href="#key-takeaways">Key Takeaways</a></h3>
+<ol>
+<li><strong>리터럴 패턴은 equality tests를 생성한다</strong> (<code>arith.cmpi eq</code>)</li>
+<li><strong>Constructor 패턴은 tag switch를 생성한다</strong> (<code>scf.index_switch</code>)</li>
+<li><strong>Wildcard는 테스트를 생성하지 않는다</strong> (fallthrough/binding only)</li>
+<li><strong>리터럴 set이 연속적이면 switch 최적화 가능</strong></li>
+<li><strong>Wildcard default는 마지막 else branch로 컴파일</strong></li>
+<li><strong>Named variables와 wildcards는 semantics만 다름</strong> (binding vs no binding)</li>
+</ol>
+<hr>
+<h2 id="summary-and-next-steps"><a class="header" href="#summary-and-next-steps">Summary and Next Steps</a></h2>
+<h3 id="chapter-17-핵심-개념-정리"><a class="header" href="#chapter-17-핵심-개념-정리">Chapter 17 핵심 개념 정리</a></h3>
+<p><strong>1. Pattern Matrix Representation</strong></p>
+<ul>
+<li>Rows = pattern clauses</li>
+<li>Columns = scrutinees</li>
+<li>Cells = patterns (wildcard, constructor, literal)</li>
+<li>Occurrence vectors = access paths to values</li>
+</ul>
+<p><strong>2. Decision Tree Structure</strong></p>
+<ul>
+<li>Internal nodes = tests (constructor, literal)</li>
+<li>Edges = outcomes (Nil, Cons, default)</li>
+<li>Leaves = actions (success, failure)</li>
+<li>Property: Each subterm tested at most once</li>
+</ul>
+<p><strong>3. Specialization Operation</strong></p>
+<ul>
+<li>Filters rows compatible with constructor</li>
+<li>Expands constructor patterns to subpatterns</li>
+<li>Updates occurrence vector with subpaths</li>
+<li>Formula: <code>S(c, i, P) = specialized matrix</code></li>
+</ul>
+<p><strong>4. Defaulting Operation</strong></p>
+<ul>
+<li>Keeps only wildcard rows</li>
+<li>Removes tested column</li>
+<li>Detects non-exhaustiveness (empty result)</li>
+<li>Formula: <code>D(i, P) = default matrix</code></li>
+</ul>
+<p><strong>5. Compilation Algorithm</strong></p>
+<ul>
+<li>Recursive function: <code>compile(P, π) = DecisionTree</code></li>
+<li>Base cases: empty (failure), irrefutable (success)</li>
+<li>Recursive case: select column, specialize, default</li>
+<li>Heuristics: column selection strategy</li>
+</ul>
+<p><strong>6. Exhaustiveness Checking</strong></p>
+<ul>
+<li>Empty matrix = non-exhaustive match</li>
+<li>Complete constructor sets = no default needed</li>
+<li>Natural integration with compilation</li>
+<li>Error reporting from failure leaves</li>
+</ul>
+<h3 id="decision-tree-algorithm의-장점-요약"><a class="header" href="#decision-tree-algorithm의-장점-요약">Decision Tree Algorithm의 장점 요약</a></h3>
+<p><strong>Efficiency:</strong></p>
+<ul>
+<li>O(d) tests (d = pattern depth), not O(n × d)</li>
+<li>Each subterm tested exactly once</li>
+<li>No redundant comparisons</li>
+</ul>
+<p><strong>Correctness:</strong></p>
+<ul>
+<li>Respects pattern order (first-match semantics)</li>
+<li>Handles nested patterns systematically</li>
+<li>Works with any constructor arity</li>
+</ul>
+<p><strong>Verification:</strong></p>
+<ul>
+<li>Exhaustiveness checking built-in</li>
+<li>Detects missing cases at compile time</li>
+<li>Identifies unreachable patterns</li>
+</ul>
+<p><strong>Optimization:</strong></p>
+<ul>
+<li>Structured representation enables optimizations</li>
+<li>Column selection heuristics improve code quality</li>
+<li>Complete constructor sets eliminate default branches</li>
+</ul>
+<h3 id="pattern-matrix-workflow"><a class="header" href="#pattern-matrix-workflow">Pattern Matrix Workflow</a></h3>
+<p><strong>전체 과정 요약:</strong></p>
+<pre><code>1. FunLang match expression
+   ↓
+2. Pattern matrix + occurrence vector
+   ↓
+3. Recursive compilation algorithm
+   ├─ Specialization (constructor tests)
+   ├─ Defaulting (wildcard cases)
+   └─ Column selection (heuristic)
+   ↓
+4. Decision tree
+   ↓
+5. MLIR IR (scf.index_switch, scf.if)
+   ↓
+6. LLVM IR (switch, br)
+</code></pre>
+<h3 id="connection-to-mlir-lowering"><a class="header" href="#connection-to-mlir-lowering">Connection to MLIR Lowering</a></h3>
+<p><strong>Chapter 17 (theory) → Chapter 19 (implementation):</strong></p>
+<p><strong>Pattern matrix → <code>funlang.match</code> operation:</strong></p>
+<pre><code class="language-mlir">%result = funlang.match %list : !funlang.list&lt;i32&gt; -&gt; i32 {
+^nil:
+    %zero = arith.constant 0 : i32
+    funlang.yield %zero : i32
+^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+    %one = arith.constant 1 : i32
+    %len_tail = func.call @length(%tail) : (!funlang.list&lt;i32&gt;) -&gt; i32
+    %result = arith.addi %one, %len_tail : i32
+    funlang.yield %result : i32
+}
+</code></pre>
+<p><strong>Decision tree → SCF dialect:</strong></p>
+<pre><code class="language-mlir">%tag = llvm.extractvalue %list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%result = scf.index_switch %tag : i32 -&gt; i32
+case 0 { ... }  // Nil branch
+case 1 { ... }  // Cons branch
+</code></pre>
+<p><strong>Specialization → Region block arguments:</strong></p>
+<pre><code class="language-mlir">^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+// Block arguments = pattern variables from specialization
+</code></pre>
+<p><strong>Exhaustiveness → Verification:</strong></p>
+<pre><code class="language-cpp">LogicalResult FunLang::MatchOp::verify() {
+    // Check all constructor cases are present or wildcard exists
+    if (!isExhaustive()) {
+        return emitOpError("non-exhaustive pattern match");
+    }
+    return success();
+}
+</code></pre>
+<h3 id="chapter-18-20-preview"><a class="header" href="#chapter-18-20-preview">Chapter 18-20 Preview</a></h3>
+<p><strong>Chapter 18: List Operations</strong></p>
+<ul>
+<li><code>funlang.nil</code> operation: Create empty list</li>
+<li><code>funlang.cons</code> operation: Prepend element to list</li>
+<li><code>!funlang.list&lt;T&gt;</code> type: Parameterized list type</li>
+<li>LLVM representation: <code>!llvm.struct&lt;(i32, ptr)&gt;</code> with tag</li>
+<li>Heap allocation with GC_malloc</li>
+</ul>
+<p><strong>Chapter 19: Match Compilation</strong></p>
+<ul>
+<li><code>funlang.match</code> operation: Region-based pattern matching</li>
+<li>Region block arguments for pattern variables</li>
+<li>Lowering to SCF dialect (<code>scf.index_switch</code>)</li>
+<li>OpConversionPattern with region handling</li>
+<li>Type conversion for <code>!funlang.list&lt;T&gt;</code></li>
+</ul>
+<p><strong>Chapter 20: Functional Programs</strong></p>
+<ul>
+<li>Complete examples: map, filter, fold</li>
+<li>List manipulation functions</li>
+<li>Recursive list traversal</li>
+<li>Higher-order functions on lists</li>
+<li>Performance analysis</li>
+</ul>
+<h3 id="practice-questions"><a class="header" href="#practice-questions">Practice Questions</a></h3>
+<p>이 장을 이해했는지 확인하는 질문들:</p>
+<p><strong>Q1: Pattern matrix의 각 요소는 무엇을 의미하는가?</strong></p>
+<details>
+<summary>Answer</summary>
+<ul>
+<li>Rows: Pattern clauses (하나의 <code>pattern -&gt; action</code>)</li>
+<li>Columns: Scrutinees (매칭 대상 values)</li>
+<li>Cells: Patterns (wildcard, constructor, literal)</li>
+<li>Actions: 각 row가 매칭되면 실행할 코드</li>
+</ul>
+</details>
+<p><strong>Q2: Specialization이 <code>Cons(x, Nil)</code> pattern을 어떻게 변환하는가?</strong></p>
+<details>
+<summary>Answer</summary>
+<p><code>Cons(x, Nil)</code> → 두 개의 subpattern columns <code>[x, Nil]</code></p>
+<ul>
+<li><code>x</code>: variable pattern (head)</li>
+<li><code>Nil</code>: constructor pattern (tail)</li>
+</ul>
+<p>Occurrence vector도 확장:</p>
+<ul>
+<li><code>[list]</code> → <code>[list.head, list.tail]</code></li>
+</ul>
+</details>
+<p><strong>Q3: Defaulting 후 empty matrix는 무엇을 의미하는가?</strong></p>
+<details>
+<summary>Answer</summary>
+<p>Non-exhaustive pattern match.</p>
+<ul>
+<li>모든 rows가 constructor patterns → wildcard 없음</li>
+<li>Default case가 없음 → 일부 values가 매칭 안 됨</li>
+<li>Compiler error 발생</li>
+</ul>
+</details>
+<p><strong>Q4: Decision tree가 if-else chain보다 효율적인 이유는?</strong></p>
+<details>
+<summary>Answer</summary>
+<ol>
+<li>각 subterm을 최대 한 번만 테스트 (no redundancy)</li>
+<li>Complete constructor sets에서 불필요한 비교 제거</li>
+<li>Structured representation으로 optimization 가능</li>
+<li>O(d) tests (d = depth), not O(n × d) (n = patterns)</li>
+</ol>
+</details>
+<p><strong>Q5: Column selection heuristic이 왜 필요한가?</strong></p>
+<details>
+<summary>Answer</summary>
+<p>여러 scrutinees가 있을 때 테스트 순서가 효율성에 영향을 준다.</p>
+<ul>
+<li>좋은 순서: Constructor patterns가 많은 column 먼저</li>
+<li>나쁜 순서: Wildcard가 많은 column 먼저 (별 정보 없음)</li>
+</ul>
+<p>Heuristic으로 optimal에 가까운 decision tree 생성.</p>
+</details>
+<h3 id="성공-기준-달성-확인"><a class="header" href="#성공-기준-달성-확인">성공 기준 달성 확인</a></h3>
+<p>이 장의 목표를 모두 달성했는가?</p>
+<ul>
+<li>
+<p><input disabled="" type="checkbox" checked=""> Pattern matrix 표현법을 이해한다</p>
+<ul>
+<li>Rows, columns, occurrences 개념 설명</li>
+<li>Example matrices with nested patterns</li>
+</ul>
+</li>
+<li>
+<p><input disabled="" type="checkbox" checked=""> Decision tree 알고리즘의 동작 원리를 안다</p>
+<ul>
+<li>Recursive compilation function</li>
+<li>Base cases (empty, irrefutable)</li>
+<li>Recursive case (specialize, default)</li>
+</ul>
+</li>
+<li>
+<p><input disabled="" type="checkbox" checked=""> Specialization과 defaulting 연산을 설명할 수 있다</p>
+<ul>
+<li>Specialization: constructor assumption + decomposition</li>
+<li>Defaulting: wildcard filtering + column removal</li>
+<li>Occurrence vector updates</li>
+</ul>
+</li>
+<li>
+<p><input disabled="" type="checkbox" checked=""> Exhaustiveness checking이 어떻게 동작하는지 안다</p>
+<ul>
+<li>Empty matrix detection</li>
+<li>Complete constructor sets</li>
+<li>Error reporting strategies</li>
+</ul>
+</li>
+<li>
+<p><input disabled="" type="checkbox" checked=""> Chapter 18-19에서 MLIR 구현을 시작할 준비가 된다</p>
+<ul>
+<li>Pattern matrix → <code>funlang.match</code> operation mapping</li>
+<li>Decision tree → SCF dialect lowering</li>
+<li>Specialization → Region block arguments</li>
+</ul>
+</li>
+</ul>
+<p><strong>Next chapter: Let’s build the foundation for pattern matching—list data structures!</strong></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="16-lowering-passes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="18-list-operations.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="16-lowering-passes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="18-list-operations.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,3914 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 18: List Operations - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-2a27a2f4.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-d20149da.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./18-list-operations.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-18-list-operations-list-operations"><a class="header" href="#chapter-18-list-operations-list-operations">Chapter 18: List Operations (List Operations)</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p><strong>Chapter 17</strong>에서는 패턴 매칭 컴파일의 <strong>이론적 기반</strong>을 다뤘다:</p>
+<ul>
+<li>Decision tree 알고리즘 (Maranget 2008)</li>
+<li>Pattern matrix 표현법</li>
+<li>Specialization과 defaulting 연산</li>
+<li>Exhaustiveness checking</li>
+</ul>
+<p><strong>Chapter 18</strong>에서는 패턴 매칭이 작동할 <strong>데이터 구조</strong>를 구현한다. FunLang dialect에 list operations를 추가하여 불변 리스트를 만들고 조작할 수 있게 한다.</p>
+<h3 id="chapter-17-복습-왜-list-operations가-먼저인가"><a class="header" href="#chapter-17-복습-왜-list-operations가-먼저인가">Chapter 17 복습: 왜 List Operations가 먼저인가?</a></h3>
+<p>Chapter 17에서 우리는 decision tree 알고리즘을 배웠다:</p>
+<pre><code class="language-fsharp">// F# 패턴 매칭 예제
+let rec sum_list lst =
+    match lst with
+    | [] -&gt; 0                           // Nil pattern
+    | head :: tail -&gt; head + sum_list tail  // Cons pattern
+
+sum_list [1; 2; 3]  // 6
+</code></pre>
+<p>Decision tree 컴파일 과정:</p>
+<ol>
+<li><strong>Pattern matrix 구성</strong>: <code>[[]; [Cons(head, tail)]]</code></li>
+<li><strong>Specialization</strong>: Nil case, Cons case 분리</li>
+<li><strong>Code generation</strong>: 각 case에 대한 MLIR 코드 생성</li>
+</ol>
+<p><strong>하지만 MLIR로 변환하려면 무엇이 필요한가?</strong></p>
+<pre><code class="language-mlir">// 목표: 이런 MLIR을 생성하고 싶다
+%result = funlang.match %list : !funlang.list&lt;i32&gt; -&gt; i32 {
+  ^nil:
+    %zero = arith.constant 0 : i32
+    funlang.yield %zero : i32
+  ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+    // ... recursive call ...
+    funlang.yield %sum : i32
+}
+</code></pre>
+<p><strong>필요한 요소들:</strong></p>
+<ol>
+<li><strong>List data structure</strong>: <code>!funlang.list&lt;T&gt;</code> 타입으로 리스트 표현</li>
+<li><strong>List construction</strong>: <code>funlang.nil</code>, <code>funlang.cons</code>로 리스트 생성</li>
+<li><strong>Pattern matching</strong>: <code>funlang.match</code>로 리스트 분해 (Chapter 19)</li>
+</ol>
+<p><strong>왜 이 순서인가?</strong></p>
+<ul>
+<li>데이터 구조 없이는 패턴 매칭할 대상이 없다</li>
+<li><code>funlang.match</code>는 <code>!funlang.list</code> 타입을 입력으로 받는다</li>
+<li>List operations를 먼저 구현하면 Chapter 19에서 <code>funlang.match</code>만 집중할 수 있다</li>
+</ul>
+<h3 id="chapter-18의-목표"><a class="header" href="#chapter-18의-목표">Chapter 18의 목표</a></h3>
+<p><strong>이 장에서 구현할 것:</strong></p>
+<ol>
+<li>
+<p><strong>List Representation Design</strong></p>
+<ul>
+<li>Tagged union으로 Nil/Cons 구분</li>
+<li>GC-allocated cons cells</li>
+<li>Immutable shared structure</li>
+</ul>
+</li>
+<li>
+<p><strong>FunLang List Type</strong></p>
+<ul>
+<li><code>!funlang.list&lt;T&gt;</code> parameterized type</li>
+<li>TableGen 정의, C API shim, F# bindings</li>
+</ul>
+</li>
+<li>
+<p><strong>funlang.nil Operation</strong></p>
+<ul>
+<li>Empty list 생성</li>
+<li>Constant representation (no allocation)</li>
+</ul>
+</li>
+<li>
+<p><strong>funlang.cons Operation</strong></p>
+<ul>
+<li>Cons cell 생성 (head :: tail)</li>
+<li>GC allocation for cell</li>
+</ul>
+</li>
+<li>
+<p><strong>TypeConverter for Lists</strong></p>
+<ul>
+<li><code>!funlang.list&lt;T&gt;</code> → <code>!llvm.struct&lt;(i32, ptr)&gt;</code> 변환</li>
+<li>Extending FunLangTypeConverter from Chapter 16</li>
+</ul>
+</li>
+<li>
+<p><strong>Lowering Patterns</strong></p>
+<ul>
+<li>NilOpLowering: struct construction</li>
+<li>ConsOpLowering: GC_malloc + store operations</li>
+</ul>
+</li>
+</ol>
+<h3 id="before-vs-after-list-operations의-위력"><a class="header" href="#before-vs-after-list-operations의-위력">Before vs After: List Operations의 위력</a></h3>
+<p><strong>Before (만약 list operations 없이 직접 구현한다면):</strong></p>
+<pre><code class="language-mlir">// Empty list: 수동으로 struct 구성
+%tag_zero = arith.constant 0 : i32
+%null_ptr = llvm.mlir.zero : !llvm.ptr
+%undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+%s1 = llvm.insertvalue %tag_zero, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%empty = llvm.insertvalue %null_ptr, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+// Cons cell: 8줄 이상의 GC_malloc + store 패턴
+%cell_size = arith.constant 16 : i64
+%cell_ptr = llvm.call @GC_malloc(%cell_size) : (i64) -&gt; !llvm.ptr
+%head_ptr = llvm.getelementptr %cell_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %head_val, %head_ptr : i32, !llvm.ptr
+%tail_ptr = llvm.getelementptr %cell_ptr[1] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %tail_val, %tail_ptr : !llvm.ptr, !llvm.ptr
+%tag_one = arith.constant 1 : i32
+%s1 = llvm.insertvalue %tag_one, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%list = llvm.insertvalue %cell_ptr, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<p><strong>After (Chapter 18 구현 후):</strong></p>
+<pre><code class="language-mlir">// Empty list: 1줄!
+%empty = funlang.nil : !funlang.list&lt;i32&gt;
+
+// Cons cell: 1줄!
+%list = funlang.cons %head, %tail : !funlang.list&lt;i32&gt;
+
+// Building [1, 2, 3]: 4줄
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%lst1 = funlang.cons %c3, %nil : !funlang.list&lt;i32&gt;
+%lst2 = funlang.cons %c2, %lst1 : !funlang.list&lt;i32&gt;
+%lst3 = funlang.cons %c1, %lst2 : !funlang.list&lt;i32&gt;
+</code></pre>
+<p><strong>개선 효과:</strong></p>
+<ul>
+<li><strong>코드 줄 수</strong>: 15+ 줄 → 1-2줄 (90%+ 감소!)</li>
+<li><strong>가독성</strong>: 저수준 struct 조작 제거, 의도 명확</li>
+<li><strong>타입 안전성</strong>: <code>!funlang.list&lt;T&gt;</code> parameterized type으로 element type 검증</li>
+<li><strong>최적화 가능성</strong>: Empty list sharing, cons cell inlining</li>
+</ul>
+<h3 id="chapter-15-복습-custom-operations-패턴"><a class="header" href="#chapter-15-복습-custom-operations-패턴">Chapter 15 복습: Custom Operations 패턴</a></h3>
+<p>Chapter 15에서 우리는 <code>funlang.closure</code>와 <code>funlang.apply</code>를 구현하며 custom operations 패턴을 배웠다:</p>
+<p><strong>1. TableGen ODS 정의</strong></p>
+<pre><code class="language-tablegen">def FunLang_ClosureOp : FunLang_Op&lt;"closure", [Pure]&gt; {
+  let summary = "Create closure";
+  let arguments = (ins FlatSymbolRefAttr:$fn, Variadic&lt;AnyType&gt;:$captures);
+  let results = (outs FunLang_ClosureType:$result);
+  let assemblyFormat = "$fn `,` $captures attr-dict `:` type($result)";
+}
+</code></pre>
+<p><strong>2. C API Shim</strong></p>
+<pre><code class="language-cpp">extern "C" MlirOperation mlirFunLangClosureOpCreate(
+    MlirLocation loc, MlirAttribute fn, MlirValue *captures, intptr_t nCaptures) {
+  return wrap(builder.create&lt;funlang::ClosureOp&gt;(loc, fn, ValueRange));
+}
+</code></pre>
+<p><strong>3. F# Bindings</strong></p>
+<pre><code class="language-fsharp">member this.CreateClosure(fn: string, captures: MlirValue list) : MlirValue =
+    let op = funlang.CreateClosureOp(loc, fn, captures)
+    GetOperationResult(op, 0)
+</code></pre>
+<p><strong>Chapter 18에서도 동일한 패턴을 적용한다:</strong></p>
+<ul>
+<li><code>funlang.nil</code> ← TableGen → C API → F# bindings</li>
+<li><code>funlang.cons</code> ← TableGen → C API → F# bindings</li>
+<li><code>!funlang.list&lt;T&gt;</code> ← TableGen → C API → F# bindings</li>
+</ul>
+<h3 id="chapter-18-로드맵"><a class="header" href="#chapter-18-로드맵">Chapter 18 로드맵</a></h3>
+<p><strong>Part 1 (현재 섹션):</strong></p>
+<ul>
+<li>List representation design</li>
+<li><code>!funlang.list&lt;T&gt;</code> parameterized type</li>
+<li><code>funlang.nil</code> operation</li>
+<li><code>funlang.cons</code> operation</li>
+</ul>
+<p><strong>Part 2 (다음 섹션):</strong></p>
+<ul>
+<li>TypeConverter for <code>!funlang.list&lt;T&gt;</code></li>
+<li>NilOpLowering pattern</li>
+<li>ConsOpLowering pattern</li>
+<li>Complete lowering pass update</li>
+</ul>
+<h3 id="성공-기준"><a class="header" href="#성공-기준">성공 기준</a></h3>
+<p>이 장을 완료하면:</p>
+<ul>
+<li><input disabled="" type="checkbox"> List의 메모리 표현(tagged union)을 이해한다</li>
+<li><input disabled="" type="checkbox"> <code>!funlang.list&lt;T&gt;</code> 타입을 TableGen으로 정의할 수 있다</li>
+<li><input disabled="" type="checkbox"> <code>funlang.nil</code>과 <code>funlang.cons</code>의 동작 원리를 안다</li>
+<li><input disabled="" type="checkbox"> TypeConverter로 FunLang → LLVM 타입 변환을 구현할 수 있다</li>
+<li><input disabled="" type="checkbox"> Lowering pattern으로 operation을 LLVM dialect로 변환할 수 있다</li>
+<li><input disabled="" type="checkbox"> Chapter 19에서 <code>funlang.match</code> 구현을 시작할 준비가 된다</li>
+</ul>
+<p><strong>Let’s build the foundation for pattern matching—list data structures!</strong></p>
+<hr>
+<h2 id="list-representation-design"><a class="header" href="#list-representation-design">List Representation Design</a></h2>
+<p>함수형 언어에서 리스트는 가장 기본적인 데이터 구조다. <strong>Immutable linked list</strong>는 다음 특징을 가진다:</p>
+<ul>
+<li><strong>Immutability</strong>: 한번 생성되면 변경 불가 (functional purity)</li>
+<li><strong>Structural sharing</strong>: 서브리스트를 공유하여 메모리 효율적</li>
+<li><strong>Recursive structure</strong>: Nil (empty) 또는 Cons (head, tail)</li>
+</ul>
+<h3 id="list는-algebraic-data-type이다"><a class="header" href="#list는-algebraic-data-type이다">List는 Algebraic Data Type이다</a></h3>
+<p>함수형 언어에서 리스트는 <strong>sum type</strong> (tagged union)으로 정의된다:</p>
+<pre><code class="language-fsharp">// F#
+type List&lt;'T&gt; =
+    | Nil
+    | Cons of 'T * List&lt;'T&gt;
+
+// 예제
+let empty = Nil
+let one = Cons(1, Nil)               // [1]
+let three = Cons(1, Cons(2, Cons(3, Nil)))  // [1; 2; 3]
+</code></pre>
+<pre><code class="language-ocaml">(* OCaml *)
+type 'a list =
+  | []
+  | (::) of 'a * 'a list
+
+(* 예제 *)
+let empty = []
+let one = 1 :: []
+let three = 1 :: 2 :: 3 :: []
+</code></pre>
+<pre><code class="language-haskell">-- Haskell
+data List a = Nil | Cons a (List a)
+
+-- 예제
+empty = Nil
+one = Cons 1 Nil
+three = Cons 1 (Cons 2 (Cons 3 Nil))
+</code></pre>
+<p><strong>공통 패턴:</strong></p>
+<ol>
+<li><strong>Two constructors</strong>: Nil (empty), Cons (non-empty)</li>
+<li><strong>Type parameter</strong>: <code>'T</code>, <code>'a</code>, <code>a</code> (element type)</li>
+<li><strong>Recursive definition</strong>: Cons의 tail은 List 자체</li>
+</ol>
+<h3 id="tagged-union-representation"><a class="header" href="#tagged-union-representation">Tagged Union Representation</a></h3>
+<p>LLVM에서 sum type을 표현하는 일반적인 방법:</p>
+<p><strong>Discriminator tag + Data pointer</strong></p>
+<pre><code>struct TaggedUnion {
+    i32 tag;        // 0 = Nil, 1 = Cons, 2 = OtherVariant, ...
+    ptr data;       // variant-specific data
+}
+</code></pre>
+<p><strong>List의 경우:</strong></p>
+<pre><code>!llvm.struct&lt;(i32, ptr)&gt;
+
+- tag = 0: Nil (data = null)
+- tag = 1: Cons (data = pointer to {head, tail})
+</code></pre>
+<p><strong>메모리 레이아웃:</strong></p>
+<pre><code>Nil representation:
+┌─────┬──────┐
+│  0  │ null │
+└─────┴──────┘
+  tag   data
+
+Cons representation:
+┌─────┬──────┐        ┌────────┬──────────┐
+│  1  │ ptr  │───────&gt;│  head  │   tail   │
+└─────┴──────┘        └────────┴──────────┘
+  tag   data            element   ptr/struct
+</code></pre>
+<h3 id="cons-cell-memory-layout"><a class="header" href="#cons-cell-memory-layout">Cons Cell Memory Layout</a></h3>
+<p>Cons cell은 heap에 할당되는 구조체다:</p>
+<pre><code>Cons Cell = struct {
+    element: T,           // head value
+    tail: !llvm.struct&lt;(i32, ptr)&gt;  // tail as tagged union
+}
+</code></pre>
+<p><strong>예제: 리스트 [1, 2, 3]의 메모리 구조</strong></p>
+<pre><code>%lst3 = Cons(1, Cons(2, Cons(3, Nil)))
+
+Stack (list values as tagged unions):
+%lst3: {1, ptr_to_cell1}
+%lst2: {1, ptr_to_cell2}
+%lst1: {1, ptr_to_cell3}
+%nil:  {0, null}
+
+Heap (cons cells):
+cell1: {1, %lst2}
+       ↑   ↓
+     head  tail
+
+cell2: {2, %lst1}
+       ↑   ↓
+     head  tail
+
+cell3: {3, %nil}
+       ↑   ↓
+     head  tail (= {0, null})
+</code></pre>
+<p><strong>Visual representation:</strong></p>
+<pre><code>%lst3               cell1              %lst2              cell2              %lst1              cell3              %nil
+┌───┬────┐          ┌───┬──────┐       ┌───┬────┐         ┌───┬──────┐       ┌───┬────┐         ┌───┬──────┐       ┌───┬──────┐
+│ 1 │ ●──┼─────────&gt;│ 1 │ ●────┼──────&gt;│ 1 │ ●──┼────────&gt;│ 2 │ ●────┼──────&gt;│ 1 │ ●──┼────────&gt;│ 3 │ ●────┼──────&gt;│ 0 │ null │
+└───┴────┘          └───┴──────┘       └───┴────┘         └───┴──────┘       └───┴────┘         └───┴──────┘       └───┴──────┘
+</code></pre>
+<h3 id="gc-allocation-for-cons-cells"><a class="header" href="#gc-allocation-for-cons-cells">GC Allocation for Cons Cells</a></h3>
+<p>Cons cell은 항상 <strong>heap에 할당</strong>된다:</p>
+<p><strong>이유:</strong></p>
+<ol>
+<li><strong>Escape analysis</strong>: 리스트는 함수 반환값으로 사용됨 (upward funarg)</li>
+<li><strong>Sharing</strong>: 여러 리스트가 같은 tail을 공유할 수 있음</li>
+<li><strong>Lifetime</strong>: 리스트의 lifetime은 생성 함수보다 길 수 있음</li>
+</ol>
+<p><strong>Allocation strategy:</strong></p>
+<pre><code class="language-mlir">// funlang.cons %head, %tail
+
+// Lowering:
+%cell_size = arith.constant 16 : i64  // sizeof(element) + sizeof(ptr)
+%cell_ptr = llvm.call @GC_malloc(%cell_size) : (i64) -&gt; !llvm.ptr
+
+// Store head
+%head_offset = llvm.getelementptr %cell_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %head, %head_offset : i32, !llvm.ptr
+
+// Store tail
+%tail_offset = llvm.getelementptr %cell_ptr[1] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %tail, %tail_offset : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+
+// Build tagged union
+%tag = arith.constant 1 : i32
+%undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%result = llvm.insertvalue %cell_ptr, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<p><strong>GC의 역할:</strong></p>
+<ul>
+<li>Cons cells는 명시적으로 free하지 않는다</li>
+<li>Boehm GC가 reachability를 추적하여 자동으로 수집</li>
+<li>Chapter 9에서 설정한 GC infrastructure 활용</li>
+</ul>
+<h3 id="immutability와-structural-sharing"><a class="header" href="#immutability와-structural-sharing">Immutability와 Structural Sharing</a></h3>
+<p><strong>Immutability:</strong></p>
+<pre><code class="language-mlir">// 리스트 생성
+%lst1 = funlang.cons %x, %nil : !funlang.list&lt;i32&gt;
+
+// "수정" 불가능 (새 리스트 생성)
+%lst2 = funlang.cons %y, %lst1 : !funlang.list&lt;i32&gt;
+// %lst1은 변경되지 않음!
+</code></pre>
+<p><strong>Structural sharing:</strong></p>
+<pre><code class="language-mlir">%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%lst1 = funlang.cons %c1, %nil : !funlang.list&lt;i32&gt;  // [1]
+%lst2 = funlang.cons %c2, %lst1 : !funlang.list&lt;i32&gt;  // [2, 1]
+%lst3 = funlang.cons %c3, %lst1 : !funlang.list&lt;i32&gt;  // [3, 1]
+
+// %lst2와 %lst3는 %lst1을 tail로 공유!
+</code></pre>
+<p><strong>메모리 효율:</strong></p>
+<pre><code>Without sharing (mutable arrays):
+[2, 1]: 2개 원소 저장
+[3, 1]: 2개 원소 저장
+Total: 4개 원소
+
+With sharing (immutable lists):
+[2, 1]: cell(2) → cell(1) → Nil
+[3, 1]: cell(3) ──┘
+Total: 3개 cons cells (원소 중복 없음)
+</code></pre>
+<p><strong>장점:</strong></p>
+<ol>
+<li><strong>메모리 효율</strong>: 공통 sublist를 재사용</li>
+<li><strong>안전성</strong>: Aliasing bugs 없음 (immutable)</li>
+<li><strong>병렬성</strong>: Race conditions 없음</li>
+<li><strong>Persistent data structures</strong>: 이전 버전 유지 가능</li>
+</ol>
+<h3 id="element-type-considerations"><a class="header" href="#element-type-considerations">Element Type Considerations</a></h3>
+<p>리스트는 <strong>parameterized type</strong>이어야 한다:</p>
+<p><strong>타입 안전성:</strong></p>
+<pre><code class="language-mlir">// 올바른 타입: !funlang.list&lt;i32&gt;
+%int_list = funlang.nil : !funlang.list&lt;i32&gt;
+%int_cons = funlang.cons %x, %int_list : !funlang.list&lt;i32&gt;
+// Type checker verifies: %x must be i32
+
+// 잘못된 타입: !funlang.list (opaque - no element type)
+%list = funlang.nil : !funlang.list
+%cons = funlang.cons %x, %list : !funlang.list
+// Type checker CANNOT verify: %x type unknown
+</code></pre>
+<p><strong>Cons cell storage:</strong></p>
+<ul>
+<li>Element type은 cons cell에 저장됨 (not in list struct)</li>
+<li>List struct는 tag + pointer만 포함</li>
+<li>Element type은 컴파일 타임 정보 (type safety)</li>
+</ul>
+<p><strong>Type parameter in lowering:</strong></p>
+<pre><code>!funlang.list&lt;i32&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+!funlang.list&lt;f64&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+!funlang.list&lt;!funlang.closure&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+
+// 런타임 표현은 동일! (opaque pointer)
+// 컴파일 타임에만 element type 검증
+</code></pre>
+<h3 id="list-representation-vs-array-representation"><a class="header" href="#list-representation-vs-array-representation">List Representation vs Array Representation</a></h3>
+<p><strong>왜 linked list인가? 배열보다 나은가?</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Linked List</th><th>Array</th></tr>
+</thead>
+<tbody>
+<tr><td>Random access</td><td>O(n)</td><td>O(1)</td></tr>
+<tr><td>Prepend (cons)</td><td>O(1)</td><td>O(n) - copy</td></tr>
+<tr><td>Append</td><td>O(n)</td><td>O(1) or O(n)</td></tr>
+<tr><td>Structural sharing</td><td>O(1)</td><td>Impossible (mutable)</td></tr>
+<tr><td>Pattern matching</td><td>Natural (Nil/Cons)</td><td>Complex (length check + index)</td></tr>
+<tr><td>Memory</td><td>Pointer overhead</td><td>Contiguous, cache-friendly</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>함수형 언어에서 linked list를 선호하는 이유:</strong></p>
+<ol>
+<li><strong>Immutability</strong>: Sharing이 메모리 효율적</li>
+<li><strong>Pattern matching</strong>: Constructor-based decomposition 자연스러움</li>
+<li><strong>Recursion</strong>: Recursive structure와 recursive functions 매칭</li>
+<li><strong>Prepend</strong>: 대부분의 list operations는 prepend 중심 (cons, map, filter)</li>
+</ol>
+<p><strong>Array가 더 나은 경우:</strong></p>
+<ul>
+<li>Random access가 주요 operation</li>
+<li>Numeric computing (SIMD, vectorization)</li>
+<li>Cache locality가 중요한 tight loop</li>
+</ul>
+<p><strong>FunLang의 선택:</strong></p>
+<ul>
+<li>Phase 6는 linked list로 구현 (함수형 언어 교육 목적)</li>
+<li>Phase 7에서 array/vector 추가 가능 (performance-critical code)</li>
+</ul>
+<h3 id="comparison-with-other-implementations"><a class="header" href="#comparison-with-other-implementations">Comparison with Other Implementations</a></h3>
+<p><strong>OCaml list representation:</strong></p>
+<pre><code class="language-c">// OCaml runtime
+typedef uintnat value;
+
+#define Val_int(x) ((value)((x) &lt;&lt; 1) + 1)
+#define Int_val(x) ((long)(x) &gt;&gt; 1)
+
+// List: []
+#define Val_emptylist Val_int(0)
+
+// List: head :: tail
+struct list_cell {
+    value header;  // GC header
+    value head;
+    value tail;
+};
+</code></pre>
+<p><strong>Haskell list representation (GHC):</strong></p>
+<pre><code class="language-c">// Haskell runtime
+typedef struct {
+    StgHeader header;
+    StgClosure *head;
+    StgClosure *tail;
+} StgCons;
+
+// [] is a special constructor (static object)
+</code></pre>
+<p><strong>FunLang’s simpler approach:</strong></p>
+<ul>
+<li>No GC header (Boehm GC handles this internally)</li>
+<li>Tagged union explicit (tag + data)</li>
+<li>Uniform representation (LLVM struct)</li>
+</ul>
+<h3 id="summary-list-representation-design"><a class="header" href="#summary-list-representation-design">Summary: List Representation Design</a></h3>
+<p><strong>핵심 결정사항:</strong></p>
+<ol>
+<li><strong>Tagged union</strong>: <code>!llvm.struct&lt;(i32, ptr)&gt;</code> for Nil/Cons discrimination</li>
+<li><strong>Cons cells</strong>: Heap-allocated <code>{element, tail}</code> structs via GC_malloc</li>
+<li><strong>Immutability</strong>: 리스트는 생성 후 변경 불가</li>
+<li><strong>Structural sharing</strong>: 여러 리스트가 tail을 공유 가능</li>
+<li><strong>Parameterized type</strong>: <code>!funlang.list&lt;T&gt;</code> for type safety</li>
+</ol>
+<p><strong>다음 섹션에서:</strong></p>
+<ul>
+<li><code>!funlang.list&lt;T&gt;</code> TableGen 정의</li>
+<li><code>funlang.nil</code> operation 구현</li>
+<li><code>funlang.cons</code> operation 구현</li>
+</ul>
+<hr>
+<h2 id="funlang-list-type"><a class="header" href="#funlang-list-type">FunLang List Type</a></h2>
+<p>이제 list를 표현할 <strong>MLIR type</strong>을 정의한다. Chapter 15에서 배운 parameterized type 패턴을 적용한다.</p>
+<h3 id="parameterized-type의-필요성"><a class="header" href="#parameterized-type의-필요성">Parameterized Type의 필요성</a></h3>
+<p><strong>왜 <code>!funlang.list</code>가 아니라 <code>!funlang.list&lt;T&gt;</code>인가?</strong></p>
+<pre><code class="language-mlir">// 잘못된 설계: Opaque list type
+def FunLang_ListType : FunLang_Type&lt;"List", "list"&gt; {
+  // No type parameters!
+}
+
+// 사용 예
+%list1 = funlang.nil : !funlang.list  // 어떤 타입의 원소?
+%list2 = funlang.cons %x, %list1 : !funlang.list  // %x의 타입은?
+
+// 문제점:
+// 1. Type checker가 element type을 검증할 수 없음
+// 2. funlang.cons의 head 타입이 tail의 element type과 일치하는지 확인 불가
+// 3. funlang.match의 cons region에서 head의 타입을 추론할 수 없음
+</code></pre>
+<p><strong>올바른 설계: Parameterized type</strong></p>
+<pre><code class="language-mlir">def FunLang_ListType : FunLang_Type&lt;"List", "list", [
+    TypeParameter&lt;"Type", "elementType"&gt;
+]&gt; {
+  // Type parameter: T
+}
+
+// 사용 예
+%int_list = funlang.nil : !funlang.list&lt;i32&gt;
+%float_list = funlang.nil : !funlang.list&lt;f64&gt;
+%closure_list = funlang.nil : !funlang.list&lt;!funlang.closure&gt;
+
+// 장점:
+// 1. Type checker가 element type 검증
+// 2. funlang.cons %x, %tail에서 %x : T (T는 tail의 element type)
+// 3. funlang.match의 ^cons region에서 head : T
+</code></pre>
+<h3 id="tablegen-type-definition"><a class="header" href="#tablegen-type-definition">TableGen Type Definition</a></h3>
+<p><strong>파일: <code>mlir/include/mlir/Dialect/FunLang/FunLangOps.td</code></strong></p>
+<pre><code class="language-tablegen">//===----------------------------------------------------------------------===//
+// FunLang Types
+//===----------------------------------------------------------------------===//
+
+// ClosureType (Chapter 15)
+def FunLang_ClosureType : FunLang_Type&lt;"Closure", "closure"&gt; {
+  let summary = "FunLang closure type (opaque)";
+
+  let description = [{
+    Represents a closure (function + captured environment).
+
+    Syntax: `!funlang.closure`
+
+    Lowering:
+    - FunLang dialect: !funlang.closure
+    - LLVM dialect: !llvm.ptr
+
+    Internal representation (after lowering):
+    ```
+    struct {
+        ptr fn_ptr;      // function pointer
+        T1 capture1;     // captured variable 1
+        T2 capture2;     // captured variable 2
+        ...
+    }
+    ```
+  }];
+}
+
+// ListType (Chapter 18)
+def FunLang_ListType : FunLang_Type&lt;"List", "list", [
+    TypeParameter&lt;"Type", "elementType"&gt;
+]&gt; {
+  let summary = "FunLang immutable list type";
+
+  let description = [{
+    Represents an immutable linked list with type parameter.
+
+    Syntax: `!funlang.list&lt;T&gt;`
+
+    Type parameter:
+    - T: Element type (any MLIR type)
+
+    Examples:
+    ```
+    !funlang.list&lt;i32&gt;          // List of integers
+    !funlang.list&lt;f64&gt;          // List of floats
+    !funlang.list&lt;!funlang.closure&gt;  // List of closures
+    !funlang.list&lt;!funlang.list&lt;i32&gt;&gt;  // List of lists (nested)
+    ```
+
+    Lowering:
+    - FunLang dialect: !funlang.list&lt;T&gt;
+    - LLVM dialect: !llvm.struct&lt;(i32, ptr)&gt;
+
+    Internal representation (after lowering):
+    ```
+    struct TaggedUnion {
+        i32 tag;        // 0 = Nil, 1 = Cons
+        ptr data;       // nullptr for Nil, cons cell pointer for Cons
+    }
+
+    struct ConsCell {
+        T element;      // head element
+        TaggedUnion tail;  // tail list
+    }
+    ```
+
+    Note: Element type T is compile-time information only.
+          Runtime representation is uniform (opaque pointer).
+  }];
+
+  let parameters = (ins "Type":$elementType);
+
+  let assemblyFormat = "`&lt;` $elementType `&gt;`";
+
+  let builders = [
+    TypeBuilder&lt;(ins "Type":$elementType), [{
+      return Base::get($_ctxt, elementType);
+    }]&gt;
+  ];
+}
+</code></pre>
+<p><strong>핵심 요소:</strong></p>
+<ol>
+<li>
+<p><strong>Type parameter</strong>: <code>TypeParameter&lt;"Type", "elementType"&gt;</code></p>
+<ul>
+<li>C++ 클래스에서 <code>Type getElementType() const</code> 메서드 생성</li>
+<li>Assembly format에서 <code>!funlang.list&lt;i32&gt;</code> 형태로 출력</li>
+</ul>
+</li>
+<li>
+<p><strong>Assembly format</strong>: <code>"`&lt;` $elementType `&gt;`"</code></p>
+<ul>
+<li><code>&lt;T&gt;</code> syntax for parameterized type</li>
+<li>TableGen이 parser/printer 자동 생성</li>
+</ul>
+</li>
+<li>
+<p><strong>Builder</strong>: 편의를 위한 생성자</p>
+<ul>
+<li><code>FunLangListType::get(context, elementType)</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="generated-c-interface"><a class="header" href="#generated-c-interface">Generated C++ Interface</a></h3>
+<p>TableGen이 생성하는 C++ 코드:</p>
+<pre><code class="language-cpp">// mlir/include/mlir/Dialect/FunLang/FunLangTypes.h
+
+namespace mlir {
+namespace funlang {
+
+class FunLangListType : public Type::TypeBase&lt;
+    FunLangListType,
+    Type,
+    detail::FunLangListTypeStorage,   // Storage for type parameters
+    TypeTrait::HasTypeParameter&gt; {    // Trait for parameterized types
+public:
+  using Base::Base;
+
+  /// Create !funlang.list&lt;elementType&gt;
+  static FunLangListType get(MLIRContext *context, Type elementType);
+
+  /// Get element type from !funlang.list&lt;T&gt;
+  Type getElementType() const;
+
+  /// Parse !funlang.list&lt;T&gt; from assembly
+  static Type parse(AsmParser &amp;parser);
+
+  /// Print !funlang.list&lt;T&gt; to assembly
+  void print(AsmPrinter &amp;printer) const;
+
+  /// Verify type parameter is valid
+  static LogicalResult verify(
+      function_ref&lt;InFlightDiagnostic()&gt; emitError,
+      Type elementType);
+};
+
+} // namespace funlang
+} // namespace mlir
+</code></pre>
+<p><strong>Storage implementation (TableGen이 생성):</strong></p>
+<pre><code class="language-cpp">namespace mlir {
+namespace funlang {
+namespace detail {
+
+struct FunLangListTypeStorage : public TypeStorage {
+  using KeyTy = Type;  // elementType is the key
+
+  FunLangListTypeStorage(Type elementType) : elementType(elementType) {}
+
+  bool operator==(const KeyTy &amp;key) const {
+    return elementType == key;
+  }
+
+  static FunLangListTypeStorage *construct(
+      TypeStorageAllocator &amp;allocator, const KeyTy &amp;key) {
+    return new (allocator.allocate&lt;FunLangListTypeStorage&gt;())
+        FunLangListTypeStorage(key);
+  }
+
+  Type elementType;
+};
+
+} // namespace detail
+} // namespace funlang
+} // namespace mlir
+</code></pre>
+<h3 id="type-uniquing"><a class="header" href="#type-uniquing">Type Uniquing</a></h3>
+<p>MLIR은 type uniquing을 자동으로 수행한다:</p>
+<pre><code class="language-cpp">// Same element type → same type instance
+auto ctx = /* context */;
+auto i32Ty = IntegerType::get(ctx, 32);
+
+auto listTy1 = FunLangListType::get(ctx, i32Ty);
+auto listTy2 = FunLangListType::get(ctx, i32Ty);
+
+assert(listTy1 == listTy2);  // Same pointer!
+</code></pre>
+<p><strong>장점:</strong></p>
+<ul>
+<li>Type comparison은 pointer equality (<code>==</code>)</li>
+<li>Type hashing 효율적</li>
+<li>Memory 효율적 (각 unique type은 한 번만 저장)</li>
+</ul>
+<h3 id="c-api-shim"><a class="header" href="#c-api-shim">C API Shim</a></h3>
+<p>F#에서 사용하기 위한 C API:</p>
+<p><strong>파일: <code>mlir/lib/CAPI/Dialect/FunLang.cpp</code></strong></p>
+<pre><code class="language-cpp">//===----------------------------------------------------------------------===//
+// ListType
+//===----------------------------------------------------------------------===//
+
+/// Create !funlang.list&lt;elementType&gt;
+MlirType mlirFunLangListTypeGet(MlirContext ctx, MlirType elementType) {
+  return wrap(funlang::FunLangListType::get(
+      unwrap(ctx), unwrap(elementType)));
+}
+
+/// Check if type is !funlang.list
+bool mlirTypeIsAFunLangListType(MlirType ty) {
+  return unwrap(ty).isa&lt;funlang::FunLangListType&gt;();
+}
+
+/// Get element type from !funlang.list&lt;T&gt;
+MlirType mlirFunLangListTypeGetElementType(MlirType ty) {
+  auto listTy = unwrap(ty).cast&lt;funlang::FunLangListType&gt;();
+  return wrap(listTy.getElementType());
+}
+</code></pre>
+<p><strong>헤더 파일: <code>mlir/include/mlir-c/Dialect/FunLang.h</code></strong></p>
+<pre><code class="language-c">#ifndef MLIR_C_DIALECT_FUNLANG_H
+#define MLIR_C_DIALECT_FUNLANG_H
+
+#include "mlir-c/IR.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//===----------------------------------------------------------------------===//
+// ListType
+//===----------------------------------------------------------------------===//
+
+/// Create !funlang.list&lt;elementType&gt; type
+MLIR_CAPI_EXPORTED MlirType
+mlirFunLangListTypeGet(MlirContext ctx, MlirType elementType);
+
+/// Check if type is !funlang.list
+MLIR_CAPI_EXPORTED bool
+mlirTypeIsAFunLangListType(MlirType ty);
+
+/// Get element type from !funlang.list&lt;T&gt;
+MLIR_CAPI_EXPORTED MlirType
+mlirFunLangListTypeGetElementType(MlirType ty);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // MLIR_C_DIALECT_FUNLANG_H
+</code></pre>
+<h3 id="f-bindings"><a class="header" href="#f-bindings">F# Bindings</a></h3>
+<p><strong>파일: <code>FunLang.Compiler/MlirBindings.fs</code></strong></p>
+<pre><code class="language-fsharp">module FunLangBindings =
+    [&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirFunLangListTypeGet(MlirContext ctx, MlirType elementType)
+
+    [&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern bool mlirTypeIsAFunLangListType(MlirType ty)
+
+    [&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirType mlirFunLangListTypeGetElementType(MlirType ty)
+</code></pre>
+<p><strong>FunLangDialect wrapper:</strong></p>
+<pre><code class="language-fsharp">type FunLangDialect(ctx: MlirContext) =
+    member this.Context = ctx
+
+    //==========================================================================
+    // Types
+    //==========================================================================
+
+    /// Create !funlang.closure type
+    member this.ClosureType() : MlirType =
+        FunLangBindings.mlirFunLangClosureTypeGet(this.Context)
+
+    /// Check if type is !funlang.closure
+    member this.IsClosureType(ty: MlirType) : bool =
+        FunLangBindings.mlirTypeIsAFunLangClosureType(ty)
+
+    /// Create !funlang.list&lt;T&gt; type
+    member this.ListType(elementType: MlirType) : MlirType =
+        FunLangBindings.mlirFunLangListTypeGet(this.Context, elementType)
+
+    /// Check if type is !funlang.list
+    member this.IsListType(ty: MlirType) : bool =
+        FunLangBindings.mlirTypeIsAFunLangListType(ty)
+
+    /// Get element type from !funlang.list&lt;T&gt;
+    member this.ListElementType(ty: MlirType) : MlirType =
+        if not (this.IsListType(ty)) then
+            invalidArg "ty" "Expected !funlang.list type"
+        FunLangBindings.mlirFunLangListTypeGetElementType(ty)
+</code></pre>
+<p><strong>OpBuilder extension:</strong></p>
+<pre><code class="language-fsharp">type OpBuilder with
+    /// Create !funlang.list&lt;T&gt; type
+    member this.FunLangListType(elementType: MlirType) : MlirType =
+        let funlang = FunLangDialect(this.Context)
+        funlang.ListType(elementType)
+</code></pre>
+<h3 id="f-usage-examples"><a class="header" href="#f-usage-examples">F# Usage Examples</a></h3>
+<pre><code class="language-fsharp">// F# compiler code
+let compileListExpr (builder: OpBuilder) =
+    // Create type: !funlang.list&lt;i32&gt;
+    let i32Type = builder.IntegerType(32)
+    let listType = builder.FunLangListType(i32Type)
+
+    // Create empty list
+    let nil = builder.CreateNil(listType)
+
+    // Create cons cell
+    let head = (* some i32 value *)
+    let cons = builder.CreateCons(head, nil)
+
+    cons
+
+// Check if type is list type
+let isListType (ty: MlirType) =
+    let funlang = FunLangDialect(ctx)
+    funlang.IsListType(ty)
+
+// Get element type
+let getElementType (listTy: MlirType) =
+    let funlang = FunLangDialect(ctx)
+    if funlang.IsListType(listTy) then
+        Some (funlang.ListElementType(listTy))
+    else
+        None
+</code></pre>
+<h3 id="nested-list-types"><a class="header" href="#nested-list-types">Nested List Types</a></h3>
+<p>Parameterized type이므로 중첩 가능:</p>
+<pre><code class="language-mlir">// List of lists
+!funlang.list&lt;!funlang.list&lt;i32&gt;&gt;
+
+// Example: [[1, 2], [3, 4]]
+%inner_nil = funlang.nil : !funlang.list&lt;i32&gt;
+%inner1 = funlang.cons %c2, %inner_nil : !funlang.list&lt;i32&gt;
+%inner1 = funlang.cons %c1, %inner1 : !funlang.list&lt;i32&gt;  // [1, 2]
+
+%inner2 = funlang.cons %c4, %inner_nil : !funlang.list&lt;i32&gt;
+%inner2 = funlang.cons %c3, %inner2 : !funlang.list&lt;i32&gt;  // [3, 4]
+
+%outer_nil = funlang.nil : !funlang.list&lt;!funlang.list&lt;i32&gt;&gt;
+%outer = funlang.cons %inner2, %outer_nil : !funlang.list&lt;!funlang.list&lt;i32&gt;&gt;
+%outer = funlang.cons %inner1, %outer : !funlang.list&lt;!funlang.list&lt;i32&gt;&gt;
+// [[1, 2], [3, 4]]
+</code></pre>
+<p><strong>Lowering:</strong></p>
+<pre><code>!funlang.list&lt;!funlang.list&lt;i32&gt;&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+
+// 동일한 표현! Element type은 컴파일 타임 정보만
+</code></pre>
+<h3 id="type-verification"><a class="header" href="#type-verification">Type Verification</a></h3>
+<p>TableGen이 자동으로 verification 생성하지만, 추가 검증 가능:</p>
+<pre><code class="language-cpp">LogicalResult FunLangListType::verify(
+    function_ref&lt;InFlightDiagnostic()&gt; emitError,
+    Type elementType) {
+  // Element type must be non-null
+  if (!elementType)
+    return emitError() &lt;&lt; "list element type cannot be null";
+
+  // Additional constraints (if needed)
+  // e.g., element type must be first-class (no void, etc.)
+
+  return success();
+}
+</code></pre>
+<h3 id="summary-funlang-list-type"><a class="header" href="#summary-funlang-list-type">Summary: FunLang List Type</a></h3>
+<p><strong>구현 완료:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> <code>!funlang.list&lt;T&gt;</code> parameterized type in TableGen</li>
+<li><input disabled="" type="checkbox" checked=""> C++ interface with <code>getElementType()</code> method</li>
+<li><input disabled="" type="checkbox" checked=""> C API shim: <code>mlirFunLangListTypeGet</code>, <code>mlirTypeIsAFunLangListType</code>, <code>mlirFunLangListTypeGetElementType</code></li>
+<li><input disabled="" type="checkbox" checked=""> F# bindings in <code>FunLangDialect</code> class</li>
+<li><input disabled="" type="checkbox" checked=""> OpBuilder extension for convenient usage</li>
+</ul>
+<p><strong>다음 섹션:</strong></p>
+<ul>
+<li><code>funlang.nil</code> operation으로 empty list 생성</li>
+<li><code>funlang.cons</code> operation으로 cons cell 생성</li>
+</ul>
+<hr>
+<h2 id="funlangnil-operation"><a class="header" href="#funlangnil-operation">funlang.nil Operation</a></h2>
+<p>Empty list를 생성하는 operation을 구현한다.</p>
+<h3 id="purpose-and-semantics"><a class="header" href="#purpose-and-semantics">Purpose and Semantics</a></h3>
+<p><strong>funlang.nil의 역할:</strong></p>
+<ul>
+<li>Empty list (빈 리스트) 생성</li>
+<li>리스트의 base case (재귀의 종료 조건)</li>
+<li>Runtime allocation 불필요 (constant representation)</li>
+</ul>
+<p><strong>예제:</strong></p>
+<pre><code class="language-mlir">// Create empty list of integers
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+
+// Create empty list of floats
+%nil = funlang.nil : !funlang.list&lt;f64&gt;
+
+// Create empty list of closures
+%nil = funlang.nil : !funlang.list&lt;!funlang.closure&gt;
+</code></pre>
+<p><strong>의미:</strong></p>
+<pre><code>funlang.nil : !funlang.list&lt;T&gt;
+
+// Equivalent to (after lowering):
+{tag: 0, data: null}
+</code></pre>
+<h3 id="tablegen-ods-definition"><a class="header" href="#tablegen-ods-definition">TableGen ODS Definition</a></h3>
+<p><strong>파일: <code>mlir/include/mlir/Dialect/FunLang/FunLangOps.td</code></strong></p>
+<pre><code class="language-tablegen">//===----------------------------------------------------------------------===//
+// List Operations
+//===----------------------------------------------------------------------===//
+
+def FunLang_NilOp : FunLang_Op&lt;"nil", [Pure]&gt; {
+  let summary = "Create empty list";
+
+  let description = [{
+    Creates an empty list (Nil constructor).
+
+    Syntax:
+    ```
+    %nil = funlang.nil : !funlang.list&lt;T&gt;
+    ```
+
+    The result type specifies the element type of the list.
+
+    Examples:
+    ```
+    // Empty list of integers
+    %nil_int = funlang.nil : !funlang.list&lt;i32&gt;
+
+    // Empty list of closures
+    %nil_closure = funlang.nil : !funlang.list&lt;!funlang.closure&gt;
+    ```
+
+    Lowering:
+    ```
+    %nil = funlang.nil : !funlang.list&lt;i32&gt;
+
+    // Lowers to:
+    %tag = arith.constant 0 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %nil = llvm.insertvalue %null, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    ```
+
+    Traits: Pure (no side effects, no memory allocation)
+  }];
+
+  let arguments = (ins);
+
+  let results = (outs FunLang_ListType:$result);
+
+  let assemblyFormat = "attr-dict `:` type($result)";
+
+  let builders = [
+    OpBuilder&lt;(ins "Type":$elementType), [{
+      auto listType = funlang::FunLangListType::get($_builder.getContext(), elementType);
+      $_state.addTypes(listType);
+    }]&gt;
+  ];
+}
+</code></pre>
+<p><strong>핵심 요소:</strong></p>
+<ol>
+<li>
+<p><strong>Pure trait</strong>: No side effects, 메모리 할당 없음</p>
+<ul>
+<li>CSE (Common Subexpression Elimination) 가능</li>
+<li>같은 element type의 nil은 한 번만 생성 가능</li>
+</ul>
+</li>
+<li>
+<p><strong>No arguments</strong>: Empty list는 인자 불필요</p>
+</li>
+<li>
+<p><strong>Result type</strong>: <code>!funlang.list&lt;T&gt;</code> (element type 명시 필요)</p>
+</li>
+<li>
+<p><strong>Assembly format</strong>: <code>funlang.nil : !funlang.list&lt;i32&gt;</code></p>
+<ul>
+<li>Type suffix로 element type 지정</li>
+</ul>
+</li>
+<li>
+<p><strong>Builder</strong>: Element type만으로 NilOp 생성 가능</p>
+</li>
+</ol>
+<h3 id="generated-c-interface-1"><a class="header" href="#generated-c-interface-1">Generated C++ Interface</a></h3>
+<p>TableGen이 생성하는 C++ 코드:</p>
+<pre><code class="language-cpp">// mlir/include/mlir/Dialect/FunLang/FunLangOps.h
+
+namespace mlir {
+namespace funlang {
+
+class NilOp : public Op&lt;
+    NilOp,
+    OpTrait::ZeroOperands,
+    OpTrait::OneResult,
+    OpTrait::Pure&gt; {
+public:
+  using Op::Op;
+
+  static StringRef getOperationName() { return "funlang.nil"; }
+
+  /// Get result type (!funlang.list&lt;T&gt;)
+  FunLangListType getType() {
+    return getResult().getType().cast&lt;FunLangListType&gt;();
+  }
+
+  /// Get element type (T from !funlang.list&lt;T&gt;)
+  Type getElementType() {
+    return getType().getElementType();
+  }
+
+  /// Build NilOp with element type
+  static void build(
+      OpBuilder &amp;builder,
+      OperationState &amp;state,
+      Type elementType);
+
+  /// Verify operation
+  LogicalResult verify();
+
+  /// Parse from assembly
+  static ParseResult parse(OpAsmParser &amp;parser, OperationState &amp;result);
+
+  /// Print to assembly
+  void print(OpAsmPrinter &amp;p);
+};
+
+} // namespace funlang
+} // namespace mlir
+</code></pre>
+<h3 id="verification"><a class="header" href="#verification">Verification</a></h3>
+<pre><code class="language-cpp">LogicalResult NilOp::verify() {
+  // Result must be !funlang.list&lt;T&gt;
+  auto resultTy = getResult().getType();
+  if (!resultTy.isa&lt;FunLangListType&gt;()) {
+    return emitOpError("result must be !funlang.list type");
+  }
+
+  // Element type must be valid (checked by FunLangListType::verify)
+  return success();
+}
+</code></pre>
+<h3 id="c-api-shim-1"><a class="header" href="#c-api-shim-1">C API Shim</a></h3>
+<p><strong>파일: <code>mlir/lib/CAPI/Dialect/FunLang.cpp</code></strong></p>
+<pre><code class="language-cpp">//===----------------------------------------------------------------------===//
+// NilOp
+//===----------------------------------------------------------------------===//
+
+MlirOperation mlirFunLangNilOpCreate(
+    MlirLocation loc,
+    MlirType elementType) {
+  mlir::OpBuilder builder(unwrap(loc)-&gt;getContext());
+  builder.setInsertionPointToStart(/* appropriate block */);
+
+  auto listType = funlang::FunLangListType::get(
+      unwrap(loc)-&gt;getContext(), unwrap(elementType));
+
+  auto op = builder.create&lt;funlang::NilOp&gt;(
+      unwrap(loc), listType);
+
+  return wrap(op.getOperation());
+}
+</code></pre>
+<p><strong>헤더 파일: <code>mlir/include/mlir-c/Dialect/FunLang.h</code></strong></p>
+<pre><code class="language-c">//===----------------------------------------------------------------------===//
+// NilOp
+//===----------------------------------------------------------------------===//
+
+/// Create funlang.nil operation
+/// Returns MlirOperation (not MlirValue - use mlirOperationGetResult)
+MLIR_CAPI_EXPORTED MlirOperation
+mlirFunLangNilOpCreate(MlirLocation loc, MlirType elementType);
+</code></pre>
+<h3 id="f-bindings-1"><a class="header" href="#f-bindings-1">F# Bindings</a></h3>
+<p><strong>파일: <code>FunLang.Compiler/MlirBindings.fs</code></strong></p>
+<pre><code class="language-fsharp">module FunLangBindings =
+    // ... (previous bindings) ...
+
+    //==========================================================================
+    // Operations - NilOp
+    //==========================================================================
+
+    [&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirFunLangNilOpCreate(MlirLocation loc, MlirType elementType)
+</code></pre>
+<p><strong>FunLangDialect wrapper:</strong></p>
+<pre><code class="language-fsharp">type FunLangDialect(ctx: MlirContext) =
+    // ... (previous members) ...
+
+    //==========================================================================
+    // Operation Creation
+    //==========================================================================
+
+    /// Create funlang.nil operation
+    member this.CreateNilOp(loc: MlirLocation, elementType: MlirType) : MlirOperation =
+        FunLangBindings.mlirFunLangNilOpCreate(loc, elementType)
+
+    /// Create funlang.nil and return the result value
+    member this.CreateNil(loc: MlirLocation, elementType: MlirType) : MlirValue =
+        let op = this.CreateNilOp(loc, elementType)
+        MlirHelpers.GetOperationResult(op, 0)
+</code></pre>
+<p><strong>OpBuilder extension:</strong></p>
+<pre><code class="language-fsharp">type OpBuilder with
+    // ... (previous members) ...
+
+    /// Create funlang.nil operation
+    member this.CreateNilOp(elementType: MlirType) : MlirOperation =
+        let funlang = FunLangDialect(this.Context)
+        funlang.CreateNilOp(this.UnknownLoc, elementType)
+
+    /// Create funlang.nil and return result value
+    member this.CreateNil(elementType: MlirType) : MlirValue =
+        let funlang = FunLangDialect(this.Context)
+        funlang.CreateNil(this.UnknownLoc, elementType)
+</code></pre>
+<h3 id="f-usage-examples-1"><a class="header" href="#f-usage-examples-1">F# Usage Examples</a></h3>
+<pre><code class="language-fsharp">// Example 1: Basic usage
+let builder = OpBuilder(ctx)
+
+let i32Type = builder.IntegerType(32)
+let nilValue = builder.CreateNil(i32Type)
+// %nil = funlang.nil : !funlang.list&lt;i32&gt;
+
+// Example 2: Building list [1, 2, 3] (forward)
+let nil = builder.CreateNil(i32Type)
+let c1 = builder.CreateConstantInt(1, 32)
+let c2 = builder.CreateConstantInt(2, 32)
+let c3 = builder.CreateConstantInt(3, 32)
+
+// Build from right to left: 3 → 2 → 1 → nil
+let lst1 = builder.CreateCons(c3, nil)    // [3]
+let lst2 = builder.CreateCons(c2, lst1)   // [2, 3]
+let lst3 = builder.CreateCons(c1, lst2)   // [1, 2, 3]
+
+// Example 3: Empty list of different types
+let floatType = builder.FloatType(64)
+let nilFloat = builder.CreateNil(floatType)
+// %nil = funlang.nil : !funlang.list&lt;f64&gt;
+
+let closureType = builder.FunLangClosureType()
+let nilClosure = builder.CreateNil(closureType)
+// %nil = funlang.nil : !funlang.list&lt;!funlang.closure&gt;
+</code></pre>
+<h3 id="no-runtime-allocation-needed"><a class="header" href="#no-runtime-allocation-needed">No Runtime Allocation Needed</a></h3>
+<p><strong>중요한 최적화 기회:</strong></p>
+<pre><code class="language-mlir">// Multiple nil operations
+%nil1 = funlang.nil : !funlang.list&lt;i32&gt;
+%nil2 = funlang.nil : !funlang.list&lt;i32&gt;
+%nil3 = funlang.nil : !funlang.list&lt;i32&gt;
+
+// Pure trait enables CSE:
+// → All replaced with single %nil!
+
+// Lowering (only once):
+%tag = arith.constant 0 : i32
+%null = llvm.mlir.zero : !llvm.ptr
+%undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%nil = llvm.insertvalue %null, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+// No GC_malloc call! (constant struct)
+</code></pre>
+<p><strong>Static empty list (advanced optimization - Phase 7):</strong></p>
+<pre><code class="language-cpp">// Could use global constant for empty list
+static const struct { int tag; void* data; } EMPTY_LIST = {0, NULL};
+
+// All funlang.nil → load from EMPTY_LIST address
+</code></pre>
+<h3 id="summary-funlangnil-operation"><a class="header" href="#summary-funlangnil-operation">Summary: funlang.nil Operation</a></h3>
+<p><strong>구현 완료:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> TableGen ODS definition with Pure trait</li>
+<li><input disabled="" type="checkbox" checked=""> No arguments, result type is <code>!funlang.list&lt;T&gt;</code></li>
+<li><input disabled="" type="checkbox" checked=""> C API shim: <code>mlirFunLangNilOpCreate</code></li>
+<li><input disabled="" type="checkbox" checked=""> F# bindings: <code>CreateNilOp</code>, <code>CreateNil</code></li>
+<li><input disabled="" type="checkbox" checked=""> OpBuilder extension for convenient usage</li>
+</ul>
+<p><strong>특징:</strong></p>
+<ul>
+<li>Pure operation (CSE 가능)</li>
+<li>No runtime allocation</li>
+<li>Result type으로 element type 지정</li>
+</ul>
+<p><strong>다음 섹션:</strong></p>
+<ul>
+<li><code>funlang.cons</code> operation으로 cons cell 생성</li>
+</ul>
+<hr>
+<h2 id="funlangcons-operation"><a class="header" href="#funlangcons-operation">funlang.cons Operation</a></h2>
+<p>Cons cell을 생성하는 operation을 구현한다. 리스트의 핵심 생성자다.</p>
+<h3 id="purpose-and-semantics-1"><a class="header" href="#purpose-and-semantics-1">Purpose and Semantics</a></h3>
+<p><strong>funlang.cons의 역할:</strong></p>
+<ul>
+<li>Non-empty list 생성 (head :: tail)</li>
+<li>리스트의 recursive case</li>
+<li>GC를 통한 heap allocation</li>
+</ul>
+<p><strong>예제:</strong></p>
+<pre><code class="language-mlir">// Prepend element to list
+%lst = funlang.cons %head, %tail : !funlang.list&lt;i32&gt;
+
+// Build list [1, 2, 3]
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%c3 = arith.constant 3 : i32
+%lst1 = funlang.cons %c3, %nil : !funlang.list&lt;i32&gt;    // [3]
+%c2 = arith.constant 2 : i32
+%lst2 = funlang.cons %c2, %lst1 : !funlang.list&lt;i32&gt;   // [2, 3]
+%c1 = arith.constant 1 : i32
+%lst3 = funlang.cons %c1, %lst2 : !funlang.list&lt;i32&gt;   // [1, 2, 3]
+</code></pre>
+<p><strong>의미:</strong></p>
+<pre><code>funlang.cons %head, %tail : !funlang.list&lt;T&gt;
+
+// Equivalent to (after lowering):
+cell = GC_malloc(sizeof(T) + sizeof(ptr))
+cell-&gt;head = %head
+cell-&gt;tail = %tail
+result = {tag: 1, data: cell}
+</code></pre>
+<h3 id="tablegen-ods-definition-1"><a class="header" href="#tablegen-ods-definition-1">TableGen ODS Definition</a></h3>
+<p><strong>파일: <code>mlir/include/mlir/Dialect/FunLang/FunLangOps.td</code></strong></p>
+<pre><code class="language-tablegen">def FunLang_ConsOp : FunLang_Op&lt;"cons", []&gt; {
+  let summary = "Create cons cell (non-empty list)";
+
+  let description = [{
+    Creates a cons cell by prepending an element to a list.
+
+    Syntax:
+    ```
+    %result = funlang.cons %head, %tail : !funlang.list&lt;T&gt;
+    ```
+
+    Arguments:
+    - `head`: Element to prepend (type T)
+    - `tail`: Existing list (type !funlang.list&lt;T&gt;)
+
+    Result:
+    - New list with `head` prepended to `tail` (type !funlang.list&lt;T&gt;)
+
+    Type constraints:
+    - `head` type must match element type of `tail` list
+    - Result type is same as `tail` type
+
+    Examples:
+    ```
+    // Create [1]
+    %nil = funlang.nil : !funlang.list&lt;i32&gt;
+    %c1 = arith.constant 1 : i32
+    %lst = funlang.cons %c1, %nil : !funlang.list&lt;i32&gt;
+
+    // Create [1, 2, 3]
+    %c3 = arith.constant 3 : i32
+    %lst1 = funlang.cons %c3, %nil : !funlang.list&lt;i32&gt;
+    %c2 = arith.constant 2 : i32
+    %lst2 = funlang.cons %c2, %lst1 : !funlang.list&lt;i32&gt;
+    %lst3 = funlang.cons %c1, %lst2 : !funlang.list&lt;i32&gt;
+    ```
+
+    Lowering:
+    ```
+    %lst = funlang.cons %head, %tail : !funlang.list&lt;i32&gt;
+
+    // Lowers to:
+    // 1. Allocate cons cell
+    %size = arith.constant 16 : i64  // sizeof(i32) + sizeof(struct)
+    %cell = llvm.call @GC_malloc(%size) : (i64) -&gt; !llvm.ptr
+
+    // 2. Store head
+    %head_ptr = llvm.getelementptr %cell[0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %head, %head_ptr : i32, !llvm.ptr
+
+    // 3. Store tail
+    %tail_ptr = llvm.getelementptr %cell[1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %tail, %tail_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+
+    // 4. Build tagged union
+    %tag = arith.constant 1 : i32
+    %undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %lst = llvm.insertvalue %cell, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    ```
+
+    Note: No Pure trait (allocates memory via GC_malloc)
+  }];
+
+  let arguments = (ins AnyType:$head, FunLang_ListType:$tail);
+
+  let results = (outs FunLang_ListType:$result);
+
+  let assemblyFormat = "$head `,` $tail attr-dict `:` type($result)";
+
+  let builders = [
+    OpBuilder&lt;(ins "Value":$head, "Value":$tail), [{
+      auto tailType = tail.getType().cast&lt;funlang::FunLangListType&gt;();
+      $_state.addOperands({head, tail});
+      $_state.addTypes(tailType);
+    }]&gt;
+  ];
+
+  let extraClassDeclaration = [{
+    /// Get element type (T from !funlang.list&lt;T&gt;)
+    Type getElementType() {
+      return getResult().getType().cast&lt;FunLangListType&gt;().getElementType();
+    }
+  }];
+}
+</code></pre>
+<p><strong>핵심 요소:</strong></p>
+<ol>
+<li>
+<p><strong>No Pure trait</strong>: GC_malloc 호출로 side effect 발생</p>
+<ul>
+<li>CSE 불가능 (각 cons는 새로운 cell 할당)</li>
+<li>Dead code elimination 신중하게 (allocation 유지 필요할 수도)</li>
+</ul>
+</li>
+<li>
+<p><strong>Arguments</strong>: <code>head</code> (element), <code>tail</code> (list)</p>
+<ul>
+<li><code>head</code>: AnyType (element type은 tail과 검증)</li>
+<li><code>tail</code>: FunLang_ListType</li>
+</ul>
+</li>
+<li>
+<p><strong>Result type</strong>: Same as <code>tail</code> type</p>
+<ul>
+<li>Builder가 자동으로 tail의 타입을 result에 사용</li>
+</ul>
+</li>
+<li>
+<p><strong>Assembly format</strong>: <code>funlang.cons %head, %tail : !funlang.list&lt;i32&gt;</code></p>
+</li>
+<li>
+<p><strong>extraClassDeclaration</strong>: <code>getElementType()</code> 헬퍼 메서드</p>
+</li>
+</ol>
+<h3 id="type-constraints-and-verification"><a class="header" href="#type-constraints-and-verification">Type Constraints and Verification</a></h3>
+<pre><code class="language-cpp">LogicalResult ConsOp::verify() {
+  // Tail must be !funlang.list&lt;T&gt;
+  auto tailType = getTail().getType().dyn_cast&lt;FunLangListType&gt;();
+  if (!tailType) {
+    return emitOpError("tail must be !funlang.list type");
+  }
+
+  // Result must be same type as tail
+  auto resultType = getResult().getType().dyn_cast&lt;FunLangListType&gt;();
+  if (!resultType || resultType != tailType) {
+    return emitOpError("result type must match tail type");
+  }
+
+  // Head type must match element type of list
+  Type headType = getHead().getType();
+  Type elemType = tailType.getElementType();
+  if (headType != elemType) {
+    return emitOpError("head type (")
+        &lt;&lt; headType &lt;&lt; ") must match list element type (" &lt;&lt; elemType &lt;&lt; ")";
+  }
+
+  return success();
+}
+</code></pre>
+<p><strong>검증하는 제약조건:</strong></p>
+<ol>
+<li>Tail은 <code>!funlang.list&lt;T&gt;</code> 타입이어야 함</li>
+<li>Result 타입은 tail 타입과 동일해야 함</li>
+<li>Head 타입은 list의 element 타입과 일치해야 함</li>
+</ol>
+<p><strong>예제: Type errors</strong></p>
+<pre><code class="language-mlir">// Error: head type mismatch
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%f = arith.constant 3.14 : f64
+%bad = funlang.cons %f, %nil : !funlang.list&lt;i32&gt;
+// Error: head type (f64) must match list element type (i32)
+
+// Error: tail not a list
+%x = arith.constant 42 : i32
+%bad = funlang.cons %x, %x : !funlang.list&lt;i32&gt;
+// Error: tail must be !funlang.list type
+
+// Error: result type mismatch
+%nil_int = funlang.nil : !funlang.list&lt;i32&gt;
+%x = arith.constant 42 : i32
+%bad = funlang.cons %x, %nil_int : !funlang.list&lt;f64&gt;
+// Error: result type must match tail type
+</code></pre>
+<h3 id="c-api-shim-2"><a class="header" href="#c-api-shim-2">C API Shim</a></h3>
+<p><strong>파일: <code>mlir/lib/CAPI/Dialect/FunLang.cpp</code></strong></p>
+<pre><code class="language-cpp">//===----------------------------------------------------------------------===//
+// ConsOp
+//===----------------------------------------------------------------------===//
+
+MlirOperation mlirFunLangConsOpCreate(
+    MlirLocation loc,
+    MlirValue head,
+    MlirValue tail) {
+  mlir::OpBuilder builder(unwrap(loc)-&gt;getContext());
+  builder.setInsertionPointToStart(/* appropriate block */);
+
+  auto op = builder.create&lt;funlang::ConsOp&gt;(
+      unwrap(loc),
+      unwrap(head),
+      unwrap(tail));
+
+  return wrap(op.getOperation());
+}
+</code></pre>
+<p><strong>헤더 파일: <code>mlir/include/mlir-c/Dialect/FunLang.h</code></strong></p>
+<pre><code class="language-c">//===----------------------------------------------------------------------===//
+// ConsOp
+//===----------------------------------------------------------------------===//
+
+/// Create funlang.cons operation
+/// Arguments:
+///   - head: Element to prepend
+///   - tail: Existing list
+/// Returns MlirOperation (use mlirOperationGetResult to get value)
+MLIR_CAPI_EXPORTED MlirOperation
+mlirFunLangConsOpCreate(
+    MlirLocation loc,
+    MlirValue head,
+    MlirValue tail);
+</code></pre>
+<h3 id="f-bindings-2"><a class="header" href="#f-bindings-2">F# Bindings</a></h3>
+<p><strong>파일: <code>FunLang.Compiler/MlirBindings.fs</code></strong></p>
+<pre><code class="language-fsharp">module FunLangBindings =
+    // ... (previous bindings) ...
+
+    //==========================================================================
+    // Operations - ConsOp
+    //==========================================================================
+
+    [&lt;DllImport("MLIR-FunLang-CAPI", CallingConvention = CallingConvention.Cdecl)&gt;]
+    extern MlirOperation mlirFunLangConsOpCreate(
+        MlirLocation loc,
+        MlirValue head,
+        MlirValue tail)
+</code></pre>
+<p><strong>FunLangDialect wrapper:</strong></p>
+<pre><code class="language-fsharp">type FunLangDialect(ctx: MlirContext) =
+    // ... (previous members) ...
+
+    /// Create funlang.cons operation
+    member this.CreateConsOp(loc: MlirLocation, head: MlirValue, tail: MlirValue) : MlirOperation =
+        FunLangBindings.mlirFunLangConsOpCreate(loc, head, tail)
+
+    /// Create funlang.cons and return the result value
+    member this.CreateCons(loc: MlirLocation, head: MlirValue, tail: MlirValue) : MlirValue =
+        let op = this.CreateConsOp(loc, head, tail)
+        MlirHelpers.GetOperationResult(op, 0)
+</code></pre>
+<p><strong>OpBuilder extension:</strong></p>
+<pre><code class="language-fsharp">type OpBuilder with
+    // ... (previous members) ...
+
+    /// Create funlang.cons operation
+    member this.CreateConsOp(head: MlirValue, tail: MlirValue) : MlirOperation =
+        let funlang = FunLangDialect(this.Context)
+        funlang.CreateConsOp(this.UnknownLoc, head, tail)
+
+    /// Create funlang.cons and return result value
+    member this.CreateCons(head: MlirValue, tail: MlirValue) : MlirValue =
+        let funlang = FunLangDialect(this.Context)
+        funlang.CreateCons(this.UnknownLoc, head, tail)
+</code></pre>
+<h3 id="f-usage-examples-2"><a class="header" href="#f-usage-examples-2">F# Usage Examples</a></h3>
+<pre><code class="language-fsharp">// Example 1: Build single-element list [42]
+let builder = OpBuilder(ctx)
+let i32Type = builder.IntegerType(32)
+
+let nil = builder.CreateNil(i32Type)
+let c42 = builder.CreateConstantInt(42, 32)
+let lst = builder.CreateCons(c42, nil)
+// %lst = funlang.cons %c42, %nil : !funlang.list&lt;i32&gt;
+
+// Example 2: Build list [1, 2, 3]
+let nil = builder.CreateNil(i32Type)
+let c1 = builder.CreateConstantInt(1, 32)
+let c2 = builder.CreateConstantInt(2, 32)
+let c3 = builder.CreateConstantInt(3, 32)
+
+// Build from right to left
+let lst1 = builder.CreateCons(c3, nil)    // [3]
+let lst2 = builder.CreateCons(c2, lst1)   // [2, 3]
+let lst3 = builder.CreateCons(c1, lst2)   // [1, 2, 3]
+
+// Example 3: Build list from F# list
+let buildList (builder: OpBuilder) (elements: MlirValue list) (elemType: MlirType) =
+    let nil = builder.CreateNil(elemType)
+    List.foldBack (fun elem acc -&gt;
+        builder.CreateCons(elem, acc)
+    ) elements nil
+
+let values = [c1; c2; c3]
+let lst = buildList builder values i32Type
+// funlang.cons %c1, (funlang.cons %c2, (funlang.cons %c3, %nil))
+
+// Example 4: Type inference from tail
+let tail = (* existing !funlang.list&lt;i32&gt; *)
+let head = builder.CreateConstantInt(99, 32)
+let extended = builder.CreateCons(head, tail)
+// Result type inferred from tail type
+</code></pre>
+<h3 id="memory-allocation-details"><a class="header" href="#memory-allocation-details">Memory Allocation Details</a></h3>
+<p><strong>Cons cell size calculation:</strong></p>
+<pre><code>ConsCell&lt;T&gt; = struct {
+    T element;
+    TaggedUnion tail;  // struct { i32 tag; ptr data }
+}
+
+Size = sizeof(T) + sizeof(i32) + sizeof(ptr)
+
+Examples:
+- i32: 4 + 4 + 8 = 16 bytes
+- f64: 8 + 4 + 8 = 20 bytes (alignment → 24 bytes)
+- !funlang.closure (ptr): 8 + 4 + 8 = 20 bytes (alignment → 24 bytes)
+</code></pre>
+<p><strong>Lowering에서 size 계산:</strong></p>
+<pre><code class="language-cpp">// ConsOpLowering::matchAndRewrite
+Value ConsOpLowering::calculateCellSize(
+    OpBuilder &amp;builder, Location loc, Type elementType) {
+  auto &amp;dataLayout = getDataLayout();
+
+  // Get element size
+  uint64_t elemSize = dataLayout.getTypeSize(elementType);
+
+  // TaggedUnion size: i32 (4 bytes) + ptr (8 bytes) = 12 bytes
+  // But alignment: struct&lt;(i32, ptr)&gt; → 16 bytes on 64-bit
+  uint64_t tailSize = 16;  // Hardcoded for simplicity
+
+  uint64_t totalSize = elemSize + tailSize;
+
+  // Align to 8 bytes
+  totalSize = (totalSize + 7) &amp; ~7;
+
+  return builder.create&lt;arith::ConstantIntOp&gt;(
+      loc, totalSize, builder.getI64Type());
+}
+</code></pre>
+<h3 id="list-construction-patterns"><a class="header" href="#list-construction-patterns">List Construction Patterns</a></h3>
+<p><strong>Pattern 1: Build from literal</strong></p>
+<pre><code class="language-fsharp">// F# source: [1; 2; 3]
+let lst = [1; 2; 3]
+
+// MLIR output:
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%c3 = arith.constant 3 : i32
+%lst1 = funlang.cons %c3, %nil : !funlang.list&lt;i32&gt;
+%c2 = arith.constant 2 : i32
+%lst2 = funlang.cons %c2, %lst1 : !funlang.list&lt;i32&gt;
+%c1 = arith.constant 1 : i32
+%lst3 = funlang.cons %c1, %lst2 : !funlang.list&lt;i32&gt;
+</code></pre>
+<p><strong>Pattern 2: Recursive construction</strong></p>
+<pre><code class="language-fsharp">// F# source
+let rec range n =
+    if n &lt;= 0 then []
+    else n :: range (n - 1)
+
+// MLIR output (simplified):
+func.func @range(%n: i32) -&gt; !funlang.list&lt;i32&gt; {
+    %zero = arith.constant 0 : i32
+    %cond = arith.cmpi sle, %n, %zero : i32
+    %result = scf.if %cond -&gt; !funlang.list&lt;i32&gt; {
+        %nil = funlang.nil : !funlang.list&lt;i32&gt;
+        scf.yield %nil : !funlang.list&lt;i32&gt;
+    } else {
+        %one = arith.constant 1 : i32
+        %n_minus_1 = arith.subi %n, %one : i32
+        %tail = func.call @range(%n_minus_1) : (i32) -&gt; !funlang.list&lt;i32&gt;
+        %cons = funlang.cons %n, %tail : !funlang.list&lt;i32&gt;
+        scf.yield %cons : !funlang.list&lt;i32&gt;
+    }
+    func.return %result : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>Pattern 3: List transformation (map)</strong></p>
+<pre><code class="language-fsharp">// F# source
+let rec map f lst =
+    match lst with
+    | [] -&gt; []
+    | head :: tail -&gt; f head :: map f tail
+
+// MLIR output (with funlang.match - Chapter 19):
+func.func @map(
+    %f: !funlang.closure,
+    %lst: !funlang.list&lt;i32&gt;
+) -&gt; !funlang.list&lt;i32&gt; {
+    %result = funlang.match %lst : !funlang.list&lt;i32&gt; -&gt; !funlang.list&lt;i32&gt; {
+      ^nil:
+        %nil = funlang.nil : !funlang.list&lt;i32&gt;
+        funlang.yield %nil : !funlang.list&lt;i32&gt;
+      ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+        %new_head = funlang.apply %f(%head) : (i32) -&gt; i32
+        %new_tail = func.call @map(%f, %tail)
+            : (!funlang.closure, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+        %new_cons = funlang.cons %new_head, %new_tail : !funlang.list&lt;i32&gt;
+        funlang.yield %new_cons : !funlang.list&lt;i32&gt;
+    }
+    func.return %result : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<h3 id="summary-funlangcons-operation"><a class="header" href="#summary-funlangcons-operation">Summary: funlang.cons Operation</a></h3>
+<p><strong>구현 완료:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> TableGen ODS definition (no Pure trait)</li>
+<li><input disabled="" type="checkbox" checked=""> Arguments: head (element), tail (list)</li>
+<li><input disabled="" type="checkbox" checked=""> Type verification: head type matches element type</li>
+<li><input disabled="" type="checkbox" checked=""> C API shim: <code>mlirFunLangConsOpCreate</code></li>
+<li><input disabled="" type="checkbox" checked=""> F# bindings: <code>CreateConsOp</code>, <code>CreateCons</code></li>
+<li><input disabled="" type="checkbox" checked=""> OpBuilder extension for convenient usage</li>
+</ul>
+<p><strong>특징:</strong></p>
+<ul>
+<li>GC allocation for cons cells</li>
+<li>Type-safe: head type must match list element type</li>
+<li>Result type inferred from tail type</li>
+</ul>
+<p><strong>다음 Part:</strong></p>
+<ul>
+<li>TypeConverter for <code>!funlang.list&lt;T&gt;</code></li>
+<li>NilOpLowering pattern</li>
+<li>ConsOpLowering pattern</li>
+<li>Complete lowering pass integration</li>
+</ul>
+<hr>
+<h2 id="튜플-타입과-연산-tuple-type-and-operations"><a class="header" href="#튜플-타입과-연산-tuple-type-and-operations">튜플 타입과 연산 (Tuple Type and Operations)</a></h2>
+<p>리스트와 함께 함수형 프로그래밍에서 필수적인 또 다른 데이터 구조가 있다: **튜플(tuple)**이다. 리스트가 같은 타입의 여러 원소를 가변 개수로 담는다면, 튜플은 서로 다른 타입의 원소들을 고정된 개수로 묶는다.</p>
+<h3 id="튜플-vs-리스트-근본적인-차이"><a class="header" href="#튜플-vs-리스트-근본적인-차이">튜플 vs 리스트: 근본적인 차이</a></h3>
+<p><strong>List:</strong></p>
+<ul>
+<li>가변 개수 (0개부터 N개까지)</li>
+<li>동질적 (모든 원소가 같은 타입)</li>
+<li>런타임에 태그로 Nil/Cons 구분 필요</li>
+<li>패턴 매칭에서 여러 case 필요</li>
+</ul>
+<pre><code class="language-fsharp">// 리스트: 가변 길이, 같은 타입
+let numbers: int list = [1; 2; 3; 4; 5]
+let empty: int list = []
+let singleton: int list = [42]
+</code></pre>
+<p><strong>Tuple:</strong></p>
+<ul>
+<li>고정 개수 (컴파일 타임에 결정)</li>
+<li>이질적 (원소마다 다른 타입 가능)</li>
+<li>태그 불필요 (항상 같은 구조)</li>
+<li>패턴 매칭에서 단일 case (항상 매칭)</li>
+</ul>
+<pre><code class="language-fsharp">// 튜플: 고정 길이, 다른 타입 가능
+let pair: int * string = (42, "hello")
+let triple: int * float * bool = (1, 3.14, true)
+let person: string * int = ("Alice", 30)
+</code></pre>
+<p><strong>메모리 표현의 차이:</strong></p>
+<pre><code>List [1, 2, 3] (가변, 태그 필요):
+┌─────────┬─────────┐     ┌─────────┬─────────┐     ┌─────────┬─────────┐     ┌─────────┬─────────┐
+│ tag=1   │ ptr  ───────► │ head=1  │ tail ────────► │ head=2  │ tail ────────► │ head=3  │ tail=NULL │
+│ (Cons)  │         │     │         │         │     │         │         │     │         │         │
+└─────────┴─────────┘     └─────────┴─────────┘     └─────────┴─────────┘     └─────────┴─────────┘
+
+Tuple (1, "hello") (고정, 태그 불필요):
+┌─────────┬─────────┐
+│  int=1  │ ptr ────────► "hello"
+│ (slot0) │ (slot1) │
+└─────────┴─────────┘
+</code></pre>
+<h3 id="튜플-타입-설계-tuple-type-design"><a class="header" href="#튜플-타입-설계-tuple-type-design">튜플 타입 설계 (Tuple Type Design)</a></h3>
+<p>FunLang에서 튜플 타입의 문법:</p>
+<pre><code class="language-mlir">// 2-tuple (pair)
+!funlang.tuple&lt;i32, f64&gt;
+
+// 3-tuple (triple)
+!funlang.tuple&lt;i32, string, bool&gt;
+
+// Nested tuple
+!funlang.tuple&lt;!funlang.tuple&lt;i32, i32&gt;, f64&gt;
+
+// Tuple of lists
+!funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt;
+</code></pre>
+<p><strong>타입 시스템에서의 특징:</strong></p>
+<ol>
+<li><strong>Arity가 타입에 인코딩</strong>: <code>!funlang.tuple&lt;i32&gt;</code> (1-tuple)과 <code>!funlang.tuple&lt;i32, i32&gt;</code> (2-tuple)은 다른 타입</li>
+<li><strong>원소 타입 순서가 중요</strong>: <code>!funlang.tuple&lt;i32, f64&gt;</code> ≠ <code>!funlang.tuple&lt;f64, i32&gt;</code></li>
+<li><strong>Unit type</strong>: 0-tuple <code>!funlang.tuple&lt;&gt;</code>은 unit type으로 사용 가능</li>
+</ol>
+<p><strong>LLVM으로의 lowering:</strong></p>
+<pre><code class="language-mlir">// FunLang tuple type
+!funlang.tuple&lt;i32, f64&gt;
+
+// LLVM struct type (no tag needed!)
+!llvm.struct&lt;(i32, f64)&gt;
+</code></pre>
+<p>리스트와 달리:</p>
+<ul>
+<li><strong>태그 필요 없음</strong>: 튜플은 항상 같은 구조</li>
+<li><strong>포인터 indirection 없음</strong>: 값 자체를 struct에 저장 (작은 튜플의 경우)</li>
+<li><strong>스택 할당 가능</strong>: escape하지 않으면 힙 할당 불필요</li>
+</ul>
+<h3 id="tablegen-정의-tablegen-definition"><a class="header" href="#tablegen-정의-tablegen-definition">TableGen 정의 (TableGen Definition)</a></h3>
+<p><strong>파일: <code>mlir/include/Dialect/FunLang/FunLangTypes.td</code></strong></p>
+<pre><code class="language-tablegen">//===----------------------------------------------------------------------===//
+// Tuple Type
+//===----------------------------------------------------------------------===//
+
+def FunLang_TupleType : FunLang_Type&lt;"Tuple", "tuple"&gt; {
+  let summary = "FunLang tuple type";
+  let description = [{
+    A fixed-size product type with heterogeneous elements.
+    Unlike lists, tuples have a known arity at compile time.
+
+    Examples:
+    - `!funlang.tuple&lt;i32, f64&gt;` is a pair of integer and float
+    - `!funlang.tuple&lt;i32, i32, i32&gt;` is a triple of integers
+    - `!funlang.tuple&lt;&gt;` is the unit type (empty tuple)
+
+    Tuples are lowered to LLVM structs directly, without tags,
+    because they always have the same structure (no variants).
+  }];
+
+  let parameters = (ins
+    ArrayRefParameter&lt;"mlir::Type", "element types"&gt;:$elementTypes
+  );
+
+  let assemblyFormat = "`&lt;` $elementTypes `&gt;`";
+
+  let extraClassDeclaration = [{
+    /// Get the number of elements in this tuple
+    size_t getNumElements() const { return getElementTypes().size(); }
+
+    /// Get the element type at the given index
+    mlir::Type getElementType(size_t index) const {
+      return getElementTypes()[index];
+    }
+
+    /// Check if this is a pair (2-tuple)
+    bool isPair() const { return getNumElements() == 2; }
+
+    /// Check if this is a unit type (0-tuple)
+    bool isUnit() const { return getNumElements() == 0; }
+  }];
+}
+</code></pre>
+<p><strong>핵심 요소 분석:</strong></p>
+<ol>
+<li>
+<p><strong><code>ArrayRefParameter</code></strong>: 가변 개수의 타입 파라미터</p>
+<ul>
+<li><code>Variadic&lt;Type&gt;</code>이 아닌 <code>ArrayRefParameter&lt;"mlir::Type"&gt;</code></li>
+<li>TableGen이 자동으로 storage와 accessor 생성</li>
+</ul>
+</li>
+<li>
+<p><strong><code>assemblyFormat</code></strong>: <code>&lt;</code> 원소타입들 <code>&gt;</code></p>
+<ul>
+<li><code>!funlang.tuple&lt;i32, f64&gt;</code> 형태로 파싱/프린팅</li>
+</ul>
+</li>
+<li>
+<p><strong><code>extraClassDeclaration</code></strong>: 유틸리티 메서드</p>
+<ul>
+<li><code>getNumElements()</code>, <code>getElementType(index)</code> 등</li>
+</ul>
+</li>
+</ol>
+<p><strong>생성되는 C++ 코드:</strong></p>
+<pre><code class="language-cpp">// Auto-generated from TableGen
+class TupleType : public mlir::Type::TypeBase&lt;TupleType,
+                                               mlir::Type,
+                                               detail::TupleTypeStorage&gt; {
+public:
+  using Base::Base;
+
+  static TupleType get(mlir::MLIRContext *context,
+                       llvm::ArrayRef&lt;mlir::Type&gt; elementTypes);
+
+  llvm::ArrayRef&lt;mlir::Type&gt; getElementTypes() const;
+  size_t getNumElements() const { return getElementTypes().size(); }
+  mlir::Type getElementType(size_t index) const {
+    return getElementTypes()[index];
+  }
+  bool isPair() const { return getNumElements() == 2; }
+  bool isUnit() const { return getNumElements() == 0; }
+};
+</code></pre>
+<h3 id="funlangmake_tuple-연산-make_tuple-operation"><a class="header" href="#funlangmake_tuple-연산-make_tuple-operation">funlang.make_tuple 연산 (make_tuple Operation)</a></h3>
+<p><strong>파일: <code>mlir/include/Dialect/FunLang/FunLangOps.td</code></strong></p>
+<pre><code class="language-tablegen">//===----------------------------------------------------------------------===//
+// make_tuple Operation
+//===----------------------------------------------------------------------===//
+
+def FunLang_MakeTupleOp : FunLang_Op&lt;"make_tuple", [Pure]&gt; {
+  let summary = "Create a tuple from values";
+  let description = [{
+    Constructs a tuple from the given element values.
+    The result type must match the types of the input elements.
+
+    Example:
+    ```mlir
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 3.14 : f64
+    %pair = funlang.make_tuple(%c1, %c2) : !funlang.tuple&lt;i32, f64&gt;
+    ```
+
+    The operation is marked Pure because it has no side effects.
+    This enables CSE (Common Subexpression Elimination) optimization.
+  }];
+
+  let arguments = (ins
+    Variadic&lt;AnyType&gt;:$elements
+  );
+
+  let results = (outs
+    FunLang_TupleType:$result
+  );
+
+  let assemblyFormat = [{
+    `(` $elements `)` attr-dict `:` type($result)
+  }];
+
+  let builders = [
+    OpBuilder&lt;(ins "mlir::ValueRange":$elements), [{
+      // Infer result type from element types
+      llvm::SmallVector&lt;mlir::Type&gt; elemTypes;
+      for (auto elem : elements)
+        elemTypes.push_back(elem.getType());
+
+      auto tupleType = TupleType::get($_builder.getContext(), elemTypes);
+      build($_builder, $_state, tupleType, elements);
+    }]&gt;
+  ];
+
+  let hasVerifier = 1;
+}
+</code></pre>
+<p><strong>핵심 요소 분석:</strong></p>
+<ol>
+<li>
+<p><strong><code>Variadic&lt;AnyType&gt;</code></strong>: 0개 이상의 임의 타입 operands</p>
+<ul>
+<li><code>make_tuple()</code> (unit), <code>make_tuple(%a)</code> (singleton), <code>make_tuple(%a, %b)</code> (pair) 모두 가능</li>
+</ul>
+</li>
+<li>
+<p><strong><code>Pure</code> trait</strong>: 순수 함수</p>
+<ul>
+<li>부작용 없음, 같은 입력 → 같은 출력</li>
+<li>CSE 최적화 가능: 동일한 make_tuple 호출 합치기</li>
+</ul>
+</li>
+<li>
+<p><strong>Custom builder</strong>: 타입 추론</p>
+<ul>
+<li>element 타입들로부터 결과 tuple 타입 자동 추론</li>
+<li>사용자가 명시적으로 타입을 지정할 필요 없음</li>
+</ul>
+</li>
+<li>
+<p><strong>Verifier</strong>: 타입 일관성 검증</p>
+<ul>
+<li>element 개수와 tuple 타입의 arity 일치</li>
+<li>각 element 타입과 tuple의 대응 위치 타입 일치</li>
+</ul>
+</li>
+</ol>
+<p><strong>Verifier 구현:</strong></p>
+<pre><code class="language-cpp">// FunLangOps.cpp
+LogicalResult MakeTupleOp::verify() {
+  auto tupleType = getType().cast&lt;TupleType&gt;();
+  auto elements = getElements();
+
+  // Check element count matches tuple arity
+  if (elements.size() != tupleType.getNumElements()) {
+    return emitOpError() &lt;&lt; "expected " &lt;&lt; tupleType.getNumElements()
+                         &lt;&lt; " elements but got " &lt;&lt; elements.size();
+  }
+
+  // Check each element type matches
+  for (size_t i = 0; i &lt; elements.size(); ++i) {
+    Type expectedType = tupleType.getElementType(i);
+    Type actualType = elements[i].getType();
+    if (expectedType != actualType) {
+      return emitOpError() &lt;&lt; "element " &lt;&lt; i &lt;&lt; " type mismatch: expected "
+                           &lt;&lt; expectedType &lt;&lt; " but got " &lt;&lt; actualType;
+    }
+  }
+
+  return success();
+}
+</code></pre>
+<p><strong>사용 예제:</strong></p>
+<pre><code class="language-mlir">// Empty tuple (unit)
+%unit = funlang.make_tuple() : !funlang.tuple&lt;&gt;
+
+// Pair of int and float
+%c1 = arith.constant 42 : i32
+%c2 = arith.constant 3.14 : f64
+%pair = funlang.make_tuple(%c1, %c2) : !funlang.tuple&lt;i32, f64&gt;
+
+// Triple of ints
+%a = arith.constant 1 : i32
+%b = arith.constant 2 : i32
+%c = arith.constant 3 : i32
+%triple = funlang.make_tuple(%a, %b, %c) : !funlang.tuple&lt;i32, i32, i32&gt;
+
+// Nested tuple
+%inner = funlang.make_tuple(%a, %b) : !funlang.tuple&lt;i32, i32&gt;
+%outer = funlang.make_tuple(%inner, %c2) : !funlang.tuple&lt;!funlang.tuple&lt;i32, i32&gt;, f64&gt;
+
+// Tuple containing list
+%list = funlang.cons %c1, %nil : !funlang.list&lt;i32&gt;
+%mixed = funlang.make_tuple(%list, %c2) : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, f64&gt;
+</code></pre>
+<h3 id="튜플-로우어링-tuple-lowering"><a class="header" href="#튜플-로우어링-tuple-lowering">튜플 로우어링 (Tuple Lowering)</a></h3>
+<p>튜플의 lowering은 리스트보다 훨씬 간단하다. 태그 없이 직접 LLVM struct로 변환한다.</p>
+<p><strong>TypeConverter 확장:</strong></p>
+<pre><code class="language-cpp">// FunLangTypeConverter에 추가
+addConversion([](funlang::TupleType type) {
+  auto ctx = type.getContext();
+
+  // Convert each element type
+  llvm::SmallVector&lt;mlir::Type&gt; llvmTypes;
+  for (auto elemType : type.getElementTypes()) {
+    // Recursively convert element types
+    // (handles nested tuples, lists, etc.)
+    auto convertedType = convertType(elemType);
+    llvmTypes.push_back(convertedType);
+  }
+
+  // Create LLVM struct type
+  return LLVM::LLVMStructType::getLiteral(ctx, llvmTypes);
+});
+</code></pre>
+<p><strong>변환 예제:</strong></p>
+<pre><code class="language-mlir">// Before: FunLang types
+!funlang.tuple&lt;i32, f64&gt;
+!funlang.tuple&lt;i32, i32, i32&gt;
+!funlang.tuple&lt;!funlang.list&lt;i32&gt;, f64&gt;
+
+// After: LLVM types
+!llvm.struct&lt;(i32, f64)&gt;
+!llvm.struct&lt;(i32, i32, i32)&gt;
+!llvm.struct&lt;(!llvm.struct&lt;(i32, ptr)&gt;, f64)&gt;  // list becomes tagged union struct
+</code></pre>
+<p><strong>MakeTupleOpLowering 패턴:</strong></p>
+<pre><code class="language-cpp">class MakeTupleOpLowering : public OpConversionPattern&lt;funlang::MakeTupleOp&gt; {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(funlang::MakeTupleOp op,
+                                 OpAdaptor adaptor,
+                                 ConversionPatternRewriter &amp;rewriter) const override {
+    Location loc = op.getLoc();
+    auto elements = adaptor.getElements();  // Already converted by TypeConverter
+
+    // Get the converted result type (LLVM struct)
+    auto resultType = getTypeConverter()-&gt;convertType(op.getType());
+    auto structType = resultType.cast&lt;LLVM::LLVMStructType&gt;();
+
+    // Start with undef struct
+    Value structVal = rewriter.create&lt;LLVM::UndefOp&gt;(loc, structType);
+
+    // Insert each element at its position
+    for (size_t i = 0; i &lt; elements.size(); ++i) {
+      structVal = rewriter.create&lt;LLVM::InsertValueOp&gt;(
+          loc, structVal, elements[i], i);
+    }
+
+    // Replace make_tuple with the constructed struct
+    rewriter.replaceOp(op, structVal);
+    return success();
+  }
+};
+</code></pre>
+<p><strong>Lowering 과정 시각화:</strong></p>
+<pre><code class="language-mlir">// Before lowering
+%c1 = arith.constant 42 : i32
+%c2 = arith.constant 3.14 : f64
+%pair = funlang.make_tuple(%c1, %c2) : !funlang.tuple&lt;i32, f64&gt;
+
+// After lowering
+%c1 = arith.constant 42 : i32
+%c2 = arith.constant 3.14 : f64
+%0 = llvm.mlir.undef : !llvm.struct&lt;(i32, f64)&gt;
+%1 = llvm.insertvalue %c1, %0[0] : !llvm.struct&lt;(i32, f64)&gt;
+%pair = llvm.insertvalue %c2, %1[1] : !llvm.struct&lt;(i32, f64)&gt;
+</code></pre>
+<p><strong>리스트 vs 튜플 lowering 비교:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>구분</th><th>List</th><th>Tuple</th></tr>
+</thead>
+<tbody>
+<tr><td>태그</td><td>필요 (Nil=0, Cons=1)</td><td>불필요</td></tr>
+<tr><td>힙 할당</td><td>필요 (GC_malloc)</td><td>불필요 (값 의미론)</td></tr>
+<tr><td>간접 참조</td><td>있음 (ptr → data)</td><td>없음 (직접 저장)</td></tr>
+<tr><td>Lowering 복잡도</td><td>높음</td><td>낮음</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="c-api-및-f-바인딩-c-api-and-f-bindings"><a class="header" href="#c-api-및-f-바인딩-c-api-and-f-bindings">C API 및 F# 바인딩 (C API and F# Bindings)</a></h3>
+<p><strong>C API Shim:</strong></p>
+<pre><code class="language-cpp">// mlir/lib/Dialect/FunLang/CAPI/FunLangCAPI.cpp
+
+//===----------------------------------------------------------------------===//
+// Tuple Type
+//===----------------------------------------------------------------------===//
+
+extern "C" MlirType funlangTupleTypeGet(MlirContext ctx,
+                                        MlirType *elementTypes,
+                                        intptr_t numElements) {
+  llvm::SmallVector&lt;mlir::Type&gt; types;
+  for (intptr_t i = 0; i &lt; numElements; ++i) {
+    types.push_back(unwrap(elementTypes[i]));
+  }
+  return wrap(funlang::TupleType::get(unwrap(ctx), types));
+}
+
+extern "C" intptr_t funlangTupleTypeGetNumElements(MlirType type) {
+  return unwrap(type).cast&lt;funlang::TupleType&gt;().getNumElements();
+}
+
+extern "C" MlirType funlangTupleTypeGetElementType(MlirType type, intptr_t index) {
+  return wrap(unwrap(type).cast&lt;funlang::TupleType&gt;().getElementType(index));
+}
+
+extern "C" bool funlangTypeIsATupleType(MlirType type) {
+  return unwrap(type).isa&lt;funlang::TupleType&gt;();
+}
+
+//===----------------------------------------------------------------------===//
+// make_tuple Operation
+//===----------------------------------------------------------------------===//
+
+extern "C" MlirOperation funlangMakeTupleOpCreate(MlirLocation loc,
+                                                   MlirType resultType,
+                                                   MlirValue *elements,
+                                                   intptr_t numElements,
+                                                   MlirBlock block) {
+  OpBuilder builder(unwrap(block)-&gt;getParent());
+  builder.setInsertionPointToEnd(unwrap(block));
+
+  llvm::SmallVector&lt;mlir::Value&gt; values;
+  for (intptr_t i = 0; i &lt; numElements; ++i) {
+    values.push_back(unwrap(elements[i]));
+  }
+
+  auto tupleType = unwrap(resultType).cast&lt;funlang::TupleType&gt;();
+  auto op = builder.create&lt;funlang::MakeTupleOp&gt;(
+      unwrap(loc), tupleType, values);
+  return wrap(op.getOperation());
+}
+</code></pre>
+<p><strong>F# Bindings:</strong></p>
+<pre><code class="language-fsharp">// FunLang.Bindings/FunLangTypes.fs
+
+module FunLangTypes
+
+open System.Runtime.InteropServices
+
+[&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirType funlangTupleTypeGet(MlirContext ctx, MlirType[] elementTypes, nativeint numElements)
+
+[&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern nativeint funlangTupleTypeGetNumElements(MlirType type_)
+
+[&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirType funlangTupleTypeGetElementType(MlirType type_, nativeint index)
+
+[&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern bool funlangTypeIsATupleType(MlirType type_)
+
+type MLIRTypeExtensions =
+    /// Create a tuple type with the given element types
+    static member CreateTupleType(ctx: MlirContext, elementTypes: MlirType list) : MlirType =
+        let typesArray = elementTypes |&gt; List.toArray
+        funlangTupleTypeGet(ctx, typesArray, nativeint typesArray.Length)
+
+    /// Check if a type is a tuple type
+    static member IsTupleType(t: MlirType) : bool =
+        funlangTypeIsATupleType(t)
+
+    /// Get the number of elements in a tuple type
+    static member GetTupleNumElements(t: MlirType) : int =
+        int (funlangTupleTypeGetNumElements(t))
+
+    /// Get an element type from a tuple type
+    static member GetTupleElementType(t: MlirType, index: int) : MlirType =
+        funlangTupleTypeGetElementType(t, nativeint index)
+</code></pre>
+<pre><code class="language-fsharp">// FunLang.Bindings/FunLangOps.fs
+
+module FunLangOps
+
+[&lt;DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)&gt;]
+extern MlirOperation funlangMakeTupleOpCreate(
+    MlirLocation loc,
+    MlirType resultType,
+    MlirValue[] elements,
+    nativeint numElements,
+    MlirBlock block)
+
+type OpBuilderExtensions =
+    /// Create a make_tuple operation
+    member this.CreateMakeTupleOp(loc: MlirLocation, elements: MlirValue list) : MlirOperation =
+        // Infer tuple type from elements
+        let elementTypes = elements |&gt; List.map (fun e -&gt; e.GetType())
+        let tupleType = MLIRTypeExtensions.CreateTupleType(this.Context, elementTypes)
+        let elemArray = elements |&gt; List.toArray
+        funlangMakeTupleOpCreate(loc, tupleType, elemArray, nativeint elemArray.Length, this.CurrentBlock)
+
+    /// Create a tuple and return its value
+    member this.CreateMakeTuple(loc: MlirLocation, elements: MlirValue list) : MlirValue =
+        let op = this.CreateMakeTupleOp(loc, elements)
+        op.GetResult(0)
+
+    /// Create a pair (2-tuple)
+    member this.CreatePair(loc: MlirLocation, first: MlirValue, second: MlirValue) : MlirValue =
+        this.CreateMakeTuple(loc, [first; second])
+</code></pre>
+<p><strong>사용 예제:</strong></p>
+<pre><code class="language-fsharp">// F# code using the bindings
+let createPointTuple (builder: OpBuilder) (x: MlirValue) (y: MlirValue) =
+    let loc = builder.GetUnknownLoc()
+
+    // Create pair using convenience method
+    let point = builder.CreatePair(loc, x, y)
+
+    // Or explicitly with CreateMakeTuple
+    let point' = builder.CreateMakeTuple(loc, [x; y])
+
+    point
+
+let createMixedTuple (builder: OpBuilder) (intVal: MlirValue) (floatVal: MlirValue) (listVal: MlirValue) =
+    let loc = builder.GetUnknownLoc()
+
+    // 3-tuple with mixed types
+    let mixed = builder.CreateMakeTuple(loc, [intVal; floatVal; listVal])
+
+    // Check the type
+    let tupleType = mixed.GetType()
+    assert (MLIRTypeExtensions.IsTupleType(tupleType))
+    assert (MLIRTypeExtensions.GetTupleNumElements(tupleType) = 3)
+
+    mixed
+</code></pre>
+<h3 id="summary-튜플-타입과-연산"><a class="header" href="#summary-튜플-타입과-연산">Summary: 튜플 타입과 연산</a></h3>
+<p><strong>구현 완료:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> <code>!funlang.tuple&lt;T1, T2, ...&gt;</code> 타입 정의 (TableGen)</li>
+<li><input disabled="" type="checkbox" checked=""> ArrayRefParameter로 가변 개수 타입 파라미터</li>
+<li><input disabled="" type="checkbox" checked=""> <code>funlang.make_tuple</code> 연산 정의</li>
+<li><input disabled="" type="checkbox" checked=""> Pure trait (CSE 최적화 가능)</li>
+<li><input disabled="" type="checkbox" checked=""> TypeConverter에 튜플 → LLVM struct 변환 추가</li>
+<li><input disabled="" type="checkbox" checked=""> MakeTupleOpLowering 패턴</li>
+<li><input disabled="" type="checkbox" checked=""> C API shim 함수</li>
+<li><input disabled="" type="checkbox" checked=""> F# bindings</li>
+</ul>
+<p><strong>튜플의 특징:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>특성</th><th>리스트</th><th>튜플</th></tr>
+</thead>
+<tbody>
+<tr><td>Arity</td><td>가변</td><td>고정</td></tr>
+<tr><td>원소 타입</td><td>동질적 (T)</td><td>이질적 (T1, T2, …)</td></tr>
+<tr><td>런타임 태그</td><td>필요</td><td>불필요</td></tr>
+<tr><td>메모리 할당</td><td>힙 (GC)</td><td>스택/인라인 가능</td></tr>
+<tr><td>패턴 매칭 case</td><td>다중 (Nil/Cons)</td><td>단일 (항상 매칭)</td></tr>
+<tr><td>Lowering 대상</td><td><code>!llvm.struct&lt;(i32, ptr)&gt;</code></td><td><code>!llvm.struct&lt;(T1, T2, ...)&gt;</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>다음:</strong></p>
+<ul>
+<li>Chapter 19에서 튜플 패턴 매칭 구현</li>
+<li>extractvalue로 튜플 원소 추출</li>
+<li>중첩 패턴 (튜플 + 리스트 조합)</li>
+</ul>
+<hr>
+<h2 id="typeconverter-for-list-types"><a class="header" href="#typeconverter-for-list-types">TypeConverter for List Types</a></h2>
+<p>Chapter 16에서 우리는 <strong>TypeConverter</strong>를 배웠다. FunLang types를 LLVM types로 변환하는 규칙을 정의한다.</p>
+<h3 id="chapter-16-복습-typeconverter란"><a class="header" href="#chapter-16-복습-typeconverter란">Chapter 16 복습: TypeConverter란?</a></h3>
+<p><strong>TypeConverter의 역할:</strong></p>
+<pre><code class="language-cpp">// Type conversion rules
+!funlang.closure → !llvm.ptr
+!funlang.list&lt;T&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+i32 → i32 (identity)
+</code></pre>
+<p><strong>왜 필요한가?</strong></p>
+<ul>
+<li>Operations를 lowering할 때 operand/result types도 변환해야 함</li>
+<li>Type consistency 유지 필요</li>
+<li>DialectConversion framework가 자동으로 type materialization 수행</li>
+</ul>
+<h3 id="funlangtypeconverter-확장"><a class="header" href="#funlangtypeconverter-확장">FunLangTypeConverter 확장</a></h3>
+<p>Chapter 16에서 closure type 변환만 구현했다. 이제 list type 변환을 추가한다.</p>
+<p><strong>파일: <code>mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp</code></strong></p>
+<pre><code class="language-cpp">class FunLangTypeConverter : public TypeConverter {
+public:
+  FunLangTypeConverter(MLIRContext *ctx) {
+    // Identity conversion for built-in types
+    addConversion([](Type type) { return type; });
+
+    // !funlang.closure → !llvm.ptr (Chapter 16)
+    addConversion([](funlang::FunLangClosureType type) {
+      return LLVM::LLVMPointerType::get(type.getContext());
+    });
+
+    // !funlang.list&lt;T&gt; → !llvm.struct&lt;(i32, ptr)&gt; (Chapter 18)
+    addConversion([](funlang::FunLangListType type) {
+      auto ctx = type.getContext();
+      auto i32Type = IntegerType::get(ctx, 32);
+      auto ptrType = LLVM::LLVMPointerType::get(ctx);
+      return LLVM::LLVMStructType::getLiteral(ctx, {i32Type, ptrType});
+    });
+
+    // Materialization for unconverted types
+    addSourceMaterialization([&amp;](OpBuilder &amp;builder, Type type,
+                                  ValueRange inputs, Location loc) -&gt; Value {
+      if (inputs.size() != 1)
+        return nullptr;
+      return inputs[0];
+    });
+
+    addTargetMaterialization([&amp;](OpBuilder &amp;builder, Type type,
+                                  ValueRange inputs, Location loc) -&gt; Value {
+      if (inputs.size() != 1)
+        return nullptr;
+      return builder.create&lt;UnrealizedConversionCastOp&gt;(loc, type, inputs)
+          .getResult(0);
+    });
+  }
+};
+</code></pre>
+<p><strong>핵심 포인트:</strong></p>
+<ol>
+<li>
+<p><strong>List type conversion</strong>:</p>
+<pre><code class="language-cpp">!funlang.list&lt;T&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<ul>
+<li>Element type <code>T</code>는 버려짐 (runtime representation에 불필요)</li>
+<li>Tagged union: tag (i32) + data (ptr)</li>
+</ul>
+</li>
+<li>
+<p><strong>Type parameter 무시</strong>:</p>
+<pre><code class="language-cpp">!funlang.list&lt;i32&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+!funlang.list&lt;f64&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+!funlang.list&lt;!funlang.closure&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+// 모두 동일한 LLVM type!
+</code></pre>
+</li>
+<li>
+<p><strong>Opaque pointer</strong>:</p>
+<ul>
+<li>Cons cell은 <code>!llvm.ptr</code>로 표현 (opaque)</li>
+<li>Element type 정보는 컴파일 타임에만 존재</li>
+</ul>
+</li>
+</ol>
+<h3 id="element-type은-어디로"><a class="header" href="#element-type은-어디로">Element Type은 어디로?</a></h3>
+<p><strong>질문:</strong> Element type <code>T</code>를 버려도 괜찮은가?</p>
+<p><strong>답:</strong> 네, 컴파일 타임에만 필요하기 때문입니다.</p>
+<p><strong>Element type의 용도:</strong></p>
+<ol>
+<li>
+<p><strong>Type checking</strong> (compile time):</p>
+<pre><code class="language-mlir">%cons = funlang.cons %head, %tail : !funlang.list&lt;i32&gt;
+// Verifier checks: %head must be i32
+</code></pre>
+</li>
+<li>
+<p><strong>Pattern matching</strong> (compile time):</p>
+<pre><code class="language-mlir">%result = funlang.match %list : !funlang.list&lt;i32&gt; -&gt; i32 {
+  ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+    // %head type inferred from list element type
+}
+</code></pre>
+</li>
+<li>
+<p><strong>Lowering</strong> (code generation):</p>
+<pre><code class="language-cpp">// ConsOpLowering::matchAndRewrite
+Type elemType = consOp.getElementType();  // Get T from !funlang.list&lt;T&gt;
+uint64_t elemSize = dataLayout.getTypeSize(elemType);  // Calculate cell size
+</code></pre>
+</li>
+</ol>
+<p><strong>Runtime에는 불필요:</strong></p>
+<ul>
+<li>Runtime에는 tag만 확인 (0=Nil, 1=Cons)</li>
+<li>Cons cell에서 데이터 로드할 때 타입 정보 불필요 (opaque pointer)</li>
+<li>GC가 타입 정보 없이도 메모리 관리 가능</li>
+</ul>
+<p><strong>비유:</strong></p>
+<pre><code class="language-cpp">// C++ template (compile time)
+template&lt;typename T&gt;
+struct List {
+    int tag;
+    void* data;
+};
+
+List&lt;int&gt; intList;      // Compile time: T = int
+List&lt;double&gt; doubleList;  // Compile time: T = double
+
+// Runtime: sizeof(List&lt;int&gt;) == sizeof(List&lt;double&gt;)
+// Runtime에는 T 정보 사라짐 (type erasure)
+</code></pre>
+<h3 id="recursive-list-types"><a class="header" href="#recursive-list-types">Recursive List Types</a></h3>
+<p><strong>중첩 리스트:</strong></p>
+<pre><code class="language-mlir">!funlang.list&lt;!funlang.list&lt;i32&gt;&gt;
+</code></pre>
+<p><strong>TypeConverter가 자동으로 처리:</strong></p>
+<pre><code class="language-cpp">// Step 1: Convert inner list
+!funlang.list&lt;i32&gt; → !llvm.struct&lt;(i32, ptr)&gt;
+
+// Step 2: Convert outer list (element type = inner list)
+!funlang.list&lt;!funlang.list&lt;i32&gt;&gt;
+  → !funlang.list&lt;!llvm.struct&lt;(i32, ptr)&gt;&gt;  // Inner converted
+  → !llvm.struct&lt;(i32, ptr)&gt;                 // Outer converted
+
+// Result: Same as flat list!
+</code></pre>
+<p><strong>이것도 type erasure:</strong></p>
+<ul>
+<li>Cons cell에는 element가 <code>!llvm.struct&lt;(i32, ptr)&gt;</code>로 저장됨</li>
+<li>하지만 outer list의 표현은 여전히 <code>!llvm.struct&lt;(i32, ptr)&gt;</code></li>
+</ul>
+<h3 id="type-materialization"><a class="header" href="#type-materialization">Type Materialization</a></h3>
+<p><strong>Materialization이란?</strong></p>
+<p>Type conversion 중 intermediate values가 필요할 때 자동으로 생성되는 operations.</p>
+<p><strong>예제:</strong></p>
+<pre><code class="language-mlir">// Before lowering
+func.func @foo(%lst: !funlang.list&lt;i32&gt;) -&gt; i32 {
+    // %lst uses: !funlang.list&lt;i32&gt;
+}
+
+// After lowering
+func.func @foo(%arg: !llvm.struct&lt;(i32, ptr)&gt;) -&gt; i32 {
+    // But some operations might still reference old type temporarily
+    // Materialization creates cast operations
+}
+</code></pre>
+<p><strong>FunLangTypeConverter에서:</strong></p>
+<pre><code class="language-cpp">// Source materialization: LLVM type → FunLang type (usually no-op)
+addSourceMaterialization([&amp;](OpBuilder &amp;builder, Type type,
+                              ValueRange inputs, Location loc) -&gt; Value {
+  if (inputs.size() != 1)
+    return nullptr;
+  return inputs[0];  // Identity cast
+});
+
+// Target materialization: FunLang type → LLVM type
+addTargetMaterialization([&amp;](OpBuilder &amp;builder, Type type,
+                              ValueRange inputs, Location loc) -&gt; Value {
+  if (inputs.size() != 1)
+    return nullptr;
+  return builder.create&lt;UnrealizedConversionCastOp&gt;(loc, type, inputs)
+      .getResult(0);
+});
+</code></pre>
+<p><strong>UnrealizedConversionCastOp:</strong></p>
+<ul>
+<li>Temporary operation for type conversion</li>
+<li>Should be removed by complete conversion</li>
+<li>If it remains after pass, conversion failed (verification error)</li>
+</ul>
+<h3 id="complete-funlangtypeconverter"><a class="header" href="#complete-funlangtypeconverter">Complete FunLangTypeConverter</a></h3>
+<p><strong>전체 TypeConverter (Closure + List):</strong></p>
+<pre><code class="language-cpp">// mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp
+
+class FunLangTypeConverter : public TypeConverter {
+public:
+  FunLangTypeConverter(MLIRContext *ctx, const DataLayout &amp;dataLayout)
+      : dataLayout(dataLayout) {
+    // Keep identity conversions (i32, f64, etc.)
+    addConversion([](Type type) { return type; });
+
+    // Closure type conversion (Phase 5)
+    addConversion([](funlang::FunLangClosureType type) {
+      return LLVM::LLVMPointerType::get(type.getContext());
+    });
+
+    // List type conversion (Phase 6)
+    addConversion([](funlang::FunLangListType type) {
+      auto ctx = type.getContext();
+      auto i32Type = IntegerType::get(ctx, 32);
+      auto ptrType = LLVM::LLVMPointerType::get(ctx);
+      // Tagged union: {i32 tag, ptr data}
+      return LLVM::LLVMStructType::getLiteral(ctx, {i32Type, ptrType});
+    });
+
+    // Function type conversion
+    addConversion([this](FunctionType type) {
+      return convertFunctionType(type);
+    });
+
+    // Materialization hooks
+    addSourceMaterialization(materializeSource);
+    addTargetMaterialization(materializeTarget);
+    addArgumentMaterialization(materializeSource);
+  }
+
+  // Get element type from list type (helper for lowering patterns)
+  Type getListElementType(funlang::FunLangListType listType) const {
+    return listType.getElementType();
+  }
+
+  // Calculate cons cell size for element type
+  uint64_t getConsCellSize(Type elementType) const {
+    uint64_t elemSize = dataLayout.getTypeSize(elementType);
+    uint64_t tailSize = 16;  // sizeof(struct&lt;(i32, ptr)&gt;) with alignment
+    uint64_t totalSize = elemSize + tailSize;
+    // Align to 8 bytes
+    return (totalSize + 7) &amp; ~7;
+  }
+
+private:
+  const DataLayout &amp;dataLayout;
+
+  FunctionType convertFunctionType(FunctionType type) {
+    SmallVector&lt;Type&gt; inputs;
+    SmallVector&lt;Type&gt; results;
+
+    if (failed(convertTypes(type.getInputs(), inputs)) ||
+        failed(convertTypes(type.getResults(), results)))
+      return nullptr;
+
+    return FunctionType::get(type.getContext(), inputs, results);
+  }
+
+  static Value materializeSource(OpBuilder &amp;builder, Type type,
+                                   ValueRange inputs, Location loc) {
+    if (inputs.size() != 1)
+      return nullptr;
+    return inputs[0];
+  }
+
+  static Value materializeTarget(OpBuilder &amp;builder, Type type,
+                                   ValueRange inputs, Location loc) {
+    if (inputs.size() != 1)
+      return nullptr;
+    return builder.create&lt;UnrealizedConversionCastOp&gt;(loc, type, inputs)
+        .getResult(0);
+  }
+};
+</code></pre>
+<h3 id="typeconverter-in-lowering-pass"><a class="header" href="#typeconverter-in-lowering-pass">TypeConverter in Lowering Pass</a></h3>
+<p><strong>Pass에서 TypeConverter 사용:</strong></p>
+<pre><code class="language-cpp">struct FunLangToLLVMPass : public PassWrapper&lt;FunLangToLLVMPass, OperationPass&lt;ModuleOp&gt;&gt; {
+  void runOnOperation() override {
+    auto module = getOperation();
+    auto *ctx = &amp;getContext();
+
+    // Get data layout from module
+    auto dataLayout = DataLayout(module);
+
+    // Create type converter
+    FunLangTypeConverter typeConverter(ctx, dataLayout);
+
+    // Setup conversion target
+    ConversionTarget target(*ctx);
+    target.addLegalDialect&lt;LLVM::LLVMDialect, arith::ArithDialect&gt;();
+    target.addIllegalDialect&lt;funlang::FunLangDialect&gt;();
+
+    // Populate rewrite patterns
+    RewritePatternSet patterns(ctx);
+    patterns.add&lt;ClosureOpLowering&gt;(typeConverter, ctx);
+    patterns.add&lt;ApplyOpLowering&gt;(typeConverter, ctx);
+    patterns.add&lt;NilOpLowering&gt;(typeConverter, ctx);     // New!
+    patterns.add&lt;ConsOpLowering&gt;(typeConverter, ctx);    // New!
+
+    // Run conversion
+    if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+</code></pre>
+<p><strong>ConversionPattern에서 typeConverter 사용:</strong></p>
+<pre><code class="language-cpp">class NilOpLowering : public OpConversionPattern&lt;funlang::NilOp&gt; {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      funlang::NilOp op,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter &amp;rewriter) const override {
+
+    auto loc = op.getLoc();
+
+    // Get converted result type: !llvm.struct&lt;(i32, ptr)&gt;
+    Type convertedType = typeConverter-&gt;convertType(op.getType());
+
+    // Build Nil representation: {0, null}
+    // ...
+  }
+};
+</code></pre>
+<h3 id="summary-typeconverter-for-list-types"><a class="header" href="#summary-typeconverter-for-list-types">Summary: TypeConverter for List Types</a></h3>
+<p><strong>구현 완료:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> <code>!funlang.list&lt;T&gt;</code> → <code>!llvm.struct&lt;(i32, ptr)&gt;</code> conversion</li>
+<li><input disabled="" type="checkbox" checked=""> Element type handling (compile-time only)</li>
+<li><input disabled="" type="checkbox" checked=""> Recursive list types (automatic handling)</li>
+<li><input disabled="" type="checkbox" checked=""> Type materialization hooks</li>
+<li><input disabled="" type="checkbox" checked=""> Helper methods for lowering patterns (<code>getConsCellSize</code>)</li>
+</ul>
+<p><strong>핵심 통찰:</strong></p>
+<ul>
+<li>Element type은 컴파일 타임 정보만</li>
+<li>Runtime representation은 모든 list types에 대해 uniform</li>
+<li>Type erasure로 효율적인 메모리 사용</li>
+</ul>
+<p><strong>다음 섹션:</strong></p>
+<ul>
+<li>NilOpLowering pattern으로 empty list 생성</li>
+</ul>
+<hr>
+<h2 id="nilop-lowering-pattern"><a class="header" href="#nilop-lowering-pattern">NilOp Lowering Pattern</a></h2>
+<p>이제 <code>funlang.nil</code>을 LLVM dialect로 lowering하는 pattern을 작성한다.</p>
+<h3 id="lowering-strategy"><a class="header" href="#lowering-strategy">Lowering Strategy</a></h3>
+<p><strong>Before:</strong></p>
+<pre><code class="language-mlir">%nil = funlang.nil : !funlang.list&lt;i32&gt;
+</code></pre>
+<p><strong>After:</strong></p>
+<pre><code class="language-mlir">// Build struct {0, null}
+%tag = arith.constant 0 : i32
+%null = llvm.mlir.zero : !llvm.ptr
+%undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%nil = llvm.insertvalue %null, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<p><strong>핵심 LLVM operations:</strong></p>
+<ol>
+<li><strong>arith.constant</strong>: Create tag value (0 for Nil)</li>
+<li><strong>llvm.mlir.zero</strong>: Create null pointer</li>
+<li><strong>llvm.mlir.undef</strong>: Create undefined struct (placeholder)</li>
+<li><strong>llvm.insertvalue</strong>: Insert values into struct fields</li>
+</ol>
+<h3 id="conversionpattern-structure"><a class="header" href="#conversionpattern-structure">ConversionPattern Structure</a></h3>
+<pre><code class="language-cpp">class NilOpLowering : public OpConversionPattern&lt;funlang::NilOp&gt; {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      funlang::NilOp op,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter &amp;rewriter) const override;
+};
+</code></pre>
+<p><strong>OpConversionPattern vs OpRewritePattern:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>OpConversionPattern</th><th>OpRewritePattern</th></tr>
+</thead>
+<tbody>
+<tr><td>Framework</td><td>DialectConversion</td><td>Greedy rewriter</td></tr>
+<tr><td>Type conversion</td><td>Automatic (TypeConverter)</td><td>Manual</td></tr>
+<tr><td>Adaptor</td><td>Yes (adaptor.getOperands())</td><td>No (op.getOperands())</td></tr>
+<tr><td>Use case</td><td>Dialect lowering</td><td>Optimization</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>OpAdaptor:</strong></p>
+<ul>
+<li>Provides <strong>converted operands</strong> (types already converted by TypeConverter)</li>
+<li>Example: <code>adaptor.getTail()</code> returns tail with LLVM type, not FunLang type</li>
+</ul>
+<h3 id="implementation"><a class="header" href="#implementation">Implementation</a></h3>
+<p><strong>파일: <code>mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp</code></strong></p>
+<pre><code class="language-cpp">//===----------------------------------------------------------------------===//
+// NilOpLowering
+//===----------------------------------------------------------------------===//
+
+class NilOpLowering : public OpConversionPattern&lt;funlang::NilOp&gt; {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      funlang::NilOp op,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter &amp;rewriter) const override {
+
+    auto loc = op.getLoc();
+    auto ctx = op.getContext();
+
+    // Get converted result type: !llvm.struct&lt;(i32, ptr)&gt;
+    Type convertedType = typeConverter-&gt;convertType(op.getType());
+    auto structType = convertedType.cast&lt;LLVM::LLVMStructType&gt;();
+
+    // Step 1: Create tag value (0 for Nil)
+    auto i32Type = IntegerType::get(ctx, 32);
+    auto tagValue = rewriter.create&lt;arith::ConstantIntOp&gt;(loc, 0, i32Type);
+
+    // Step 2: Create null pointer
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
+    auto nullPtr = rewriter.create&lt;LLVM::ZeroOp&gt;(loc, ptrType);
+
+    // Step 3: Create undefined struct (placeholder)
+    auto undefStruct = rewriter.create&lt;LLVM::UndefOp&gt;(loc, structType);
+
+    // Step 4: Insert tag into struct at index 0
+    auto withTag = rewriter.create&lt;LLVM::InsertValueOp&gt;(
+        loc, undefStruct, tagValue, ArrayRef&lt;int64_t&gt;{0});
+
+    // Step 5: Insert null pointer into struct at index 1
+    auto nilValue = rewriter.create&lt;LLVM::InsertValueOp&gt;(
+        loc, withTag, nullPtr, ArrayRef&lt;int64_t&gt;{1});
+
+    // Replace funlang.nil with constructed struct
+    rewriter.replaceOp(op, nilValue.getResult());
+
+    return success();
+  }
+};
+</code></pre>
+<h3 id="step-by-step-explanation"><a class="header" href="#step-by-step-explanation">Step-by-Step Explanation</a></h3>
+<p><strong>Step 1: Tag value (0)</strong></p>
+<pre><code class="language-cpp">auto tagValue = rewriter.create&lt;arith::ConstantIntOp&gt;(loc, 0, i32Type);
+</code></pre>
+<p>생성되는 MLIR:</p>
+<pre><code class="language-mlir">%tag = arith.constant 0 : i32
+</code></pre>
+<p><strong>Step 2: Null pointer</strong></p>
+<pre><code class="language-cpp">auto nullPtr = rewriter.create&lt;LLVM::ZeroOp&gt;(loc, ptrType);
+</code></pre>
+<p>생성되는 MLIR:</p>
+<pre><code class="language-mlir">%null = llvm.mlir.zero : !llvm.ptr
+</code></pre>
+<p><strong>llvm.mlir.zero vs llvm.null:</strong></p>
+<ul>
+<li><code>llvm.mlir.zero</code>: MLIR의 zero initializer (opaque pointers)</li>
+<li>Old LLVM: <code>llvm.null</code> (deprecated with opaque pointers)</li>
+</ul>
+<p><strong>Step 3: Undefined struct</strong></p>
+<pre><code class="language-cpp">auto undefStruct = rewriter.create&lt;LLVM::UndefOp&gt;(loc, structType);
+</code></pre>
+<p>생성되는 MLIR:</p>
+<pre><code class="language-mlir">%undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<p><strong>왜 undef부터 시작?</strong></p>
+<ul>
+<li>LLVM structs는 immutable (SSA form)</li>
+<li><code>insertvalue</code>로 필드를 하나씩 채워 나감</li>
+<li>초기값은 undefined (나중에 덮어씀)</li>
+</ul>
+<p><strong>Step 4-5: Insert values</strong></p>
+<pre><code class="language-cpp">auto withTag = rewriter.create&lt;LLVM::InsertValueOp&gt;(
+    loc, undefStruct, tagValue, ArrayRef&lt;int64_t&gt;{0});
+auto nilValue = rewriter.create&lt;LLVM::InsertValueOp&gt;(
+    loc, withTag, nullPtr, ArrayRef&lt;int64_t&gt;{1});
+</code></pre>
+<p>생성되는 MLIR:</p>
+<pre><code class="language-mlir">%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%nil = llvm.insertvalue %null, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<p><strong>InsertValueOp syntax:</strong></p>
+<ul>
+<li><code>llvm.insertvalue %value, %struct[index]</code></li>
+<li>index: struct field index (0 = tag, 1 = data)</li>
+<li>Returns new struct with field updated</li>
+</ul>
+<p><strong>Step 6: Replace operation</strong></p>
+<pre><code class="language-cpp">rewriter.replaceOp(op, nilValue.getResult());
+</code></pre>
+<ul>
+<li>Remove original <code>funlang.nil</code> operation</li>
+<li>Replace all uses with new struct value</li>
+<li><code>nilValue.getResult()</code>: Extract Value from Operation</li>
+</ul>
+<h3 id="no-memory-allocation"><a class="header" href="#no-memory-allocation">No Memory Allocation</a></h3>
+<p><strong>중요한 최적화:</strong></p>
+<ul>
+<li>NilOp lowering은 <strong>pure computation</strong> (no side effects)</li>
+<li>Stack-only operations (constant, undef, insertvalue)</li>
+<li><strong>No GC_malloc call</strong> (unlike ConsOp)</li>
+</ul>
+<p><strong>LLVM optimization 기회:</strong></p>
+<pre><code class="language-mlir">// Multiple nil operations
+%nil1 = funlang.nil : !funlang.list&lt;i32&gt;
+%nil2 = funlang.nil : !funlang.list&lt;i32&gt;
+
+// After lowering:
+%tag = arith.constant 0 : i32
+%null = llvm.mlir.zero : !llvm.ptr
+%undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%nil = llvm.insertvalue %null, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+// LLVM CSE: %nil1 and %nil2 → same %nil!
+</code></pre>
+<p><strong>Advanced optimization (Phase 7):</strong></p>
+<ul>
+<li>Global constant for empty list</li>
+<li>All nil operations → load from constant</li>
+<li>Zero runtime cost</li>
+</ul>
+<h3 id="c-api-shim-if-needed"><a class="header" href="#c-api-shim-if-needed">C API Shim (if needed)</a></h3>
+<p>NilOpLowering은 C++에서만 사용되므로 C API shim 불필요. 하지만 testing을 위해 제공 가능:</p>
+<pre><code class="language-cpp">// For testing lowering pass from F#
+void mlirFunLangRegisterNilOpLowering(MlirRewritePatternSet patterns) {
+  auto *ctx = unwrap(patterns)-&gt;getContext();
+  FunLangTypeConverter typeConverter(ctx, /* dataLayout */);
+  unwrap(patterns)-&gt;add&lt;NilOpLowering&gt;(typeConverter, ctx);
+}
+</code></pre>
+<h3 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h3>
+<p><strong>Input MLIR (FunLang dialect):</strong></p>
+<pre><code class="language-mlir">func.func @test_nil() -&gt; !funlang.list&lt;i32&gt; {
+    %nil = funlang.nil : !funlang.list&lt;i32&gt;
+    func.return %nil : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>After NilOpLowering (LLVM dialect):</strong></p>
+<pre><code class="language-mlir">func.func @test_nil() -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+    %c0 = arith.constant 0 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %0 = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %1 = llvm.insertvalue %c0, %0[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %nil = llvm.insertvalue %null, %1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    func.return %nil : !llvm.struct&lt;(i32, ptr)&gt;
+}
+</code></pre>
+<p><strong>After LLVM optimization:</strong></p>
+<pre><code class="language-llvm">define { i32, ptr } @test_nil() {
+  ; Constant struct {0, null} directly
+  ret { i32, ptr } { i32 0, ptr null }
+}
+</code></pre>
+<h3 id="summary-nilop-lowering-pattern"><a class="header" href="#summary-nilop-lowering-pattern">Summary: NilOp Lowering Pattern</a></h3>
+<p><strong>구현 완료:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> OpConversionPattern for funlang.nil</li>
+<li><input disabled="" type="checkbox" checked=""> Tagged union construction: {tag: 0, data: null}</li>
+<li><input disabled="" type="checkbox" checked=""> No memory allocation (pure computation)</li>
+<li><input disabled="" type="checkbox" checked=""> LLVM optimization friendly</li>
+</ul>
+<p><strong>핵심 패턴:</strong></p>
+<ol>
+<li>Undefined struct as starting point</li>
+<li>InsertValueOp for field-by-field construction</li>
+<li>replaceOp to complete rewriting</li>
+</ol>
+<p><strong>다음 섹션:</strong></p>
+<ul>
+<li>ConsOpLowering pattern으로 cons cell allocation</li>
+</ul>
+<hr>
+<h2 id="consop-lowering-pattern"><a class="header" href="#consop-lowering-pattern">ConsOp Lowering Pattern</a></h2>
+<p>이제 <code>funlang.cons</code>를 LLVM dialect로 lowering한다. NilOp보다 복잡하다 - <strong>memory allocation</strong>이 필요하기 때문이다.</p>
+<h3 id="lowering-strategy-1"><a class="header" href="#lowering-strategy-1">Lowering Strategy</a></h3>
+<p><strong>Before:</strong></p>
+<pre><code class="language-mlir">%lst = funlang.cons %head, %tail : !funlang.list&lt;i32&gt;
+</code></pre>
+<p><strong>After:</strong></p>
+<pre><code class="language-mlir">// 1. Allocate cons cell
+%cell_size = arith.constant 16 : i64
+%cell_ptr = llvm.call @GC_malloc(%cell_size) : (i64) -&gt; !llvm.ptr
+
+// 2. Store head element
+%head_ptr = llvm.getelementptr %cell_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %head, %head_ptr : i32, !llvm.ptr
+
+// 3. Store tail list
+%tail_ptr = llvm.getelementptr %cell_ptr[1] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %tail, %tail_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+
+// 4. Build tagged union {1, cell_ptr}
+%tag = arith.constant 1 : i32
+%undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%lst = llvm.insertvalue %cell_ptr, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<p><strong>핵심 작업:</strong></p>
+<ol>
+<li><strong>GC_malloc</strong>: Heap에 cons cell 할당</li>
+<li><strong>GEP (GetElementPtr)</strong>: Struct field 주소 계산</li>
+<li><strong>Store</strong>: Head와 tail을 cell에 저장</li>
+<li><strong>InsertValue</strong>: Tagged union 구성</li>
+</ol>
+<h3 id="memory-layout-recap"><a class="header" href="#memory-layout-recap">Memory Layout Recap</a></h3>
+<p><strong>Cons cell structure:</strong></p>
+<pre><code>struct ConsCell {
+    T element;                    // Offset 0
+    TaggedUnion tail;             // Offset sizeof(T)
+}
+
+TaggedUnion = struct {
+    i32 tag;                      // 4 bytes
+    ptr data;                     // 8 bytes
+}
+</code></pre>
+<p><strong>예제: <code>!funlang.list&lt;i32&gt;</code></strong></p>
+<pre><code>ConsCell&lt;i32&gt; = {
+    i32 element;        // 4 bytes at offset 0
+    struct {            // 16 bytes at offset 4 (aligned to 8)
+        i32 tag;        // 4 bytes
+        ptr data;       // 8 bytes
+    } tail;
+}
+
+Total size: 4 + 16 = 20 bytes → aligned to 24 bytes
+</code></pre>
+<h3 id="implementation-1"><a class="header" href="#implementation-1">Implementation</a></h3>
+<p><strong>파일: <code>mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp</code></strong></p>
+<pre><code class="language-cpp">//===----------------------------------------------------------------------===//
+// ConsOpLowering
+//===----------------------------------------------------------------------===//
+
+class ConsOpLowering : public OpConversionPattern&lt;funlang::ConsOp&gt; {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      funlang::ConsOp op,
+      OpAdaptor adaptor,
+      ConversionPatternRewriter &amp;rewriter) const override {
+
+    auto loc = op.getLoc();
+    auto ctx = op.getContext();
+
+    // Get converted types
+    Type convertedResultType = typeConverter-&gt;convertType(op.getType());
+    auto structType = convertedResultType.cast&lt;LLVM::LLVMStructType&gt;();
+
+    // Get element type (from original FunLang type)
+    Type elementType = op.getElementType();
+
+    // Get converted operands (TypeConverter already converted them)
+    Value headValue = adaptor.getHead();
+    Value tailValue = adaptor.getTail();
+
+    // Step 1: Calculate cons cell size
+    auto cellSize = calculateCellSize(rewriter, loc, elementType);
+
+    // Step 2: Allocate cons cell via GC_malloc
+    auto cellPtr = allocateConsCell(rewriter, loc, cellSize);
+
+    // Step 3: Store head element
+    storeHead(rewriter, loc, cellPtr, headValue, elementType);
+
+    // Step 4: Store tail list
+    storeTail(rewriter, loc, cellPtr, tailValue, elementType);
+
+    // Step 5: Build tagged union {1, cellPtr}
+    auto consValue = buildTaggedUnion(rewriter, loc, structType, cellPtr);
+
+    // Replace funlang.cons with constructed value
+    rewriter.replaceOp(op, consValue);
+
+    return success();
+  }
+
+private:
+  // Calculate cons cell size: sizeof(element) + sizeof(TaggedUnion)
+  Value calculateCellSize(
+      OpBuilder &amp;builder, Location loc, Type elementType) const {
+
+    auto *typeConverter = getTypeConverter();
+    auto dataLayout = DataLayout::closest(loc.getParentModule());
+
+    // Get element size
+    uint64_t elemSize = dataLayout.getTypeSize(elementType);
+
+    // TaggedUnion size: struct&lt;(i32, ptr)&gt; = 4 + 8 = 12, aligned to 16
+    uint64_t tailSize = 16;
+
+    uint64_t totalSize = elemSize + tailSize;
+
+    // Align to 8 bytes
+    totalSize = (totalSize + 7) &amp; ~7;
+
+    auto i64Type = builder.getI64Type();
+    return builder.create&lt;arith::ConstantIntOp&gt;(loc, totalSize, i64Type);
+  }
+
+  // Allocate cons cell via GC_malloc
+  Value allocateConsCell(
+      OpBuilder &amp;builder, Location loc, Value size) const {
+
+    auto ctx = builder.getContext();
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
+    auto i64Type = builder.getI64Type();
+
+    // Get or declare GC_malloc
+    auto module = loc-&gt;getParentOfType&lt;ModuleOp&gt;();
+    auto gcMalloc = module.lookupSymbol&lt;LLVM::LLVMFuncOp&gt;("GC_malloc");
+    if (!gcMalloc) {
+      OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToStart(module.getBody());
+
+      auto funcType = LLVM::LLVMFunctionType::get(ptrType, {i64Type});
+      gcMalloc = builder.create&lt;LLVM::LLVMFuncOp&gt;(
+          loc, "GC_malloc", funcType);
+    }
+
+    // Call GC_malloc
+    auto callOp = builder.create&lt;LLVM::CallOp&gt;(
+        loc, gcMalloc, ValueRange{size});
+
+    return callOp.getResult();
+  }
+
+  // Store head element at offset 0
+  void storeHead(
+      OpBuilder &amp;builder, Location loc, Value cellPtr,
+      Value headValue, Type elementType) const {
+
+    // GEP to head field: cell[0]
+    auto headPtr = builder.create&lt;LLVM::GEPOp&gt;(
+        loc, cellPtr.getType(), cellPtr,
+        ArrayRef&lt;LLVM::GEPArg&gt;{0},
+        elementType);
+
+    // Store head
+    builder.create&lt;LLVM::StoreOp&gt;(loc, headValue, headPtr);
+  }
+
+  // Store tail list at offset sizeof(element)
+  void storeTail(
+      OpBuilder &amp;builder, Location loc, Value cellPtr,
+      Value tailValue, Type elementType) const {
+
+    auto ctx = builder.getContext();
+    auto dataLayout = DataLayout::closest(loc.getParentModule());
+
+    // Calculate tail offset
+    uint64_t elemSize = dataLayout.getTypeSize(elementType);
+    uint64_t tailOffset = (elemSize + 7) &amp; ~7;  // Align to 8 bytes
+
+    // GEP to tail field: cell + tailOffset bytes
+    auto tailPtr = builder.create&lt;LLVM::GEPOp&gt;(
+        loc, cellPtr.getType(), cellPtr,
+        ArrayRef&lt;LLVM::GEPArg&gt;{static_cast&lt;int32_t&gt;(tailOffset)},
+        builder.getI8Type());
+
+    // Store tail
+    builder.create&lt;LLVM::StoreOp&gt;(loc, tailValue, tailPtr);
+  }
+
+  // Build tagged union: {tag: 1, data: cellPtr}
+  Value buildTaggedUnion(
+      OpBuilder &amp;builder, Location loc,
+      LLVM::LLVMStructType structType, Value cellPtr) const {
+
+    auto ctx = builder.getContext();
+    auto i32Type = builder.getI32Type();
+
+    // Tag = 1 (Cons)
+    auto tagValue = builder.create&lt;arith::ConstantIntOp&gt;(loc, 1, i32Type);
+
+    // Start with undefined struct
+    auto undefStruct = builder.create&lt;LLVM::UndefOp&gt;(loc, structType);
+
+    // Insert tag
+    auto withTag = builder.create&lt;LLVM::InsertValueOp&gt;(
+        loc, undefStruct, tagValue, ArrayRef&lt;int64_t&gt;{0});
+
+    // Insert cell pointer
+    auto withData = builder.create&lt;LLVM::InsertValueOp&gt;(
+        loc, withTag, cellPtr, ArrayRef&lt;int64_t&gt;{1});
+
+    return withData.getResult();
+  }
+};
+</code></pre>
+<h3 id="detailed-breakdown"><a class="header" href="#detailed-breakdown">Detailed Breakdown</a></h3>
+<p><strong>Step 1: Cell size calculation</strong></p>
+<pre><code class="language-cpp">uint64_t elemSize = dataLayout.getTypeSize(elementType);
+uint64_t tailSize = 16;  // struct&lt;(i32, ptr)&gt; aligned
+uint64_t totalSize = elemSize + tailSize;
+totalSize = (totalSize + 7) &amp; ~7;  // Align to 8 bytes
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code>i32: 4 + 16 = 20 → 24 bytes
+f64: 8 + 16 = 24 → 24 bytes
+!funlang.closure (ptr): 8 + 16 = 24 → 24 bytes
+</code></pre>
+<p><strong>Step 2: GC_malloc call</strong></p>
+<pre><code class="language-cpp">auto gcMalloc = module.lookupSymbol&lt;LLVM::LLVMFuncOp&gt;("GC_malloc");
+if (!gcMalloc) {
+  // Declare if not exists
+  auto funcType = LLVM::LLVMFunctionType::get(ptrType, {i64Type});
+  gcMalloc = builder.create&lt;LLVM::LLVMFuncOp&gt;(loc, "GC_malloc", funcType);
+}
+auto callOp = builder.create&lt;LLVM::CallOp&gt;(loc, gcMalloc, ValueRange{size});
+</code></pre>
+<p>생성되는 MLIR:</p>
+<pre><code class="language-mlir">llvm.func @GC_malloc(i64) -&gt; !llvm.ptr
+%cell_ptr = llvm.call @GC_malloc(%cell_size) : (i64) -&gt; !llvm.ptr
+</code></pre>
+<p><strong>Step 3: Store head</strong></p>
+<pre><code class="language-cpp">auto headPtr = builder.create&lt;LLVM::GEPOp&gt;(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef&lt;LLVM::GEPArg&gt;{0}, elementType);
+builder.create&lt;LLVM::StoreOp&gt;(loc, headValue, headPtr);
+</code></pre>
+<p>생성되는 MLIR:</p>
+<pre><code class="language-mlir">%head_ptr = llvm.getelementptr %cell_ptr[0] : (!llvm.ptr) -&gt; !llvm.ptr, i32
+llvm.store %head, %head_ptr : i32, !llvm.ptr
+</code></pre>
+<p><strong>GEPOp (GetElementPtr):</strong></p>
+<ul>
+<li>Opaque pointers 시대의 GEP</li>
+<li>Type hint: <code>elementType</code> (i32, f64, etc.)</li>
+<li>Offset: <code>[0]</code> (first field)</li>
+</ul>
+<p><strong>Step 4: Store tail</strong></p>
+<pre><code class="language-cpp">uint64_t tailOffset = (elemSize + 7) &amp; ~7;  // Aligned offset
+auto tailPtr = builder.create&lt;LLVM::GEPOp&gt;(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef&lt;LLVM::GEPArg&gt;{static_cast&lt;int32_t&gt;(tailOffset)},
+    builder.getI8Type());
+builder.create&lt;LLVM::StoreOp&gt;(loc, tailValue, tailPtr);
+</code></pre>
+<p>생성되는 MLIR:</p>
+<pre><code class="language-mlir">%tail_ptr = llvm.getelementptr %cell_ptr[8] : (!llvm.ptr) -&gt; !llvm.ptr, i8
+llvm.store %tail, %tail_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+</code></pre>
+<p><strong>Byte-offset GEP:</strong></p>
+<ul>
+<li>Type hint: <code>i8</code> (byte-addressable)</li>
+<li>Offset: <code>[8]</code> (after 4-byte i32, aligned to 8)</li>
+</ul>
+<p><strong>Step 5: Tagged union</strong></p>
+<pre><code class="language-cpp">auto tagValue = builder.create&lt;arith::ConstantIntOp&gt;(loc, 1, i32Type);
+auto undefStruct = builder.create&lt;LLVM::UndefOp&gt;(loc, structType);
+auto withTag = builder.create&lt;LLVM::InsertValueOp&gt;(
+    loc, undefStruct, tagValue, ArrayRef&lt;int64_t&gt;{0});
+auto withData = builder.create&lt;LLVM::InsertValueOp&gt;(
+    loc, withTag, cellPtr, ArrayRef&lt;int64_t&gt;{1});
+</code></pre>
+<p>생성되는 MLIR:</p>
+<pre><code class="language-mlir">%tag = arith.constant 1 : i32
+%undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+%s1 = llvm.insertvalue %tag, %undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%cons = llvm.insertvalue %cell_ptr, %s1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<h3 id="opadaptor-usage"><a class="header" href="#opadaptor-usage">OpAdaptor Usage</a></h3>
+<p><strong>OpAdaptor가 중요한 이유:</strong></p>
+<pre><code class="language-cpp">Value headValue = adaptor.getHead();  // Converted type!
+Value tailValue = adaptor.getTail();  // Converted type!
+</code></pre>
+<p><strong>Type conversion 자동 처리:</strong></p>
+<pre><code class="language-mlir">// Before lowering
+%cons = funlang.cons %head, %tail : !funlang.list&lt;i32&gt;
+// %head: i32
+// %tail: !funlang.list&lt;i32&gt;
+
+// During lowering (via OpAdaptor)
+// adaptor.getHead(): i32 (unchanged)
+// adaptor.getTail(): !llvm.struct&lt;(i32, ptr)&gt; (converted!)
+</code></pre>
+<p><strong>이미 TypeConverter가 처리함:</strong></p>
+<ul>
+<li>OpAdaptor는 TypeConverter가 변환한 operands 제공</li>
+<li>Pattern 코드는 converted types로 작업</li>
+<li>수동 type conversion 불필요</li>
+</ul>
+<h3 id="complete-example-1"><a class="header" href="#complete-example-1">Complete Example</a></h3>
+<p><strong>Input MLIR (FunLang dialect):</strong></p>
+<pre><code class="language-mlir">func.func @build_list() -&gt; !funlang.list&lt;i32&gt; {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+
+    %nil = funlang.nil : !funlang.list&lt;i32&gt;
+    %lst1 = funlang.cons %c3, %nil : !funlang.list&lt;i32&gt;
+    %lst2 = funlang.cons %c2, %lst1 : !funlang.list&lt;i32&gt;
+    %lst3 = funlang.cons %c1, %lst2 : !funlang.list&lt;i32&gt;
+
+    func.return %lst3 : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>After lowering (LLVM dialect):</strong></p>
+<pre><code class="language-mlir">func.func @build_list() -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+
+    // Nil
+    %c0_tag = arith.constant 0 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %nil_undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %nil_1 = llvm.insertvalue %c0_tag, %nil_undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %nil = llvm.insertvalue %null, %nil_1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Cons %c3, %nil
+    %size1 = arith.constant 24 : i64
+    %cell1 = llvm.call @GC_malloc(%size1) : (i64) -&gt; !llvm.ptr
+    %head1_ptr = llvm.getelementptr %cell1[0] : (!llvm.ptr) -&gt; !llvm.ptr, i32
+    llvm.store %c3, %head1_ptr : i32, !llvm.ptr
+    %tail1_ptr = llvm.getelementptr %cell1[8] : (!llvm.ptr) -&gt; !llvm.ptr, i8
+    llvm.store %nil, %tail1_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+    %c1_tag = arith.constant 1 : i32
+    %lst1_undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %lst1_1 = llvm.insertvalue %c1_tag, %lst1_undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %lst1 = llvm.insertvalue %cell1, %lst1_1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Cons %c2, %lst1
+    %size2 = arith.constant 24 : i64
+    %cell2 = llvm.call @GC_malloc(%size2) : (i64) -&gt; !llvm.ptr
+    %head2_ptr = llvm.getelementptr %cell2[0] : (!llvm.ptr) -&gt; !llvm.ptr, i32
+    llvm.store %c2, %head2_ptr : i32, !llvm.ptr
+    %tail2_ptr = llvm.getelementptr %cell2[8] : (!llvm.ptr) -&gt; !llvm.ptr, i8
+    llvm.store %lst1, %tail2_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+    %lst2_1 = llvm.insertvalue %c1_tag, %lst1_undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %lst2 = llvm.insertvalue %cell2, %lst2_1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Cons %c1, %lst2
+    %size3 = arith.constant 24 : i64
+    %cell3 = llvm.call @GC_malloc(%size3) : (i64) -&gt; !llvm.ptr
+    %head3_ptr = llvm.getelementptr %cell3[0] : (!llvm.ptr) -&gt; !llvm.ptr, i32
+    llvm.store %c1, %head3_ptr : i32, !llvm.ptr
+    %tail3_ptr = llvm.getelementptr %cell3[8] : (!llvm.ptr) -&gt; !llvm.ptr, i8
+    llvm.store %lst2, %tail3_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+    %lst3_1 = llvm.insertvalue %c1_tag, %lst1_undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %lst3 = llvm.insertvalue %cell3, %lst3_1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+    func.return %lst3 : !llvm.struct&lt;(i32, ptr)&gt;
+}
+</code></pre>
+<h3 id="summary-consop-lowering-pattern"><a class="header" href="#summary-consop-lowering-pattern">Summary: ConsOp Lowering Pattern</a></h3>
+<p><strong>구현 완료:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> OpConversionPattern for funlang.cons</li>
+<li><input disabled="" type="checkbox" checked=""> GC_malloc call for cons cell allocation</li>
+<li><input disabled="" type="checkbox" checked=""> GEP + Store for head and tail</li>
+<li><input disabled="" type="checkbox" checked=""> Tagged union construction with tag=1</li>
+<li><input disabled="" type="checkbox" checked=""> OpAdaptor for converted operands</li>
+</ul>
+<p><strong>핵심 패턴:</strong></p>
+<ol>
+<li>Calculate cell size from element type</li>
+<li>Allocate via GC_malloc</li>
+<li>Store head and tail with GEP</li>
+<li>Build tagged union with InsertValueOp</li>
+</ol>
+<p><strong>다음 섹션:</strong></p>
+<ul>
+<li>Complete lowering pass integration</li>
+<li>Common errors and debugging</li>
+</ul>
+<hr>
+<h2 id="complete-lowering-pass-update"><a class="header" href="#complete-lowering-pass-update">Complete Lowering Pass Update</a></h2>
+<p>이제 NilOpLowering과 ConsOpLowering을 FunLangToLLVM pass에 등록한다.</p>
+<h3 id="funlangtollvm-pass-structure"><a class="header" href="#funlangtollvm-pass-structure">FunLangToLLVM Pass Structure</a></h3>
+<p><strong>파일: <code>mlir/lib/Dialect/FunLang/Transforms/FunLangToLLVM.cpp</code></strong></p>
+<pre><code class="language-cpp">//===----------------------------------------------------------------------===//
+// FunLangToLLVM Pass
+//===----------------------------------------------------------------------===//
+
+struct FunLangToLLVMPass
+    : public PassWrapper&lt;FunLangToLLVMPass, OperationPass&lt;ModuleOp&gt;&gt; {
+
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FunLangToLLVMPass)
+
+  StringRef getArgument() const final { return "convert-funlang-to-llvm"; }
+  StringRef getDescription() const final {
+    return "Convert FunLang dialect to LLVM dialect";
+  }
+
+  void runOnOperation() override {
+    auto module = getOperation();
+    auto *ctx = &amp;getContext();
+
+    // Get data layout from module
+    auto dataLayout = DataLayout::closest(module);
+
+    // Create type converter
+    FunLangTypeConverter typeConverter(ctx, dataLayout);
+
+    // Setup conversion target
+    ConversionTarget target(*ctx);
+
+    // Legal dialects (after conversion)
+    target.addLegalDialect&lt;LLVM::LLVMDialect&gt;();
+    target.addLegalDialect&lt;arith::ArithDialect&gt;();
+    target.addLegalDialect&lt;func::FuncDialect&gt;();
+
+    // Illegal dialects (must be converted)
+    target.addIllegalDialect&lt;funlang::FunLangDialect&gt;();
+
+    // Function signatures must be converted
+    target.addDynamicallyLegalOp&lt;func::FuncOp&gt;([&amp;](func::FuncOp op) {
+      return typeConverter.isSignatureLegal(op.getFunctionType());
+    });
+
+    // Populate rewrite patterns
+    RewritePatternSet patterns(ctx);
+
+    // Phase 5 patterns (Chapter 16)
+    patterns.add&lt;ClosureOpLowering&gt;(typeConverter, ctx);
+    patterns.add&lt;ApplyOpLowering&gt;(typeConverter, ctx);
+
+    // Phase 6 patterns (Chapter 18)
+    patterns.add&lt;NilOpLowering&gt;(typeConverter, ctx);
+    patterns.add&lt;ConsOpLowering&gt;(typeConverter, ctx);
+
+    // Function signature conversion
+    populateFunctionOpInterfaceTypeConversionPattern&lt;func::FuncOp&gt;(
+        patterns, typeConverter);
+
+    // Run partial conversion
+    if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+
+// Register pass
+void registerFunLangToLLVMPass() {
+  PassRegistration&lt;FunLangToLLVMPass&gt;();
+}
+</code></pre>
+<h3 id="pattern-registration-order"><a class="header" href="#pattern-registration-order">Pattern Registration Order</a></h3>
+<p><strong>순서가 중요한가?</strong></p>
+<p>일반적으로 <strong>순서 무관</strong>하다. DialectConversion framework가 모든 patterns를 시도한다.</p>
+<p><strong>하지만 성능 최적화를 위해:</strong></p>
+<ul>
+<li>자주 매칭되는 patterns를 먼저 등록</li>
+<li>복잡한 patterns를 나중에 등록 (matching cost 고려)</li>
+</ul>
+<p><strong>FunLang의 경우:</strong></p>
+<pre><code class="language-cpp">// Frequency: ClosureOp &gt; ApplyOp &gt; ConsOp &gt; NilOp (typical functional code)
+patterns.add&lt;ClosureOpLowering&gt;(typeConverter, ctx);    // Most frequent
+patterns.add&lt;ApplyOpLowering&gt;(typeConverter, ctx);
+patterns.add&lt;ConsOpLowering&gt;(typeConverter, ctx);
+patterns.add&lt;NilOpLowering&gt;(typeConverter, ctx);        // Least frequent
+</code></pre>
+<p>하지만 <strong>실용적으로는 로직 순서</strong>로 배치:</p>
+<pre><code class="language-cpp">// Logical grouping
+// Phase 5 operations
+patterns.add&lt;ClosureOpLowering&gt;(typeConverter, ctx);
+patterns.add&lt;ApplyOpLowering&gt;(typeConverter, ctx);
+
+// Phase 6 operations
+patterns.add&lt;NilOpLowering&gt;(typeConverter, ctx);
+patterns.add&lt;ConsOpLowering&gt;(typeConverter, ctx);
+</code></pre>
+<h3 id="pass-manager-integration"><a class="header" href="#pass-manager-integration">Pass Manager Integration</a></h3>
+<p><strong>F# compiler pipeline:</strong></p>
+<pre><code class="language-fsharp">// FunLang.Compiler/Compiler.fs
+let lowerToLLVM (mlirModule: MlirModule) =
+    let pm = PassManager(mlirModule.Context)
+
+    // Phase 5-6: FunLang → LLVM
+    pm.AddPass("convert-funlang-to-llvm")
+
+    // Standard MLIR lowering
+    pm.AddPass("convert-func-to-llvm")
+    pm.AddPass("convert-arith-to-llvm")
+    pm.AddPass("reconcile-unrealized-casts")
+
+    pm.Run(mlirModule)
+</code></pre>
+<p><strong>Pass order:</strong></p>
+<ol>
+<li><strong>convert-funlang-to-llvm</strong>: FunLang ops → LLVM ops</li>
+<li><strong>convert-func-to-llvm</strong>: func.func → llvm.func</li>
+<li><strong>convert-arith-to-llvm</strong>: arith ops → llvm ops</li>
+<li><strong>reconcile-unrealized-casts</strong>: Remove UnrealizedConversionCastOps</li>
+</ol>
+<h3 id="testing-list-construction"><a class="header" href="#testing-list-construction">Testing List Construction</a></h3>
+<p><strong>Test case:</strong></p>
+<pre><code class="language-fsharp">// F# source
+let test_list = [1; 2; 3]
+</code></pre>
+<p><strong>Compiled MLIR (FunLang dialect):</strong></p>
+<pre><code class="language-mlir">module {
+  func.func @test_list() -&gt; !funlang.list&lt;i32&gt; {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+
+    %nil = funlang.nil : !funlang.list&lt;i32&gt;
+    %lst1 = funlang.cons %c3, %nil : !funlang.list&lt;i32&gt;
+    %lst2 = funlang.cons %c2, %lst1 : !funlang.list&lt;i32&gt;
+    %lst3 = funlang.cons %c1, %lst2 : !funlang.list&lt;i32&gt;
+
+    func.return %lst3 : !funlang.list&lt;i32&gt;
+  }
+}
+</code></pre>
+<p><strong>After lowering:</strong></p>
+<pre><code class="language-bash">mlir-opt test.mlir \
+  --convert-funlang-to-llvm \
+  --convert-func-to-llvm \
+  --convert-arith-to-llvm \
+  --reconcile-unrealized-casts
+</code></pre>
+<p><strong>Result (LLVM dialect):</strong></p>
+<pre><code class="language-mlir">module {
+  llvm.func @GC_malloc(i64) -&gt; !llvm.ptr
+
+  llvm.func @test_list() -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+
+    // Nil
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %nil_undef = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %nil_1 = llvm.insertvalue %c0, %nil_undef[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %nil = llvm.insertvalue %null, %nil_1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Cons cells (similar to previous example)
+    // ...
+
+    llvm.return %lst3 : !llvm.struct&lt;(i32, ptr)&gt;
+  }
+}
+</code></pre>
+<h3 id="end-to-end-example"><a class="header" href="#end-to-end-example">End-to-End Example</a></h3>
+<p><strong>Complete workflow:</strong></p>
+<pre><code class="language-fsharp">// 1. F# AST → FunLang MLIR
+let ast = parseExpression "[1; 2; 3]"
+let mlirModule = compileToFunLang ast
+
+// 2. FunLang MLIR → LLVM MLIR
+lowerToLLVM mlirModule
+
+// 3. LLVM MLIR → LLVM IR
+let llvmIR = translateToLLVMIR mlirModule
+
+// 4. LLVM IR → Object file
+let objFile = compileLLVMIR llvmIR
+
+// 5. Link with runtime
+let executable = linkWithRuntime objFile
+
+// 6. Run!
+runExecutable executable
+</code></pre>
+<p><strong>Memory diagram at runtime:</strong></p>
+<pre><code>Stack:
+  %lst3: {1, 0x1000}
+
+Heap (GC-managed):
+  0x1000: ConsCell { head: 1, tail: {1, 0x2000} }
+  0x2000: ConsCell { head: 2, tail: {1, 0x3000} }
+  0x3000: ConsCell { head: 3, tail: {0, null} }
+</code></pre>
+<h3 id="summary-complete-lowering-pass"><a class="header" href="#summary-complete-lowering-pass">Summary: Complete Lowering Pass</a></h3>
+<p><strong>구현 완료:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> FunLangToLLVMPass with all patterns</li>
+<li><input disabled="" type="checkbox" checked=""> Pattern registration (Closure, Apply, Nil, Cons)</li>
+<li><input disabled="" type="checkbox" checked=""> Pass manager integration</li>
+<li><input disabled="" type="checkbox" checked=""> End-to-end list construction</li>
+</ul>
+<p><strong>Pass pipeline:</strong></p>
+<ol>
+<li>convert-funlang-to-llvm</li>
+<li>convert-func-to-llvm</li>
+<li>convert-arith-to-llvm</li>
+<li>reconcile-unrealized-casts</li>
+</ol>
+<p><strong>다음 섹션:</strong></p>
+<ul>
+<li>Common errors and debugging strategies</li>
+</ul>
+<hr>
+<h2 id="common-errors"><a class="header" href="#common-errors">Common Errors</a></h2>
+<p>Lowering pass 구현 시 흔히 발생하는 오류와 해결 방법.</p>
+<h3 id="error-1-wrong-cons-cell-size"><a class="header" href="#error-1-wrong-cons-cell-size">Error 1: Wrong Cons Cell Size</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Runtime segfault when accessing tail
+</code></pre>
+<p><strong>원인:</strong></p>
+<pre><code class="language-cpp">// 잘못된 코드
+uint64_t totalSize = elemSize + 12;  // struct&lt;(i32, ptr)&gt; = 12 bytes?
+// 실제: struct는 alignment 때문에 16 bytes!
+</code></pre>
+<p><strong>해결:</strong></p>
+<pre><code class="language-cpp">// 올바른 코드
+uint64_t tailSize = 16;  // Aligned struct size
+uint64_t totalSize = elemSize + tailSize;
+totalSize = (totalSize + 7) &amp; ~7;  // Align total to 8 bytes
+</code></pre>
+<p><strong>디버깅:</strong></p>
+<pre><code class="language-cpp">// Print sizes in lowering pass
+llvm::errs() &lt;&lt; "Element size: " &lt;&lt; elemSize &lt;&lt; "\n";
+llvm::errs() &lt;&lt; "Total cell size: " &lt;&lt; totalSize &lt;&lt; "\n";
+</code></pre>
+<h3 id="error-2-type-mismatch-in-store-operations"><a class="header" href="#error-2-type-mismatch-in-store-operations">Error 2: Type Mismatch in Store Operations</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>error: 'llvm.store' op operand #0 type 'i32' does not match
+  destination pointer element type '!llvm.struct&lt;(i32, ptr)&gt;'
+</code></pre>
+<p><strong>원인:</strong></p>
+<pre><code class="language-cpp">// 잘못된 GEP - head pointer로 tail을 store
+llvm.store %tail, %head_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+</code></pre>
+<p><strong>해결:</strong></p>
+<pre><code class="language-cpp">// 올바른 GEP offsets
+auto headPtr = builder.create&lt;LLVM::GEPOp&gt;(
+    loc, cellPtr.getType(), cellPtr, ArrayRef&lt;LLVM::GEPArg&gt;{0}, elementType);
+    // ^^^^^^^^ offset 0 for head
+
+auto tailPtr = builder.create&lt;LLVM::GEPOp&gt;(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef&lt;LLVM::GEPArg&gt;{tailOffset}, builder.getI8Type());
+    // ^^^^^^^^^^^^^^^^ byte offset for tail
+</code></pre>
+<h3 id="error-3-missing-typeconverter-rule"><a class="header" href="#error-3-missing-typeconverter-rule">Error 3: Missing TypeConverter Rule</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>error: failed to legalize operation 'funlang.cons'
+  operand #1 type '!funlang.list&lt;i32&gt;' is not legal
+</code></pre>
+<p><strong>원인:</strong></p>
+<p>TypeConverter에 list type 변환 규칙 없음.</p>
+<p><strong>해결:</strong></p>
+<pre><code class="language-cpp">// TypeConverter에 추가
+addConversion([](funlang::FunLangListType type) {
+  auto ctx = type.getContext();
+  auto i32Type = IntegerType::get(ctx, 32);
+  auto ptrType = LLVM::LLVMPointerType::get(ctx);
+  return LLVM::LLVMStructType::getLiteral(ctx, {i32Type, ptrType});
+});
+</code></pre>
+<h3 id="error-4-gep-index-confusion"><a class="header" href="#error-4-gep-index-confusion">Error 4: GEP Index Confusion</a></h3>
+<p><strong>증상:</strong></p>
+<pre><code>Runtime crash: accessing wrong memory offset
+</code></pre>
+<p><strong>원인:</strong></p>
+<pre><code class="language-cpp">// Element index vs byte offset 혼동
+auto tailPtr = builder.create&lt;LLVM::GEPOp&gt;(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef&lt;LLVM::GEPArg&gt;{1},  // Element index 1? No!
+    structType);
+</code></pre>
+<p><strong>해결:</strong></p>
+<pre><code class="language-cpp">// Byte offset 사용
+uint64_t tailOffset = (elemSize + 7) &amp; ~7;
+auto tailPtr = builder.create&lt;LLVM::GEPOp&gt;(
+    loc, cellPtr.getType(), cellPtr,
+    ArrayRef&lt;LLVM::GEPArg&gt;{static_cast&lt;int32_t&gt;(tailOffset)},
+    builder.getI8Type());  // i8 for byte-addressable
+</code></pre>
+<p><strong>GEP modes:</strong></p>
+<ul>
+<li><strong>Type-based</strong>: <code>GEP ptr, [index]</code> with element type → element index</li>
+<li><strong>Byte-based</strong>: <code>GEP ptr, [offset]</code> with i8 type → byte offset</li>
+</ul>
+<h3 id="debugging-strategies"><a class="header" href="#debugging-strategies">Debugging Strategies</a></h3>
+<p><strong>Strategy 1: Print intermediate MLIR</strong></p>
+<pre><code class="language-bash">mlir-opt input.mlir \
+  --convert-funlang-to-llvm \
+  --print-ir-after-all \
+  -o output.mlir
+</code></pre>
+<p><strong>Strategy 2: Use mlir-opt with debug flags</strong></p>
+<pre><code class="language-bash">mlir-opt input.mlir \
+  --convert-funlang-to-llvm \
+  --debug-only=dialect-conversion \
+  --mlir-print-debuginfo
+</code></pre>
+<p><strong>Strategy 3: Add assertions in lowering patterns</strong></p>
+<pre><code class="language-cpp">LogicalResult matchAndRewrite(...) const override {
+  // Check preconditions
+  assert(adaptor.getTail().getType().isa&lt;LLVM::LLVMStructType&gt;() &amp;&amp;
+         "Tail must be converted to struct type");
+
+  // Pattern logic...
+}
+</code></pre>
+<p><strong>Strategy 4: Test incrementally</strong></p>
+<pre><code class="language-mlir">// Test NilOp alone first
+func.func @test_nil() -&gt; !funlang.list&lt;i32&gt; {
+    %nil = funlang.nil : !funlang.list&lt;i32&gt;
+    func.return %nil : !funlang.list&lt;i32&gt;
+}
+
+// Then ConsOp with nil
+func.func @test_cons_nil() -&gt; !funlang.list&lt;i32&gt; {
+    %nil = funlang.nil : !funlang.list&lt;i32&gt;
+    %c1 = arith.constant 1 : i32
+    %cons = funlang.cons %c1, %nil : !funlang.list&lt;i32&gt;
+    func.return %cons : !funlang.list&lt;i32&gt;
+}
+
+// Then multiple cons
+// ...
+</code></pre>
+<h3 id="summary-common-errors"><a class="header" href="#summary-common-errors">Summary: Common Errors</a></h3>
+<p><strong>주요 실수:</strong></p>
+<ol>
+<li>Cons cell size 계산 오류 (alignment 무시)</li>
+<li>GEP offset 혼동 (element index vs byte offset)</li>
+<li>TypeConverter 규칙 누락</li>
+<li>Store type mismatch</li>
+</ol>
+<p><strong>디버깅 도구:</strong></p>
+<ul>
+<li><code>mlir-opt --print-ir-after-all</code></li>
+<li><code>--debug-only=dialect-conversion</code></li>
+<li>Assertions in pattern code</li>
+<li>Incremental testing</li>
+</ul>
+<p><strong>다음 섹션:</strong></p>
+<ul>
+<li>Chapter 18 summary and Chapter 19 preview</li>
+</ul>
+<hr>
+<h2 id="summary-and-chapter-19-preview"><a class="header" href="#summary-and-chapter-19-preview">Summary and Chapter 19 Preview</a></h2>
+<h3 id="chapter-18-복습"><a class="header" href="#chapter-18-복습">Chapter 18 복습</a></h3>
+<p><strong>이 장에서 구현한 것:</strong></p>
+<ol>
+<li>
+<p><strong>List Representation Design</strong></p>
+<ul>
+<li>Tagged union: <code>!llvm.struct&lt;(i32, ptr)&gt;</code></li>
+<li>Cons cells: Heap-allocated <code>{element, tail}</code> structs</li>
+<li>Immutability and structural sharing</li>
+</ul>
+</li>
+<li>
+<p><strong>FunLang List Type</strong></p>
+<ul>
+<li><code>!funlang.list&lt;T&gt;</code> parameterized type</li>
+<li>TableGen definition with type parameter</li>
+<li>C API shim and F# bindings</li>
+</ul>
+</li>
+<li>
+<p><strong>funlang.nil Operation</strong></p>
+<ul>
+<li>Empty list constructor</li>
+<li>Pure trait (no allocation)</li>
+<li>Lowering: constant struct {0, null}</li>
+</ul>
+</li>
+<li>
+<p><strong>funlang.cons Operation</strong></p>
+<ul>
+<li>Cons cell constructor</li>
+<li>Type-safe head/tail constraints</li>
+<li>Lowering: GC_malloc + GEP + store</li>
+</ul>
+</li>
+<li>
+<p><strong>TypeConverter Extension</strong></p>
+<ul>
+<li><code>!funlang.list&lt;T&gt;</code> → <code>!llvm.struct&lt;(i32, ptr)&gt;</code></li>
+<li>Element type erasure at runtime</li>
+<li>Integration with FunLangTypeConverter</li>
+</ul>
+</li>
+<li>
+<p><strong>Lowering Patterns</strong></p>
+<ul>
+<li>NilOpLowering: InsertValueOp for struct construction</li>
+<li>ConsOpLowering: GC_malloc + GEP + store + InsertValueOp</li>
+<li>Complete pass integration</li>
+</ul>
+</li>
+</ol>
+<h3 id="list-operations의-의의"><a class="header" href="#list-operations의-의의">List Operations의 의의</a></h3>
+<p><strong>Before Chapter 18:</strong></p>
+<pre><code class="language-mlir">// 리스트 표현 불가
+// 패턴 매칭 불가
+</code></pre>
+<p><strong>After Chapter 18:</strong></p>
+<pre><code class="language-mlir">// 리스트 생성 가능
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%lst = funlang.cons %head, %tail : !funlang.list&lt;i32&gt;
+
+// Chapter 19에서 패턴 매칭 추가:
+%result = funlang.match %lst : !funlang.list&lt;i32&gt; -&gt; i32 {
+  ^nil: ...
+  ^cons(%h, %t): ...
+}
+</code></pre>
+<h3 id="성공-기준-달성-확인"><a class="header" href="#성공-기준-달성-확인">성공 기준 달성 확인</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> List의 메모리 표현(tagged union)을 이해한다</li>
+<li><input disabled="" type="checkbox" checked=""> <code>!funlang.list&lt;T&gt;</code> 타입을 TableGen으로 정의할 수 있다</li>
+<li><input disabled="" type="checkbox" checked=""> <code>funlang.nil</code>과 <code>funlang.cons</code>의 동작 원리를 안다</li>
+<li><input disabled="" type="checkbox" checked=""> TypeConverter로 FunLang → LLVM 타입 변환을 구현할 수 있다</li>
+<li><input disabled="" type="checkbox" checked=""> Lowering pattern으로 operation을 LLVM dialect로 변환할 수 있다</li>
+<li><input disabled="" type="checkbox" checked=""> Chapter 19에서 <code>funlang.match</code> 구현을 시작할 준비가 된다</li>
+</ul>
+<h3 id="chapter-19-preview-match-compilation"><a class="header" href="#chapter-19-preview-match-compilation">Chapter 19 Preview: Match Compilation</a></h3>
+<p><strong>Chapter 19의 목표:</strong></p>
+<p><code>funlang.match</code> operation으로 패턴 매칭을 MLIR로 표현하고, decision tree 알고리즘을 lowering으로 구현한다.</p>
+<p><strong>funlang.match operation (preview):</strong></p>
+<pre><code class="language-mlir">%sum = funlang.match %list : !funlang.list&lt;i32&gt; -&gt; i32 {
+  ^nil:
+    %zero = arith.constant 0 : i32
+    funlang.yield %zero : i32
+
+  ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+    %sum_tail = func.call @sum_list(%tail) : (!funlang.list&lt;i32&gt;) -&gt; i32
+    %result = arith.addi %head, %sum_tail : i32
+    funlang.yield %result : i32
+}
+</code></pre>
+<p><strong>Lowering strategy:</strong></p>
+<pre><code class="language-mlir">// funlang.match lowering → scf.if + tag dispatch
+
+// Extract tag
+%tag_ptr = llvm.getelementptr %list[0] : ...
+%tag = llvm.load %tag_ptr : ...
+
+// Dispatch
+%is_nil = arith.cmpi eq, %tag, %c0 : i32
+%result = scf.if %is_nil -&gt; i32 {
+  // Nil case
+  %zero = arith.constant 0 : i32
+  scf.yield %zero : i32
+} else {
+  // Cons case: extract head and tail
+  %data_ptr = llvm.getelementptr %list[1] : ...
+  %cell = llvm.load %data_ptr : ...
+  %head = llvm.load %head_ptr : ...
+  %tail = llvm.load %tail_ptr : ...
+
+  // Execute cons body
+  %sum_tail = func.call @sum_list(%tail) : ...
+  %result = arith.addi %head, %sum_tail : i32
+  scf.yield %result : i32
+}
+</code></pre>
+<p><strong>Chapter 19 구조:</strong></p>
+<ol>
+<li><strong>funlang.match Operation</strong>: Region-based pattern matching</li>
+<li><strong>MatchOp Lowering</strong>: Decision tree → scf.if/cf.br</li>
+<li><strong>Pattern Decomposition</strong>: Tag dispatch + field extraction</li>
+<li><strong>Exhaustiveness Checking</strong>: Verification at operation level</li>
+<li><strong>End-to-End Examples</strong>: sum_list, length, map, filter</li>
+</ol>
+<h3 id="phase-6-progress"><a class="header" href="#phase-6-progress">Phase 6 Progress</a></h3>
+<p><strong>Completed:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> Chapter 17: Pattern Matching Theory (decision tree algorithm)</li>
+<li><input disabled="" type="checkbox" checked=""> Chapter 18: List Operations (nil, cons, lowering)</li>
+</ul>
+<p><strong>Remaining:</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> Chapter 19: Match Compilation (funlang.match operation and lowering)</li>
+<li><input disabled="" type="checkbox"> Chapter 20: Functional Programs (실전 예제: map, filter, fold)</li>
+</ul>
+<p><strong>Phase 6이 완료되면:</strong></p>
+<ul>
+<li>완전한 함수형 언어 (closures + pattern matching + data structures)</li>
+<li>Real-world functional programs 작성 가능</li>
+<li>Phase 7 (optimizations)의 기반 완성</li>
+</ul>
+<h3 id="마무리"><a class="header" href="#마무리">마무리</a></h3>
+<p><strong>Chapter 18에서 배운 핵심 개념:</strong></p>
+<ol>
+<li><strong>Parameterized types</strong>: <code>!funlang.list&lt;T&gt;</code> for type safety</li>
+<li><strong>Tagged unions</strong>: Runtime representation of sum types</li>
+<li><strong>GC allocation</strong>: Heap-allocated cons cells</li>
+<li><strong>Type erasure</strong>: Element type as compile-time information</li>
+<li><strong>ConversionPattern</strong>: OpConversionPattern + TypeConverter + OpAdaptor</li>
+</ol>
+<p><strong>Next chapter: Let’s implement pattern matching with funlang.match!</strong></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="17-pattern-matching-theory.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="19-match-compilation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="17-pattern-matching-theory.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="19-match-compilation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

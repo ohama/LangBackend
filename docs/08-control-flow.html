@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-e7b79bcf.js";
+            window.path_to_searchindex_js = "searchindex-2a27a2f4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-744e4df7.js"></script>
+        <script src="toc-d20149da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1079,37 +1079,63 @@ let finalResult =
 <h2 id="ifthenelse-코드-생성"><a class="header" href="#ifthenelse-코드-생성">If/Then/Else 코드 생성</a></h2>
 <p>이제 If 케이스를 scf.if로 컴파일한다.</p>
 <h3 id="if-케이스-구현"><a class="header" href="#if-케이스-구현">If 케이스 구현</a></h3>
+<p>실제 구현에서는 <code>CreateOperation</code>과 Region 생성 패턴을 사용한다:</p>
 <p><strong>CodeGen.fs에 추가:</strong></p>
-<pre><code class="language-fsharp">| If(condition, thenExpr, elseExpr) -&gt;
-    // 1. 조건 표현식 컴파일 (i1 타입 필요)
-    let condVal = compileExpr builder block location condition env
+<pre><code class="language-fsharp">| If(cond, thenExpr, elseExpr, _) -&gt;
+    // 1. Compile condition (must be i1 type)
+    let condVal = compileExpr ctx cond
 
-    // 2. 결과 타입 결정 (thenBranch의 타입을 사용)
-    // 실제로는 타입 추론이 필요하지만, 지금은 i32로 가정
-    let i32Type = builder.I32Type()
-    let resultTypes = [| i32Type |]
+    // 2. Determine result type (assume i32 for now - FunLang is well-typed)
+    let resultType = i32Type
 
-    // 3. scf.if operation 생성
-    let ifOp = builder.CreateScfIf(condVal, resultTypes, location)
+    // 3. Create THEN region
+    let thenRegion = builder.CreateRegion()
+    let thenBlock = builder.CreateBlock([||], ctx.Location)
+    builder.AppendBlockToRegion(thenRegion, thenBlock)
 
-    // 4. Then region 작성
-    let thenBlock = builder.GetThenBlock(ifOp)
-    let thenVal = compileExpr builder thenBlock location thenExpr env
-    let thenYield = builder.CreateScfYield([| thenVal |], location)
-    MlirNative.mlirBlockAppendOwnedOperation(thenBlock, thenYield)
+    // Compile then expression in new block context
+    let thenCtx = { ctx with Block = thenBlock }
+    let thenVal = compileExpr thenCtx thenExpr
 
-    // 5. Else region 작성
-    let elseBlock = builder.GetElseBlock(ifOp)
-    let elseVal = compileExpr builder elseBlock location elseExpr env
-    let elseYield = builder.CreateScfYield([| elseVal |], location)
-    MlirNative.mlirBlockAppendOwnedOperation(elseBlock, elseYield)
+    // Add scf.yield terminator to then block
+    let thenYieldOp = builder.CreateOperation(
+        "scf.yield", ctx.Location,
+        [||], [| thenVal |], [||], [||])
+    builder.AppendOperationToBlock(thenBlock, thenYieldOp)
 
-    // 6. scf.if를 블록에 추가
-    MlirNative.mlirBlockAppendOwnedOperation(block, ifOp)
+    // 4. Create ELSE region
+    let elseRegion = builder.CreateRegion()
+    let elseBlock = builder.CreateBlock([||], ctx.Location)
+    builder.AppendBlockToRegion(elseRegion, elseBlock)
 
-    // 7. scf.if의 결과 반환
+    // Compile else expression in new block context
+    let elseCtx = { ctx with Block = elseBlock }
+    let elseVal = compileExpr elseCtx elseExpr
+
+    // Add scf.yield terminator to else block
+    let elseYieldOp = builder.CreateOperation(
+        "scf.yield", ctx.Location,
+        [||], [| elseVal |], [||], [||])
+    builder.AppendOperationToBlock(elseBlock, elseYieldOp)
+
+    // 5. Create scf.if operation
+    let ifOp = builder.CreateOperation(
+        "scf.if", ctx.Location,
+        [| resultType |],              // result types
+        [| condVal |],                 // operands (condition only)
+        [||],                          // no attributes
+        [| thenRegion; elseRegion |])  // regions: then, else
+
+    builder.AppendOperationToBlock(ctx.Block, ifOp)
     builder.GetResult(ifOp, 0)
 </code></pre>
+<p><strong>핵심 패턴:</strong></p>
+<ul>
+<li><strong>Region 생성</strong>: <code>builder.CreateRegion()</code> → <code>builder.CreateBlock([||], loc)</code> → <code>builder.AppendBlockToRegion</code></li>
+<li><strong>Context 전환</strong>: 각 region에서 <code>{ ctx with Block = thenBlock }</code>로 새 컨텍스트 생성</li>
+<li><strong>scf.yield 종결자</strong>: 반드시 각 region의 끝에 추가해야 함</li>
+<li><strong>Region 순서</strong>: <code>[| thenRegion; elseRegion |]</code> - then이 첫 번째, else가 두 번째</li>
+</ul>
 <p><strong>동작 설명:</strong></p>
 <ol>
 <li><strong>조건 컴파일:</strong> <code>condition</code> 표현식을 컴파일하여 i1 값을 얻는다</li>
@@ -1197,52 +1223,45 @@ $ echo $?
 <p>5 &lt; 10이 true이므로 1을 반환한다!</p>
 <h2 id="lowering-pass-업데이트"><a class="header" href="#lowering-pass-업데이트">Lowering Pass 업데이트</a></h2>
 <p>SCF dialect를 사용하므로 lowering pass에 <code>--convert-scf-to-cf</code>를 추가해야 한다.</p>
-<h3 id="pass-manager-순서"><a class="header" href="#pass-manager-순서">Pass Manager 순서</a></h3>
-<p><strong>Lowering.fs 수정:</strong></p>
-<pre><code class="language-fsharp">namespace FunLangCompiler
+<h3 id="pass-pipeline"><a class="header" href="#pass-pipeline">Pass Pipeline</a></h3>
+<p>실제 구현에서는 <code>PassManager.AddPipeline</code>을 사용하여 단일 문자열로 pass pipeline을 지정한다:</p>
+<p><strong>CodeGen.fs의 compileAndRun 함수:</strong></p>
+<pre><code class="language-fsharp">/// Compile, lower to LLVM, and JIT execute an expression
+let compileAndRun (source: string) : int32 =
+    use ctx = new Context()
+    ctx.LoadStandardDialects()
+    MlirNative.mlirRegisterAllLLVMTranslations(ctx.Handle)
 
-module Lowering =
+    let expr = parse source "&lt;string&gt;"
+    use mlirMod = compileToFunction ctx "main" expr
 
-    /// MLIR module을 LLVM dialect로 lowering
-    let lowerToLLVMDialect (mlirMod: Module) =
-        let ctx = mlirMod.Context
-        let pm = MlirNative.mlirPassManagerCreate(ctx.Handle)
+    // Lower to LLVM
+    // Conversion order:
+    // 1. convert-scf-to-cf - Convert scf.if to cf.br/cf.cond_br
+    // 2. convert-arith-to-llvm - Convert arith ops to LLVM dialect
+    // 3. convert-cf-to-llvm - Convert cf branches to LLVM dialect
+    // 4. convert-func-to-llvm - Convert func dialect to LLVM dialect
+    // 5. reconcile-unrealized-casts - Clean up any unrealized casts
+    use pm = new PassManager(ctx)
+    pm.AddPipeline("builtin.module(convert-scf-to-cf,convert-arith-to-llvm,convert-cf-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)")
+    if not (pm.Run(mlirMod)) then
+        failwith "Pass pipeline failed"
 
-        // 1. SCF -&gt; CF 변환 (구조화된 제어 흐름 -&gt; 분기)
-        let scfToCfPass = MlirNative.mlirCreateConversionConvertSCFToCFPass()
-        MlirNative.mlirPassManagerAddOwnedPass(pm, scfToCfPass)
-
-        // 2. Arith -&gt; LLVM 변환
-        let arithToLLVMPass = MlirNative.mlirCreateConversionConvertArithToLLVMPass()
-        MlirNative.mlirPassManagerAddOwnedPass(pm, arithToLLVMPass)
-
-        // 3. Func -&gt; LLVM 변환
-        let funcToLLVMPass = MlirNative.mlirCreateConversionConvertFuncToLLVMPass()
-        MlirNative.mlirPassManagerAddOwnedPass(pm, funcToLLVMPass)
-
-        // 4. Unrealized casts 정리
-        let reconcilePass = MlirNative.mlirCreateConversionReconcileUnrealizedCastsPass()
-        MlirNative.mlirPassManagerAddOwnedPass(pm, reconcilePass)
-
-        // Pass 실행
-        let result = MlirNative.mlirPassManagerRun(pm, mlirMod.Handle)
-        if not (MlirNative.mlirLogicalResultIsSuccess(result)) then
-            failwith "Failed to run lowering passes"
-
-        MlirNative.mlirPassManagerDestroy(pm)
-
-    /// MLIR module을 LLVM IR로 변환
-    let translateToLLVMIR (mlirMod: Module) : string =
-        let llvmIR = MlirNative.mlirTranslateModuleToLLVMIR(mlirMod.Handle)
-        MlirHelpers.toString llvmIR
+    // JIT execute
+    use ee = new ExecutionEngine(mlirMod, 0)
+    // ... JIT 실행 코드 ...
 </code></pre>
-<p><strong>Pass 순서 설명:</strong></p>
+<p><strong>Pass 순서가 중요하다:</strong></p>
 <ol>
-<li><strong>SCF → CF:</strong> <code>scf.if</code> → <code>cf.cond_br</code> + block arguments</li>
-<li><strong>Arith → LLVM:</strong> <code>arith.constant</code>, <code>arith.addi</code> 등 → <code>llvm.mlir.constant</code>, <code>llvm.add</code> 등</li>
-<li><strong>Func → LLVM:</strong> <code>func.func</code>, <code>func.return</code> → <code>llvm.func</code>, <code>llvm.return</code></li>
-<li><strong>Reconcile:</strong> 중간 cast 연산 정리</li>
+<li><strong>convert-scf-to-cf</strong>: <code>scf.if</code> → <code>cf.cond_br</code> + block arguments</li>
+<li><strong>convert-arith-to-llvm</strong>: <code>arith.constant</code>, <code>arith.addi</code> → LLVM dialect</li>
+<li><strong>convert-cf-to-llvm</strong>: <code>cf.br</code>, <code>cf.cond_br</code> → LLVM dialect branches</li>
+<li><strong>convert-func-to-llvm</strong>: <code>func.func</code>, <code>func.return</code> → LLVM dialect</li>
+<li><strong>reconcile-unrealized-casts</strong>: 중간 cast 연산 정리</li>
 </ol>
+<blockquote>
+<p><strong>주의:</strong> cf dialect도 로드해야 한다. <code>LoadStandardDialects()</code>에 포함되어 있다.</p>
+</blockquote>
 <h3 id="mlirbindingsfs에-pass-추가"><a class="header" href="#mlirbindingsfs에-pass-추가">MlirBindings.fs에 Pass 추가</a></h3>
 <p><strong>MlirBindings.fs에 추가:</strong></p>
 <pre><code class="language-fsharp">/// SCF to CF 변환 pass 생성
@@ -1466,17 +1485,48 @@ Unhandled operation: scf.if
 MlirNative.mlirPassManagerAddOwnedPass(pm, scfToCfPass)
 </code></pre>
 <p>Pass 순서: SCF → CF → Arith → Func → Reconcile</p>
+<h2 id="구현-시-주의사항-common-pitfalls"><a class="header" href="#구현-시-주의사항-common-pitfalls">구현 시 주의사항 (Common Pitfalls)</a></h2>
+<p>실제 구현에서 발견된 중요한 주의사항들:</p>
+<h3 id="1-region-내부의-block-context"><a class="header" href="#1-region-내부의-block-context">1. Region 내부의 Block Context</a></h3>
+<p>각 region에서 표현식을 컴파일할 때 <strong>해당 region의 블록</strong>을 컨텍스트에 전달해야 한다:</p>
+<pre><code class="language-fsharp">// CORRECT: region별로 새 컨텍스트 생성
+let thenCtx = { ctx with Block = thenBlock }
+let thenVal = compileExpr thenCtx thenExpr
+
+// WRONG: 부모 블록 사용하면 연산이 잘못된 위치에 생성됨
+let thenVal = compileExpr ctx thenExpr  // ctx.Block은 부모 블록!
+</code></pre>
+<h3 id="2-scfyield-종결자-필수"><a class="header" href="#2-scfyield-종결자-필수">2. scf.yield 종결자 필수</a></h3>
+<p>모든 region은 반드시 종결자로 끝나야 한다. <code>scf.yield</code>가 없으면 MLIR 검증이 실패한다:</p>
+<pre><code class="language-fsharp">// 반드시 yield 추가
+let thenYieldOp = builder.CreateOperation(
+    "scf.yield", ctx.Location,
+    [||], [| thenVal |], [||], [||])
+builder.AppendOperationToBlock(thenBlock, thenYieldOp)
+</code></pre>
+<h3 id="3-if-결과-타입-고정"><a class="header" href="#3-if-결과-타입-고정">3. if 결과 타입 고정</a></h3>
+<p>현재 구현에서는 if 결과 타입을 i32로 고정했다. FunLang은 well-typed 언어이므로 양쪽 branch가 같은 타입을 반환한다고 가정한다:</p>
+<pre><code class="language-fsharp">// 결과 타입 고정 (실제로는 타입 추론 필요할 수 있음)
+let resultType = i32Type
+</code></pre>
+<h3 id="4-pass-pipeline-순서"><a class="header" href="#4-pass-pipeline-순서">4. Pass Pipeline 순서</a></h3>
+<p>scf → cf → llvm 순서로 lowering해야 한다. scf.if를 직접 LLVM으로 변환할 수 없다:</p>
+<pre><code class="language-fsharp">// CORRECT: scf.if → cf.cond_br → llvm branches
+"builtin.module(convert-scf-to-cf,convert-arith-to-llvm,convert-cf-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)"
+</code></pre>
+<h3 id="5-cf-dialect-로드"><a class="header" href="#5-cf-dialect-로드">5. cf dialect 로드</a></h3>
+<p>scf-to-cf 변환을 사용하면 cf dialect가 필요하다. <code>LoadStandardDialects()</code>에 포함시켜야 한다.</p>
 <h2 id="장-요약"><a class="header" href="#장-요약">장 요약</a></h2>
 <p>이 장에서 다음을 성취했다:</p>
 <ol>
 <li><strong>PHI 노드 문제 이해</strong>: 위치 제약, lost copy problem, dominance frontier 계산</li>
 <li><strong>Block Arguments 학습</strong>: MLIR의 우아한 대안, 함수 인자와 통일된 의미론</li>
 <li><strong>scf.if 연산 사용</strong>: 고수준 구조화된 제어 흐름, scf.yield 종결자</li>
-<li><strong>P/Invoke 바인딩 추가</strong>: SCF dialect 지원 (mlirSCFIfCreate, mlirSCFYieldCreate)</li>
+<li><strong>Region 생성 패턴</strong>: CreateRegion → CreateBlock → AppendBlockToRegion</li>
 <li><strong>AST 확장</strong>: If 표현식과 Bool 리터럴 추가</li>
 <li><strong>Boolean 타입</strong>: i1 (1-bit integer), true = 1, false = 0</li>
-<li><strong>코드 생성 구현</strong>: If 케이스를 scf.if로 컴파일</li>
-<li><strong>Lowering pass 업데이트</strong>: SCF → CF 변환 추가</li>
+<li><strong>코드 생성 구현</strong>: If 케이스를 scf.if + regions로 컴파일</li>
+<li><strong>Lowering pass 업데이트</strong>: scf→cf→llvm 순서 pipeline</li>
 <li><strong>완전한 예제</strong>: if/then/else와 let 바인딩 결합</li>
 </ol>
 <p><strong>독자가 할 수 있는 것:</strong></p>

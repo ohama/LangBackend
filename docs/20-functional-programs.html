@@ -1,0 +1,3323 @@
+<!DOCTYPE HTML>
+<html lang="ko" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 20: Functional Programs - LangBackend Tutorial</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="MLIR 기반 FunLang 컴파일러 백엔드 튜토리얼">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-2a27a2f4.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-d20149da.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">LangBackend Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/ohama/LangBackend/edit/master/tutorial/./20-functional-programs.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="chapter-20-functional-programs-functional-programs"><a class="header" href="#chapter-20-functional-programs-functional-programs">Chapter 20: Functional Programs (Functional Programs)</a></h1>
+<h2 id="소개"><a class="header" href="#소개">소개</a></h2>
+<p><strong>Phase 6의 여정을 복습하자:</strong></p>
+<p><strong>Chapter 17: Pattern Matching Theory</strong>에서는 패턴 매칭의 이론적 기초를 다뤘다:</p>
+<ul>
+<li>Decision tree 알고리즘 (Maranget 2008)</li>
+<li>Pattern matrix와 specialization/defaulting 연산</li>
+<li>Exhaustiveness checking과 unreachable case detection</li>
+<li>컴파일 시간에 패턴을 분석하여 최적의 decision tree 생성</li>
+</ul>
+<p><strong>Chapter 18: List Operations</strong>에서는 패턴 매칭이 작동할 데이터 구조를 구현했다:</p>
+<ul>
+<li><code>!funlang.list&lt;T&gt;</code> parameterized type으로 타입 안전한 리스트 표현</li>
+<li><code>funlang.nil</code>과 <code>funlang.cons</code> operations으로 리스트 생성</li>
+<li>TypeConverter로 tagged union <code>!llvm.struct&lt;(i32, ptr)&gt;</code> 변환</li>
+<li>NilOpLowering과 ConsOpLowering patterns로 LLVM dialect 생성</li>
+</ul>
+<p><strong>Chapter 19: Match Compilation</strong>에서는 모든 것을 종합했다:</p>
+<ul>
+<li><code>funlang.match</code> operation으로 패턴 매칭 표현</li>
+<li>Multi-stage lowering: FunLang → SCF → CF → LLVM</li>
+<li>IRMapping으로 block argument remapping</li>
+<li>실행 가능한 코드 생성</li>
+</ul>
+<p><strong>Chapter 20에서는 이 모든 것을 사용하여 실제 함수형 프로그램을 작성한다.</strong></p>
+<h3 id="phase-6의-최종-목표-완전한-함수형-프로그래밍"><a class="header" href="#phase-6의-최종-목표-완전한-함수형-프로그래밍">Phase 6의 최종 목표: 완전한 함수형 프로그래밍</a></h3>
+<p>Phase 4에서 우리는 클로저를 구현했다:</p>
+<pre><code class="language-fsharp">// Phase 4: 클로저
+let makeAdder n = fun x -&gt; x + n
+let add5 = makeAdder 5
+let result = add5 10  // 15
+</code></pre>
+<p>Phase 5에서 우리는 커스텀 FunLang dialect를 만들었다:</p>
+<pre><code class="language-mlir">// Phase 5: FunLang operations
+%closure = funlang.closure @add_impl(%n) : (i32) -&gt; ((i32) -&gt; i32)
+%result = funlang.apply %closure(%x) : ((i32) -&gt; i32, i32) -&gt; i32
+</code></pre>
+<p>Phase 6에서 우리는 리스트와 패턴 매칭을 구현했다:</p>
+<pre><code class="language-mlir">// Phase 6: Lists and pattern matching
+%list = funlang.cons %head, %tail : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+%result = funlang.match %list : !funlang.list&lt;i32&gt; -&gt; i32 {
+  ^nil:
+    funlang.yield %zero : i32
+  ^cons(%h: i32, %t: !funlang.list&lt;i32&gt;):
+    funlang.yield %h : i32
+}
+</code></pre>
+<p><strong>이제 이 세 가지를 조합하면 강력한 함수형 프로그래밍이 가능하다:</strong></p>
+<pre><code class="language-fsharp">// Phase 6 Complete: 클로저 + 리스트 + 패턴 매칭
+let map f lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt; (f head) :: (map f tail)
+
+let double x = x * 2
+let result = map double [1, 2, 3]  // [2, 4, 6]
+</code></pre>
+<h3 id="chapter-20의-목표-실전-함수형-프로그램"><a class="header" href="#chapter-20의-목표-실전-함수형-프로그램">Chapter 20의 목표: 실전 함수형 프로그램</a></h3>
+<p>이 장을 마치면 다음과 같은 <strong>실제 함수형 프로그램을 컴파일하고 실행</strong>할 수 있다:</p>
+<p><strong>1. map: 리스트의 각 원소에 함수를 적용</strong></p>
+<pre><code class="language-fsharp">let map f lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt; (f head) :: (map f tail)
+
+map (fun x -&gt; x * 2) [1, 2, 3]  // [2, 4, 6]
+</code></pre>
+<p><strong>2. filter: 조건을 만족하는 원소만 남기기</strong></p>
+<pre><code class="language-fsharp">let filter pred lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt;
+      if pred head then
+        head :: filter pred tail
+      else
+        filter pred tail
+
+filter (fun x -&gt; x &gt; 2) [1, 2, 3, 4]  // [3, 4]
+</code></pre>
+<p><strong>3. fold: 리스트를 하나의 값으로 축약</strong></p>
+<pre><code class="language-fsharp">let fold f acc lst =
+  match lst with
+  | [] -&gt; acc
+  | head :: tail -&gt; fold f (f acc head) tail
+
+fold (+) 0 [1, 2, 3, 4, 5]  // 15
+</code></pre>
+<p><strong>4. 조합: 복잡한 프로그램</strong></p>
+<pre><code class="language-fsharp">// 제곱의 합: [1, 2, 3] -&gt; 14
+let sum_of_squares lst =
+  fold (+) 0 (map (fun x -&gt; x * x) lst)
+
+sum_of_squares [1, 2, 3]  // 1 + 4 + 9 = 14
+</code></pre>
+<h3 id="성공-기준-완전한-컴파일-파이프라인"><a class="header" href="#성공-기준-완전한-컴파일-파이프라인">성공 기준: 완전한 컴파일 파이프라인</a></h3>
+<p>각 함수형 프로그램에 대해 다음을 보여준다:</p>
+<ol>
+<li><strong>FunLang 소스 코드</strong>: F# 스타일의 함수형 문법</li>
+<li><strong>FunLang dialect MLIR</strong>: 커스텀 operations 사용</li>
+<li><strong>SCF dialect MLIR</strong>: 제어 흐름으로 변환</li>
+<li><strong>LLVM dialect MLIR</strong>: 최종 lowering</li>
+<li><strong>실행 결과</strong>: JIT으로 실행하여 결과 확인</li>
+</ol>
+<p><strong>이것이 바로 “실전 컴파일러“다:</strong></p>
+<ul>
+<li>교과서의 toy 예제가 아니라 실제 사용 가능한 프로그램</li>
+<li>모든 단계를 추적 가능하고 검증 가능</li>
+<li>Phase 7 (최적화)로 이어지는 기반</li>
+</ul>
+<h3 id="chapter-20의-구성"><a class="header" href="#chapter-20의-구성">Chapter 20의 구성</a></h3>
+<p><strong>Part 1: Map and Filter (이번 섹션)</strong></p>
+<ol>
+<li>FunLang에서 리스트 구축하기</li>
+<li>map 함수: 소스, 컴파일, 실행</li>
+<li>filter 함수: 중첩 제어 흐름</li>
+<li>Helper 함수: length, append</li>
+</ol>
+<p><strong>Part 2: Fold and Complete Pipeline</strong></p>
+<ol>
+<li>fold 함수: 일반적인 리스트 combinator</li>
+<li>완전한 예제: sum_of_squares</li>
+<li>성능 고려사항</li>
+<li>완전한 컴파일러 통합</li>
+<li>Phase 6 요약과 Phase 7 미리보기</li>
+</ol>
+<p>이 장을 마치면 <strong>Phase 6가 완료</strong>되며, Phase 7 (최적화)로 넘어갈 준비가 된다.</p>
+<h2 id="funlang에서-리스트-구축하기"><a class="header" href="#funlang에서-리스트-구축하기">FunLang에서 리스트 구축하기</a></h2>
+<h3 id="funlang-ast-확장-list-expressions"><a class="header" href="#funlang-ast-확장-list-expressions">FunLang AST 확장: List Expressions</a></h3>
+<p>지금까지 우리는 MLIR operations로 리스트를 직접 구축했다:</p>
+<pre><code class="language-mlir">// 직접 MLIR 작성
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%three = arith.constant 3 : i32
+%l1 = funlang.cons %three, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+</code></pre>
+<p>하지만 사용자는 <strong>FunLang 언어</strong>로 작성하고 싶어한다:</p>
+<pre><code class="language-fsharp">// 사용자가 원하는 문법
+let empty = []
+let list = [1, 2, 3]
+let consed = 1 :: [2, 3]
+</code></pre>
+<p><strong>AST 확장이 필요하다.</strong></p>
+<h3 id="funlang-ast-type-definition"><a class="header" href="#funlang-ast-type-definition">FunLang AST Type Definition</a></h3>
+<p><code>Ast.fs</code>에 리스트 표현식을 추가한다:</p>
+<pre><code class="language-fsharp">// Ast.fs
+type Expr =
+    | Int of int
+    | Var of string
+    | Add of Expr * Expr
+    | Let of string * Expr * Expr
+    | If of Expr * Expr * Expr
+    | Fun of string * Expr              // Phase 4: lambda
+    | App of Expr * Expr                // Phase 4: application
+
+    // Phase 6: List expressions
+    | Nil                                // []
+    | Cons of Expr * Expr                // head :: tail
+    | List of Expr list                  // [1, 2, 3] - syntactic sugar
+    | Match of Expr * (Pattern * Expr) list  // match expr with cases
+
+and Pattern =
+    | PVar of string                     // x (bind any value)
+    | PNil                               // [] (empty list)
+    | PCons of Pattern * Pattern         // head :: tail
+    | PWild                              // _ (wildcard)
+</code></pre>
+<p><strong>설계 결정:</strong></p>
+<ol>
+<li><strong><code>Nil</code></strong>: Empty list <code>[]</code>는 zero-argument constructor</li>
+<li><strong><code>Cons</code></strong>: Binary operator <code>::</code> (head와 tail)</li>
+<li><strong><code>List</code></strong>: List literal <code>[1, 2, 3]</code>는 syntactic sugar (연속된 Cons로 desugaring)</li>
+<li><strong><code>Match</code></strong>: Pattern matching expression</li>
+</ol>
+<h3 id="list-literal-desugaring"><a class="header" href="#list-literal-desugaring">List Literal Desugaring</a></h3>
+<p>List literal은 syntactic sugar다:</p>
+<pre><code class="language-fsharp">// 사용자 작성
+[1, 2, 3]
+
+// Desugaring
+1 :: (2 :: (3 :: []))
+
+// AST 표현
+Cons(Int 1, Cons(Int 2, Cons(Int 3, Nil)))
+</code></pre>
+<p>Desugaring 함수:</p>
+<pre><code class="language-fsharp">// Parser.fs or Desugar.fs
+let rec desugarList (exprs: Expr list) : Expr =
+    match exprs with
+    | [] -&gt; Nil
+    | head :: tail -&gt; Cons(head, desugarList tail)
+
+// Usage
+let ast = List [Int 1; Int 2; Int 3]
+let desugared = desugarList [Int 1; Int 2; Int 3]
+// Result: Cons(Int 1, Cons(Int 2, Cons(Int 3, Nil)))
+</code></pre>
+<p><strong>왜 desugaring인가?</strong></p>
+<ol>
+<li><strong>간단한 컴파일</strong>: 컴파일러는 <code>Cons</code>와 <code>Nil</code>만 처리하면 된다</li>
+<li><strong>중복 제거</strong>: <code>List</code> literal과 <code>Cons</code> operator가 같은 representation을 공유</li>
+<li><strong>확장성</strong>: 새로운 syntactic sugar 추가 시 desugaring만 변경</li>
+</ol>
+<h3 id="컴파일러-통합-compileexpr-확장"><a class="header" href="#컴파일러-통합-compileexpr-확장">컴파일러 통합: compileExpr 확장</a></h3>
+<p><code>Compiler.fs</code>의 <code>compileExpr</code> 함수를 확장하여 리스트를 처리한다:</p>
+<pre><code class="language-fsharp">// Compiler.fs
+let rec compileExpr (builder: OpBuilder) (expr: Expr) (symbolTable: Map&lt;string, Value&gt;) : Value =
+    match expr with
+    | Int n -&gt;
+        let ty = builder.GetI32Type()
+        builder.CreateConstantInt(ty, n)
+
+    | Var name -&gt;
+        symbolTable.[name]
+
+    | Add (left, right) -&gt;
+        let lhs = compileExpr builder left symbolTable
+        let rhs = compileExpr builder right symbolTable
+        builder.CreateAddI(lhs, rhs)
+
+    // ... (Phase 3-4 cases)
+
+    // Phase 6: Nil case
+    | Nil -&gt;
+        // funlang.nil : !funlang.list&lt;T&gt;
+        // Type inference: 주변 context에서 element type 결정
+        let elemTy = inferElementType expr  // e.g., i32
+        let listTy = builder.GetListType(elemTy)
+        builder.CreateNil(listTy)
+
+    // Phase 6: Cons case
+    | Cons (head, tail) -&gt;
+        // funlang.cons %head, %tail : (T, !funlang.list&lt;T&gt;) -&gt; !funlang.list&lt;T&gt;
+        let headVal = compileExpr builder head symbolTable
+        let tailVal = compileExpr builder tail symbolTable
+        let headTy = headVal.GetType()
+        let listTy = builder.GetListType(headTy)
+        builder.CreateCons(headVal, tailVal, listTy)
+
+    // Phase 6: Match case (covered later in this chapter)
+    | Match (scrutinee, cases) -&gt;
+        compileMatch builder scrutinee cases symbolTable
+</code></pre>
+<p><strong>Type inference 예제:</strong></p>
+<pre><code class="language-fsharp">// FunLang source
+let list = 1 :: 2 :: []
+
+// Type inference
+// - 1 is i32, so head is i32
+// - Cons expects (i32, !funlang.list&lt;i32&gt;)
+// - [] must be !funlang.list&lt;i32&gt;
+
+// Compiled MLIR
+%c1 = arith.constant 1 : i32
+%c2 = arith.constant 2 : i32
+%nil = funlang.nil : !funlang.list&lt;i32&gt;
+%tail = funlang.cons %c2, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+%list = funlang.cons %c1, %tail : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+</code></pre>
+<h3 id="예제-리스트-컴파일"><a class="header" href="#예제-리스트-컴파일">예제: 리스트 컴파일</a></h3>
+<p><strong>Example 1: Empty list</strong></p>
+<pre><code class="language-fsharp">// FunLang
+let empty = []
+</code></pre>
+<p>Compiled MLIR:</p>
+<pre><code class="language-mlir">func.func @example1() -&gt; !funlang.list&lt;i32&gt; {
+  %empty = funlang.nil : !funlang.list&lt;i32&gt;
+  return %empty : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>Example 2: Single element</strong></p>
+<pre><code class="language-fsharp">// FunLang
+let single = [42]
+
+// Desugared
+let single = 42 :: []
+</code></pre>
+<p>Compiled MLIR:</p>
+<pre><code class="language-mlir">func.func @example2() -&gt; !funlang.list&lt;i32&gt; {
+  %c42 = arith.constant 42 : i32
+  %nil = funlang.nil : !funlang.list&lt;i32&gt;
+  %single = funlang.cons %c42, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+  return %single : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>Example 3: Multiple elements</strong></p>
+<pre><code class="language-fsharp">// FunLang
+let list = [1, 2, 3]
+
+// Desugared
+let list = 1 :: (2 :: (3 :: []))
+</code></pre>
+<p>Compiled MLIR:</p>
+<pre><code class="language-mlir">func.func @example3() -&gt; !funlang.list&lt;i32&gt; {
+  // Build from inside out: 3 :: []
+  %c3 = arith.constant 3 : i32
+  %nil = funlang.nil : !funlang.list&lt;i32&gt;
+  %l3 = funlang.cons %c3, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  // 2 :: [3]
+  %c2 = arith.constant 2 : i32
+  %l2 = funlang.cons %c2, %l3 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  // 1 :: [2, 3]
+  %c1 = arith.constant 1 : i32
+  %l1 = funlang.cons %c1, %l2 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  return %l1 : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>Example 4: Cons operator</strong></p>
+<pre><code class="language-fsharp">// FunLang
+let list = 1 :: 2 :: 3 :: []
+</code></pre>
+<p>Compiled MLIR (same as Example 3):</p>
+<pre><code class="language-mlir">func.func @example4() -&gt; !funlang.list&lt;i32&gt; {
+  %c3 = arith.constant 3 : i32
+  %nil = funlang.nil : !funlang.list&lt;i32&gt;
+  %l3 = funlang.cons %c3, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  %c2 = arith.constant 2 : i32
+  %l2 = funlang.cons %c2, %l3 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  %c1 = arith.constant 1 : i32
+  %l1 = funlang.cons %c1, %l2 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  return %l1 : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>Type safety:</strong></p>
+<p>FunLang의 타입 시스템은 heterogeneous list를 방지한다:</p>
+<pre><code class="language-fsharp">// Type error: element type mismatch
+let bad = [1, "hello", 3]
+// Error: Expected i32, found string
+</code></pre>
+<p>MLIR type은 element type을 명시한다:</p>
+<ul>
+<li><code>!funlang.list&lt;i32&gt;</code>: 32비트 정수 리스트</li>
+<li><code>!funlang.list&lt;f64&gt;</code>: 64비트 부동소수점 리스트</li>
+<li><code>!funlang.list&lt;!funlang.closure&lt;(i32) -&gt; i32&gt;&gt;</code>: 클로저 리스트 (고차 함수)</li>
+</ul>
+<p>이제 우리는 리스트를 구축할 수 있다. 다음은 <strong>리스트를 조작하는 함수</strong>를 작성할 차례다.</p>
+<h2 id="map-함수-리스트-변환"><a class="header" href="#map-함수-리스트-변환">map 함수: 리스트 변환</a></h2>
+<h3 id="map의-개념"><a class="header" href="#map의-개념">map의 개념</a></h3>
+<p><code>map</code>은 함수형 프로그래밍의 가장 기본적인 고차 함수다:</p>
+<pre><code class="language-fsharp">// map의 타입
+map : (a -&gt; b) -&gt; [a] -&gt; [b]
+
+// map의 의미
+map f [x1, x2, ..., xn] = [f x1, f x2, ..., f xn]
+</code></pre>
+<p><strong>예제:</strong></p>
+<pre><code class="language-fsharp">let double x = x * 2
+map double [1, 2, 3]  // [2, 4, 6]
+
+let inc x = x + 1
+map inc [10, 20, 30]  // [11, 21, 31]
+
+map (fun x -&gt; x * x) [1, 2, 3, 4]  // [1, 4, 9, 16]
+</code></pre>
+<h3 id="funlang-소스-코드"><a class="header" href="#funlang-소스-코드">FunLang 소스 코드</a></h3>
+<p><code>map</code> 함수를 FunLang으로 작성한다:</p>
+<pre><code class="language-fsharp">let rec map f lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt; (f head) :: (map f tail)
+</code></pre>
+<p><strong>동작 원리:</strong></p>
+<ol>
+<li><strong>Base case</strong>: Empty list → return empty list</li>
+<li><strong>Recursive case</strong>:
+<ul>
+<li>Apply <code>f</code> to <code>head</code> → transformed head</li>
+<li>Recursively map over <code>tail</code></li>
+<li>Cons the results</li>
+</ul>
+</li>
+</ol>
+<p><strong>실행 trace:</strong></p>
+<pre><code class="language-fsharp">map double [1, 2, 3]
+→ double 1 :: map double [2, 3]
+→ 2 :: (double 2 :: map double [3])
+→ 2 :: (4 :: (double 3 :: map double []))
+→ 2 :: (4 :: (6 :: []))
+→ [2, 4, 6]
+</code></pre>
+<h3 id="funlang-ast-표현"><a class="header" href="#funlang-ast-표현">FunLang AST 표현</a></h3>
+<p>FunLang AST로 표현하면:</p>
+<pre><code class="language-fsharp">// let rec map f lst = ...
+Let("map",
+    Fun("f",
+        Fun("lst",
+            Match(Var "lst",
+                [ (PNil, Nil)
+                ; (PCons(PVar "head", PVar "tail"),
+                   Cons(App(Var "f", Var "head"),
+                        App(App(Var "map", Var "f"), Var "tail")))
+                ]))),
+    // ... body that uses map ...
+)
+</code></pre>
+<p><strong>구조 분석:</strong></p>
+<ol>
+<li><strong>Outer Let</strong>: <code>map</code> 정의를 scope에 바인딩</li>
+<li><strong>Curried function</strong>: <code>f</code>와 <code>lst</code> 두 개의 중첩 lambda</li>
+<li><strong>Match expression</strong>: <code>lst</code>에 대한 패턴 매칭</li>
+<li><strong>Patterns</strong>: <code>[]</code> (PNil)과 <code>head :: tail</code> (PCons)</li>
+<li><strong>Recursive call</strong>: <code>map f tail</code>에서 <code>map</code> 자기 자신 호출</li>
+</ol>
+<h3 id="컴파일된-mlir-funlang-dialect"><a class="header" href="#컴파일된-mlir-funlang-dialect">컴파일된 MLIR: FunLang Dialect</a></h3>
+<p><code>compileExpr</code>가 위 AST를 컴파일하면 다음 MLIR이 생성된다:</p>
+<pre><code class="language-mlir">// map : (T -&gt; U) -&gt; !funlang.list&lt;T&gt; -&gt; !funlang.list&lt;U&gt;
+func.func @map(%f: !funlang.closure&lt;(i32) -&gt; i32&gt;,
+               %lst: !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt; {
+  // match lst with ...
+  %result = funlang.match %lst : !funlang.list&lt;i32&gt; -&gt; !funlang.list&lt;i32&gt; {
+    // Case 1: [] -&gt; []
+    ^nil:
+      %empty = funlang.nil : !funlang.list&lt;i32&gt;
+      funlang.yield %empty : !funlang.list&lt;i32&gt;
+
+    // Case 2: head :: tail -&gt; (f head) :: (map f tail)
+    ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+      // f head
+      %transformed = funlang.apply %f(%head) : (!funlang.closure&lt;(i32) -&gt; i32&gt;, i32) -&gt; i32
+
+      // map f tail (recursive call)
+      %mapped_tail = func.call @map(%f, %tail)
+        : (!funlang.closure&lt;(i32) -&gt; i32&gt;, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+      // transformed :: mapped_tail
+      %new_list = funlang.cons %transformed, %mapped_tail
+        : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+      funlang.yield %new_list : !funlang.list&lt;i32&gt;
+  }
+
+  return %result : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>핵심 포인트:</strong></p>
+<ol>
+<li><strong><code>funlang.match</code></strong>: 리스트를 검사하는 control flow</li>
+<li><strong><code>funlang.apply</code></strong>: 클로저 간접 호출 (<code>f head</code>)</li>
+<li><strong><code>func.call @map</code></strong>: 재귀 호출 (named function)</li>
+<li><strong><code>funlang.cons</code></strong>: 결과 리스트 구축</li>
+<li><strong>Type safety</strong>: 모든 operations가 타입 정보를 유지</li>
+</ol>
+<h3 id="lowering-stage-1-funlang--scf"><a class="header" href="#lowering-stage-1-funlang--scf">Lowering Stage 1: FunLang → SCF</a></h3>
+<p><code>FunLangToSCFPass</code>가 실행되면 <code>funlang.match</code>가 <code>scf.if</code>로 lowering된다:</p>
+<pre><code class="language-mlir">func.func @map(%f: !funlang.closure&lt;(i32) -&gt; i32&gt;,
+               %lst: !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+  // Extract tag: lst-&gt;tag
+  %tag_ptr = llvm.getelementptr %lst[0, 0] : (!llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.ptr
+  %tag = llvm.load %tag_ptr : !llvm.ptr -&gt; i32
+
+  // Check if tag == 0 (Nil)
+  %c0 = arith.constant 0 : i32
+  %is_nil = arith.cmpi eq, %tag, %c0 : i32
+
+  // if (is_nil) then ... else ...
+  %result = scf.if %is_nil -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+    // Nil case: return empty list
+    %nil_tag = arith.constant 0 : i32
+    %null_ptr = llvm.mlir.null : !llvm.ptr
+    %empty = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %empty1 = llvm.insertvalue %nil_tag, %empty[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %empty2 = llvm.insertvalue %null_ptr, %empty1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    scf.yield %empty2 : !llvm.struct&lt;(i32, ptr)&gt;
+  } else {
+    // Cons case: extract head and tail
+    %cons_tag = arith.constant 1 : i32
+    %payload_ptr = llvm.getelementptr %lst[0, 1] : (!llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.ptr
+    %payload = llvm.load %payload_ptr : !llvm.ptr -&gt; !llvm.ptr
+
+    // Cast payload to ConsCell: struct { head: i32, tail: list }
+    %head_ptr = llvm.getelementptr %payload[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+    %head = llvm.load %head_ptr : !llvm.ptr -&gt; i32
+
+    %tail_ptr = llvm.getelementptr %payload[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Apply closure: f head
+    %transformed = funlang.apply %f(%head) : (!funlang.closure&lt;(i32) -&gt; i32&gt;, i32) -&gt; i32
+
+    // Recursive call: map f tail
+    %mapped_tail = func.call @map(%f, %tail)
+      : (!funlang.closure&lt;(i32) -&gt; i32&gt;, !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Build cons cell: transformed :: mapped_tail
+    %cell_size = llvm.mlir.constant(16 : i64) : i64  // sizeof(ConsCell)
+    %cell = llvm.call @GC_malloc(%cell_size) : (i64) -&gt; !llvm.ptr
+
+    %cell_head_ptr = llvm.getelementptr %cell[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %transformed, %cell_head_ptr : i32, !llvm.ptr
+
+    %cell_tail_ptr = llvm.getelementptr %cell[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %mapped_tail, %cell_tail_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+
+    // Build list struct: {tag=1, payload=cell}
+    %cons_tag_val = arith.constant 1 : i32
+    %new_list = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %new_list1 = llvm.insertvalue %cons_tag_val, %new_list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %new_list2 = llvm.insertvalue %cell, %new_list1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+    scf.yield %new_list2 : !llvm.struct&lt;(i32, ptr)&gt;
+  }
+
+  return %result : !llvm.struct&lt;(i32, ptr)&gt;
+}
+</code></pre>
+<p><strong>변환 내용:</strong></p>
+<ol>
+<li><strong><code>funlang.match</code> → <code>scf.if</code></strong>: Binary choice (Nil vs Cons)</li>
+<li><strong>Tag extraction</strong>: <code>llvm.getelementptr</code> + <code>llvm.load</code>로 tag field 읽기</li>
+<li><strong>Comparison</strong>: <code>arith.cmpi eq</code>로 tag 검사</li>
+<li><strong>Block arguments → loads</strong>: Cons case의 <code>%head</code>, <code>%tail</code>을 payload에서 추출</li>
+<li><strong>GC allocation</strong>: <code>GC_malloc</code>으로 새 cons cell 할당</li>
+</ol>
+<h3 id="lowering-stage-2-scf--cf--llvm"><a class="header" href="#lowering-stage-2-scf--cf--llvm">Lowering Stage 2: SCF → CF + LLVM</a></h3>
+<p><code>SCFToControlFlowPass</code>가 실행되면 <code>scf.if</code>가 <code>cf.br</code>, <code>cf.cond_br</code>로 lowering된다:</p>
+<pre><code class="language-mlir">func.func @map(%f: !funlang.closure&lt;(i32) -&gt; i32&gt;,
+               %lst: !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+^entry:
+  // Extract tag
+  %tag_ptr = llvm.getelementptr %lst[0, 0] : (!llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.ptr
+  %tag = llvm.load %tag_ptr : !llvm.ptr -&gt; i32
+
+  %c0 = arith.constant 0 : i32
+  %is_nil = arith.cmpi eq, %tag, %c0 : i32
+
+  // Conditional branch
+  cf.cond_br %is_nil, ^nil_case, ^cons_case
+
+^nil_case:
+  // Return empty list
+  %nil_tag = arith.constant 0 : i32
+  %null_ptr = llvm.mlir.null : !llvm.ptr
+  %empty = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+  %empty1 = llvm.insertvalue %nil_tag, %empty[0] : !llvm.struct&lt;(i32, ptr)&gt;
+  %empty2 = llvm.insertvalue %null_ptr, %empty1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+  cf.br ^exit(%empty2 : !llvm.struct&lt;(i32, ptr)&gt;)
+
+^cons_case:
+  // Extract head and tail
+  %payload_ptr = llvm.getelementptr %lst[0, 1] : (!llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.ptr
+  %payload = llvm.load %payload_ptr : !llvm.ptr -&gt; !llvm.ptr
+
+  %head_ptr = llvm.getelementptr %payload[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+  %head = llvm.load %head_ptr : !llvm.ptr -&gt; i32
+
+  %tail_ptr = llvm.getelementptr %payload[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+  %tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+  // Apply closure
+  %transformed = funlang.apply %f(%head) : (!funlang.closure&lt;(i32) -&gt; i32&gt;, i32) -&gt; i32
+
+  // Recursive call
+  %mapped_tail = func.call @map(%f, %tail)
+    : (!funlang.closure&lt;(i32) -&gt; i32&gt;, !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+  // Allocate cons cell
+  %cell_size = llvm.mlir.constant(16 : i64) : i64
+  %cell = llvm.call @GC_malloc(%cell_size) : (i64) -&gt; !llvm.ptr
+
+  %cell_head_ptr = llvm.getelementptr %cell[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+  llvm.store %transformed, %cell_head_ptr : i32, !llvm.ptr
+
+  %cell_tail_ptr = llvm.getelementptr %cell[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+  llvm.store %mapped_tail, %cell_tail_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+
+  // Build result
+  %cons_tag = arith.constant 1 : i32
+  %new_list = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+  %new_list1 = llvm.insertvalue %cons_tag, %new_list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+  %new_list2 = llvm.insertvalue %cell, %new_list1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+  cf.br ^exit(%new_list2 : !llvm.struct&lt;(i32, ptr)&gt;)
+
+^exit(%result: !llvm.struct&lt;(i32, ptr)&gt;):
+  return %result : !llvm.struct&lt;(i32, ptr)&gt;
+}
+</code></pre>
+<p><strong>CFG 구조:</strong></p>
+<pre><code>       [entry]
+          |
+       (is_nil?)
+        /    \
+    [nil]  [cons]
+       \    /
+       [exit]
+</code></pre>
+<h3 id="테스트-프로그램-map-fun-x---x--2-1-2-3"><a class="header" href="#테스트-프로그램-map-fun-x---x--2-1-2-3">테스트 프로그램: map (fun x -&gt; x * 2) [1, 2, 3]</a></h3>
+<p>완전한 프로그램을 컴파일하고 실행해보자:</p>
+<pre><code class="language-fsharp">// FunLang source
+let double = fun x -&gt; x * 2
+
+let rec map f lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt; (f head) :: (map f tail)
+
+let result = map double [1, 2, 3]
+// Expected: [2, 4, 6]
+</code></pre>
+<p><strong>Compiled MLIR (simplified):</strong></p>
+<pre><code class="language-mlir">module {
+  // Helper: double function as closure implementation
+  func.func @double_impl(%x: i32) -&gt; i32 {
+    %c2 = arith.constant 2 : i32
+    %result = arith.muli %x, %c2 : i32
+    return %result : i32
+  }
+
+  // map function (as defined above)
+  func.func @map(%f: !funlang.closure&lt;(i32) -&gt; i32&gt;,
+                 %lst: !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+    // ... (as shown in previous section)
+  }
+
+  // Main entry point
+  func.func @main() -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+    // Create closure: double
+    %double_fn = llvm.mlir.addressof @double_impl : !llvm.ptr
+    %null_env = llvm.mlir.null : !llvm.ptr  // no captures
+    %closure_size = llvm.mlir.constant(16 : i64) : i64
+    %closure_mem = llvm.call @GC_malloc(%closure_size) : (i64) -&gt; !llvm.ptr
+
+    %fn_ptr_field = llvm.getelementptr %closure_mem[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %double_fn, %fn_ptr_field : !llvm.ptr, !llvm.ptr
+
+    %env_ptr_field = llvm.getelementptr %closure_mem[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+    llvm.store %null_env, %env_ptr_field : !llvm.ptr, !llvm.ptr
+
+    %double = llvm.load %closure_mem : !llvm.ptr -&gt; !funlang.closure&lt;(i32) -&gt; i32&gt;
+
+    // Create list: [1, 2, 3]
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+
+    %nil = funlang.nil : !funlang.list&lt;i32&gt;
+    %l3 = funlang.cons %c3, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+    %l2 = funlang.cons %c2, %l3 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+    %l1 = funlang.cons %c1, %l2 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+    // Call map
+    %result = func.call @map(%double, %l1)
+      : (!funlang.closure&lt;(i32) -&gt; i32&gt;, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+    return %result : !llvm.struct&lt;(i32, ptr)&gt;
+  }
+}
+</code></pre>
+<p><strong>실행 trace:</strong></p>
+<pre><code>map double [1, 2, 3]
+→ double 1 :: map double [2, 3]
+→ 2 :: (double 2 :: map double [3])
+→ 2 :: (4 :: (double 3 :: map double []))
+→ 2 :: (4 :: (6 :: []))
+→ [2, 4, 6]
+</code></pre>
+<p><strong>Memory layout (heap):</strong></p>
+<pre><code>Closure (double):
+  +0: fn_ptr    -&gt; @double_impl
+  +8: env_ptr   -&gt; NULL
+
+List [2, 4, 6]:
+  +0: tag=1, payload -&gt; ConsCell1
+
+  ConsCell1:
+    +0: head=2
+    +8: tail -&gt; {tag=1, payload -&gt; ConsCell2}
+
+  ConsCell2:
+    +0: head=4
+    +8: tail -&gt; {tag=1, payload -&gt; ConsCell3}
+
+  ConsCell3:
+    +0: head=6
+    +8: tail -&gt; {tag=0, payload=NULL}  // Nil
+</code></pre>
+<h3 id="검증-jit-실행"><a class="header" href="#검증-jit-실행">검증: JIT 실행</a></h3>
+<pre><code class="language-fsharp">// Compiler.fs
+let testMapDouble() =
+    let ctx = MLIRContext.Create()
+    let module = compileProgram ctx mapDoubleSource
+
+    // Apply lowering passes
+    let pm = PassManager.Create(ctx)
+    pm.AddPass("convert-funlang-to-scf")
+    pm.AddPass("convert-scf-to-cf")
+    pm.AddPass("convert-funlang-to-llvm")
+    pm.Run(module)
+
+    // JIT execute
+    let engine = ExecutionEngine.Create(module)
+    let result = engine.Invoke("main", [||])
+
+    // Verify result: [2, 4, 6]
+    let list = result :?&gt; ListValue
+    assert (list.Count = 3)
+    assert (list.[0] = 2)
+    assert (list.[1] = 4)
+    assert (list.[2] = 6)
+
+    printfn "map double [1, 2, 3] = [2, 4, 6] ✓"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>map double [1, 2, 3] = [2, 4, 6] ✓
+</code></pre>
+<p>성공! <code>map</code> 함수가 완전히 작동한다.</p>
+<h2 id="filter-함수-조건부-리스트-필터링"><a class="header" href="#filter-함수-조건부-리스트-필터링">filter 함수: 조건부 리스트 필터링</a></h2>
+<h3 id="filter의-개념"><a class="header" href="#filter의-개념">filter의 개념</a></h3>
+<p><code>filter</code>는 조건을 만족하는 원소만 남긴다:</p>
+<pre><code class="language-fsharp">// filter의 타입
+filter : (a -&gt; bool) -&gt; [a] -&gt; [a]
+
+// filter의 의미
+filter pred [x1, x2, ..., xn] = [xi | pred xi = true]
+</code></pre>
+<p><strong>예제:</strong></p>
+<pre><code class="language-fsharp">let is_positive x = x &gt; 0
+filter is_positive [-2, -1, 0, 1, 2]  // [1, 2]
+
+let is_even x = x % 2 == 0
+filter is_even [1, 2, 3, 4, 5, 6]  // [2, 4, 6]
+
+filter (fun x -&gt; x &gt; 2) [1, 2, 3, 4]  // [3, 4]
+</code></pre>
+<h3 id="funlang-소스-코드-1"><a class="header" href="#funlang-소스-코드-1">FunLang 소스 코드</a></h3>
+<p><code>filter</code> 함수를 FunLang으로 작성한다:</p>
+<pre><code class="language-fsharp">let rec filter pred lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt;
+      if pred head then
+        head :: filter pred tail
+      else
+        filter pred tail
+</code></pre>
+<p><strong>동작 원리:</strong></p>
+<ol>
+<li><strong>Base case</strong>: Empty list → return empty list</li>
+<li><strong>Recursive case</strong>:
+<ul>
+<li>조건 검사: <code>pred head</code></li>
+<li>True이면: <code>head</code>를 결과에 포함</li>
+<li>False이면: <code>head</code>를 건너뛰고 tail만 재귀 처리</li>
+</ul>
+</li>
+</ol>
+<p><strong>실행 trace:</strong></p>
+<pre><code class="language-fsharp">filter (fun x -&gt; x &gt; 2) [1, 2, 3, 4]
+→ (1 &gt; 2)? No → filter pred [2, 3, 4]
+→ (2 &gt; 2)? No → filter pred [3, 4]
+→ (3 &gt; 2)? Yes → 3 :: filter pred [4]
+→ (4 &gt; 2)? Yes → 3 :: (4 :: filter pred [])
+→ 3 :: (4 :: [])
+→ [3, 4]
+</code></pre>
+<h3 id="map-vs-filter-비교"><a class="header" href="#map-vs-filter-비교">map vs filter 비교</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>특성</th><th>map</th><th>filter</th></tr>
+</thead>
+<tbody>
+<tr><td>타입</td><td><code>(a -&gt; b) -&gt; [a] -&gt; [b]</code></td><td><code>(a -&gt; bool) -&gt; [a] -&gt; [a]</code></td></tr>
+<tr><td>결과 크기</td><td>Input과 동일</td><td>Input 이하</td></tr>
+<tr><td>조건 분기</td><td>없음 (항상 변환)</td><td>있음 (if-else)</td></tr>
+<tr><td>원소 변환</td><td>있음 (<code>f x</code>)</td><td>없음 (원소 그대로)</td></tr>
+<tr><td>MLIR 복잡도</td><td>Moderate</td><td>Higher (nested control flow)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="컴파일된-mlir-funlang-dialect-1"><a class="header" href="#컴파일된-mlir-funlang-dialect-1">컴파일된 MLIR: FunLang Dialect</a></h3>
+<pre><code class="language-mlir">// filter : (T -&gt; i1) -&gt; !funlang.list&lt;T&gt; -&gt; !funlang.list&lt;T&gt;
+func.func @filter(%pred: !funlang.closure&lt;(i32) -&gt; i1&gt;,
+                  %lst: !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt; {
+  // match lst with ...
+  %result = funlang.match %lst : !funlang.list&lt;i32&gt; -&gt; !funlang.list&lt;i32&gt; {
+    // Case 1: [] -&gt; []
+    ^nil:
+      %empty = funlang.nil : !funlang.list&lt;i32&gt;
+      funlang.yield %empty : !funlang.list&lt;i32&gt;
+
+    // Case 2: head :: tail -&gt; if (pred head) then ... else ...
+    ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+      // pred head
+      %should_keep = funlang.apply %pred(%head)
+        : (!funlang.closure&lt;(i32) -&gt; i1&gt;, i32) -&gt; i1
+
+      // Recursive call (always needed)
+      %filtered_tail = func.call @filter(%pred, %tail)
+        : (!funlang.closure&lt;(i32) -&gt; i1&gt;, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+      // if should_keep then head :: filtered_tail else filtered_tail
+      %new_list = scf.if %should_keep -&gt; !funlang.list&lt;i32&gt; {
+        // Keep head
+        %kept = funlang.cons %head, %filtered_tail
+          : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+        scf.yield %kept : !funlang.list&lt;i32&gt;
+      } else {
+        // Skip head
+        scf.yield %filtered_tail : !funlang.list&lt;i32&gt;
+      }
+
+      funlang.yield %new_list : !funlang.list&lt;i32&gt;
+  }
+
+  return %result : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>핵심 포인트:</strong></p>
+<ol>
+<li><strong>Nested control flow</strong>: <code>funlang.match</code> 안에 <code>scf.if</code></li>
+<li><strong>Predicate 호출</strong>: <code>funlang.apply %pred(%head)</code>는 boolean 반환</li>
+<li><strong>Conditional cons</strong>: True일 때만 <code>funlang.cons</code></li>
+<li><strong>Recursive call position</strong>: if 밖에서 호출 (항상 필요)</li>
+</ol>
+<h3 id="nested-control-flow-분석"><a class="header" href="#nested-control-flow-분석">Nested Control Flow 분석</a></h3>
+<p><code>filter</code>는 두 단계의 제어 흐름을 가진다:</p>
+<p><strong>Level 1: Pattern matching</strong></p>
+<pre><code>match lst:
+  Nil  → []
+  Cons → [Level 2]
+</code></pre>
+<p><strong>Level 2: Conditional inclusion</strong></p>
+<pre><code>if pred head:
+  True  → head :: filtered_tail
+  False → filtered_tail
+</code></pre>
+<p><strong>Combined CFG:</strong></p>
+<pre><code>        [entry]
+           |
+       (is_nil?)
+        /    \
+    [nil]  [cons]
+       |      |
+       |   (pred head?)
+       |    /      \
+       | [keep]  [skip]
+       |    \      /
+       |   [merge]
+        \    /
+        [exit]
+</code></pre>
+<h3 id="lowering-stage-1-funlang--scf-1"><a class="header" href="#lowering-stage-1-funlang--scf-1">Lowering Stage 1: FunLang → SCF</a></h3>
+<pre><code class="language-mlir">func.func @filter(%pred: !funlang.closure&lt;(i32) -&gt; i1&gt;,
+                  %lst: !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+  // Extract tag
+  %tag_ptr = llvm.getelementptr %lst[0, 0] : (!llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.ptr
+  %tag = llvm.load %tag_ptr : !llvm.ptr -&gt; i32
+
+  %c0 = arith.constant 0 : i32
+  %is_nil = arith.cmpi eq, %tag, %c0 : i32
+
+  // Level 1: match
+  %result = scf.if %is_nil -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+    // Nil case
+    %nil_tag = arith.constant 0 : i32
+    %null_ptr = llvm.mlir.null : !llvm.ptr
+    %empty = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+    %empty1 = llvm.insertvalue %nil_tag, %empty[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %empty2 = llvm.insertvalue %null_ptr, %empty1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+    scf.yield %empty2 : !llvm.struct&lt;(i32, ptr)&gt;
+  } else {
+    // Cons case: extract head and tail
+    %payload_ptr = llvm.getelementptr %lst[0, 1] : (!llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.ptr
+    %payload = llvm.load %payload_ptr : !llvm.ptr -&gt; !llvm.ptr
+
+    %head_ptr = llvm.getelementptr %payload[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+    %head = llvm.load %head_ptr : !llvm.ptr -&gt; i32
+
+    %tail_ptr = llvm.getelementptr %payload[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+    %tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Apply predicate
+    %should_keep = funlang.apply %pred(%head)
+      : (!funlang.closure&lt;(i32) -&gt; i1&gt;, i32) -&gt; i1
+
+    // Recursive call
+    %filtered_tail = func.call @filter(%pred, %tail)
+      : (!funlang.closure&lt;(i32) -&gt; i1&gt;, !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+
+    // Level 2: if pred
+    %new_list = scf.if %should_keep -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+      // Keep: allocate cons cell
+      %cell_size = llvm.mlir.constant(16 : i64) : i64
+      %cell = llvm.call @GC_malloc(%cell_size) : (i64) -&gt; !llvm.ptr
+
+      %cell_head_ptr = llvm.getelementptr %cell[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+      llvm.store %head, %cell_head_ptr : i32, !llvm.ptr
+
+      %cell_tail_ptr = llvm.getelementptr %cell[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+      llvm.store %filtered_tail, %cell_tail_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+
+      %cons_tag = arith.constant 1 : i32
+      %kept = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+      %kept1 = llvm.insertvalue %cons_tag, %kept[0] : !llvm.struct&lt;(i32, ptr)&gt;
+      %kept2 = llvm.insertvalue %cell, %kept1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+
+      scf.yield %kept2 : !llvm.struct&lt;(i32, ptr)&gt;
+    } else {
+      // Skip: return filtered_tail directly
+      scf.yield %filtered_tail : !llvm.struct&lt;(i32, ptr)&gt;
+    }
+
+    scf.yield %new_list : !llvm.struct&lt;(i32, ptr)&gt;
+  }
+
+  return %result : !llvm.struct&lt;(i32, ptr)&gt;
+}
+</code></pre>
+<p><strong>Nested <code>scf.if</code> analysis:</strong></p>
+<ol>
+<li><strong>Outer if</strong>: 리스트가 empty인지 검사</li>
+<li><strong>Inner if</strong>: Head를 keep할지 skip할지 결정</li>
+<li><strong>Region nesting</strong>: Inner if는 outer if의 else branch 안에 있다</li>
+<li><strong>Type consistency</strong>: 모든 branch가 같은 타입 반환</li>
+</ol>
+<h3 id="테스트-프로그램-filter-fun-x---x--2-1-2-3-4"><a class="header" href="#테스트-프로그램-filter-fun-x---x--2-1-2-3-4">테스트 프로그램: filter (fun x -&gt; x &gt; 2) [1, 2, 3, 4]</a></h3>
+<pre><code class="language-fsharp">// FunLang source
+let is_greater_than_2 = fun x -&gt; x &gt; 2
+
+let rec filter pred lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt;
+      if pred head then
+        head :: filter pred tail
+      else
+        filter pred tail
+
+let result = filter is_greater_than_2 [1, 2, 3, 4]
+// Expected: [3, 4]
+</code></pre>
+<p><strong>Compiled MLIR (main function):</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+  // Create predicate closure: fun x -&gt; x &gt; 2
+  %pred_fn = llvm.mlir.addressof @is_greater_than_2_impl : !llvm.ptr
+  %null_env = llvm.mlir.null : !llvm.ptr
+  %closure_size = llvm.mlir.constant(16 : i64) : i64
+  %closure_mem = llvm.call @GC_malloc(%closure_size) : (i64) -&gt; !llvm.ptr
+
+  %fn_ptr_field = llvm.getelementptr %closure_mem[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+  llvm.store %pred_fn, %fn_ptr_field : !llvm.ptr, !llvm.ptr
+
+  %env_ptr_field = llvm.getelementptr %closure_mem[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+  llvm.store %null_env, %env_ptr_field : !llvm.ptr, !llvm.ptr
+
+  %pred = llvm.load %closure_mem : !llvm.ptr -&gt; !funlang.closure&lt;(i32) -&gt; i1&gt;
+
+  // Create list: [1, 2, 3, 4]
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+  %c3 = arith.constant 3 : i32
+  %c4 = arith.constant 4 : i32
+
+  %nil = funlang.nil : !funlang.list&lt;i32&gt;
+  %l4 = funlang.cons %c4, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+  %l3 = funlang.cons %c3, %l4 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+  %l2 = funlang.cons %c2, %l3 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+  %l1 = funlang.cons %c1, %l2 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  // Call filter
+  %result = func.call @filter(%pred, %l1)
+    : (!funlang.closure&lt;(i32) -&gt; i1&gt;, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  return %result : !llvm.struct&lt;(i32, ptr)&gt;
+}
+
+// Predicate implementation
+func.func @is_greater_than_2_impl(%x: i32) -&gt; i1 {
+  %c2 = arith.constant 2 : i32
+  %result = arith.cmpi sgt, %x, %c2 : i32
+  return %result : i1
+}
+</code></pre>
+<p><strong>실행 trace:</strong></p>
+<pre><code>filter pred [1, 2, 3, 4]
+→ (1 &gt; 2)? No → filter pred [2, 3, 4]
+→ (2 &gt; 2)? No → filter pred [3, 4]
+→ (3 &gt; 2)? Yes → 3 :: filter pred [4]
+→ (4 &gt; 2)? Yes → 3 :: (4 :: filter pred [])
+→ 3 :: (4 :: [])
+→ [3, 4]
+</code></pre>
+<p><strong>검증:</strong></p>
+<pre><code class="language-fsharp">let testFilterGreaterThan2() =
+    let ctx = MLIRContext.Create()
+    let module = compileProgram ctx filterSource
+
+    let pm = PassManager.Create(ctx)
+    pm.AddPass("convert-funlang-to-scf")
+    pm.AddPass("convert-scf-to-cf")
+    pm.AddPass("convert-funlang-to-llvm")
+    pm.Run(module)
+
+    let engine = ExecutionEngine.Create(module)
+    let result = engine.Invoke("main", [||])
+
+    let list = result :?&gt; ListValue
+    assert (list.Count = 2)
+    assert (list.[0] = 3)
+    assert (list.[1] = 4)
+
+    printfn "filter (fun x -&gt; x &gt; 2) [1, 2, 3, 4] = [3, 4] ✓"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>filter (fun x -&gt; x &gt; 2) [1, 2, 3, 4] = [3, 4] ✓
+</code></pre>
+<p>성공! <code>filter</code> 함수도 완전히 작동한다.</p>
+<h2 id="helper-함수-length와-append"><a class="header" href="#helper-함수-length와-append">Helper 함수: length와 append</a></h2>
+<p><code>map</code>과 <code>filter</code> 외에도 유용한 리스트 함수가 많다. 두 가지 기본 helper를 구현한다.</p>
+<h3 id="length-함수"><a class="header" href="#length-함수">length 함수</a></h3>
+<p><strong>FunLang 소스:</strong></p>
+<pre><code class="language-fsharp">let rec length lst =
+  match lst with
+  | [] -&gt; 0
+  | head :: tail -&gt; 1 + length tail
+</code></pre>
+<p><strong>타입:</strong> <code>[a] -&gt; int</code></p>
+<p><strong>예제:</strong></p>
+<pre><code class="language-fsharp">length []           // 0
+length [1]          // 1
+length [1, 2, 3]    // 3
+</code></pre>
+<p><strong>Compiled MLIR:</strong></p>
+<pre><code class="language-mlir">func.func @length(%lst: !funlang.list&lt;i32&gt;) -&gt; i32 {
+  %result = funlang.match %lst : !funlang.list&lt;i32&gt; -&gt; i32 {
+    ^nil:
+      %zero = arith.constant 0 : i32
+      funlang.yield %zero : i32
+
+    ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+      %tail_len = func.call @length(%tail) : (!funlang.list&lt;i32&gt;) -&gt; i32
+      %one = arith.constant 1 : i32
+      %len = arith.addi %one, %tail_len : i32
+      funlang.yield %len : i32
+  }
+  return %result : i32
+}
+</code></pre>
+<p><strong>특징:</strong></p>
+<ul>
+<li><code>head</code> 값은 무시 (타입만 필요)</li>
+<li>재귀 호출로 tail length 계산</li>
+<li>결과: <code>1 + tail_length</code></li>
+</ul>
+<h3 id="append-함수"><a class="header" href="#append-함수">append 함수</a></h3>
+<p><strong>FunLang 소스:</strong></p>
+<pre><code class="language-fsharp">let rec append xs ys =
+  match xs with
+  | [] -&gt; ys
+  | head :: tail -&gt; head :: (append tail ys)
+</code></pre>
+<p><strong>타입:</strong> <code>[a] -&gt; [a] -&gt; [a]</code></p>
+<p><strong>예제:</strong></p>
+<pre><code class="language-fsharp">append [] [1, 2]         // [1, 2]
+append [1, 2] []         // [1, 2]
+append [1, 2] [3, 4]     // [1, 2, 3, 4]
+</code></pre>
+<p><strong>Compiled MLIR:</strong></p>
+<pre><code class="language-mlir">func.func @append(%xs: !funlang.list&lt;i32&gt;,
+                  %ys: !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt; {
+  %result = funlang.match %xs : !funlang.list&lt;i32&gt; -&gt; !funlang.list&lt;i32&gt; {
+    ^nil:
+      // Base case: [] ++ ys = ys
+      funlang.yield %ys : !funlang.list&lt;i32&gt;
+
+    ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+      // Recursive case: (h :: t) ++ ys = h :: (t ++ ys)
+      %appended = func.call @append(%tail, %ys)
+        : (!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+      %new_list = funlang.cons %head, %appended
+        : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+      funlang.yield %new_list : !funlang.list&lt;i32&gt;
+  }
+  return %result : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>특징:</strong></p>
+<ul>
+<li>Base case: 첫 번째 리스트가 empty이면 두 번째 리스트 반환</li>
+<li>Recursive case: 첫 번째 리스트의 head를 보존하고 tail 재귀 처리</li>
+<li>시간 복잡도: O(|xs|) - 첫 번째 리스트 길이에 비례</li>
+</ul>
+<p><strong>실행 trace:</strong></p>
+<pre><code class="language-fsharp">append [1, 2] [3, 4]
+→ 1 :: append [2] [3, 4]
+→ 1 :: (2 :: append [] [3, 4])
+→ 1 :: (2 :: [3, 4])
+→ [1, 2, 3, 4]
+</code></pre>
+<h3 id="테스트-helper-함수"><a class="header" href="#테스트-helper-함수">테스트: Helper 함수</a></h3>
+<pre><code class="language-fsharp">let testHelpers() =
+    // Test length
+    let len1 = length []            // 0
+    let len2 = length [1]           // 1
+    let len3 = length [1, 2, 3]     // 3
+
+    assert (len1 = 0)
+    assert (len2 = 1)
+    assert (len3 = 3)
+    printfn "length tests passed ✓"
+
+    // Test append
+    let app1 = append [] [1, 2]         // [1, 2]
+    let app2 = append [1, 2] []         // [1, 2]
+    let app3 = append [1, 2] [3, 4]     // [1, 2, 3, 4]
+
+    assert (listEqual app1 [1, 2])
+    assert (listEqual app2 [1, 2])
+    assert (listEqual app3 [1, 2, 3, 4])
+    printfn "append tests passed ✓"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>length tests passed ✓
+append tests passed ✓
+</code></pre>
+<p>이제 우리는 <strong>기본 함수형 프로그래밍 toolkit</strong>을 갖췄다:</p>
+<ul>
+<li><code>map</code>: 변환</li>
+<li><code>filter</code>: 필터링</li>
+<li><code>length</code>: 크기 측정</li>
+<li><code>append</code>: 결합</li>
+</ul>
+<p>다음 섹션에서는 가장 강력한 combinator인 **<code>fold</code>**를 구현한다.</p>
+<h2 id="fold-함수-일반적인-리스트-combinator"><a class="header" href="#fold-함수-일반적인-리스트-combinator">fold 함수: 일반적인 리스트 Combinator</a></h2>
+<h3 id="fold의-개념"><a class="header" href="#fold의-개념">fold의 개념</a></h3>
+<p><code>fold</code> (또는 <code>reduce</code>)는 리스트를 하나의 값으로 축약하는 가장 일반적인 combinator다:</p>
+<pre><code class="language-fsharp">// fold의 타입
+fold : (acc -&gt; a -&gt; acc) -&gt; acc -&gt; [a] -&gt; acc
+
+// fold의 의미
+fold f acc [x1, x2, ..., xn] = f (... (f (f acc x1) x2) ...) xn
+</code></pre>
+<p><strong>fold는 모든 리스트 연산의 기초다:</strong></p>
+<pre><code class="language-fsharp">// sum: 모든 원소의 합
+let sum lst = fold (+) 0 lst
+sum [1, 2, 3, 4, 5]  // 15
+
+// product: 모든 원소의 곱
+let product lst = fold (*) 1 lst
+product [1, 2, 3, 4]  // 24
+
+// length: map과 filter도 fold로 구현 가능
+let length lst = fold (fun acc _ -&gt; acc + 1) 0 lst
+length [1, 2, 3]  // 3
+</code></pre>
+<p><strong>왜 fold가 가장 강력한가?</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>함수</th><th>fold로 구현 가능?</th><th>예제</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sum</code></td><td>✓</td><td><code>fold (+) 0</code></td></tr>
+<tr><td><code>product</code></td><td>✓</td><td><code>fold (*) 1</code></td></tr>
+<tr><td><code>length</code></td><td>✓</td><td><code>fold (fun acc _ -&gt; acc + 1) 0</code></td></tr>
+<tr><td><code>map</code></td><td>✓</td><td><code>fold (fun acc x -&gt; acc ++ [f x]) []</code></td></tr>
+<tr><td><code>filter</code></td><td>✓</td><td><code>fold (fun acc x -&gt; if p x then acc ++ [x] else acc) []</code></td></tr>
+<tr><td><code>reverse</code></td><td>✓</td><td><code>fold (fun acc x -&gt; x :: acc) []</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>fold는 universal list combinator다.</strong> 다른 모든 리스트 함수를 fold로 표현할 수 있다.</p>
+<h3 id="funlang-소스-코드-2"><a class="header" href="#funlang-소스-코드-2">FunLang 소스 코드</a></h3>
+<p><code>fold</code> 함수를 FunLang으로 작성한다:</p>
+<pre><code class="language-fsharp">let rec fold f acc lst =
+  match lst with
+  | [] -&gt; acc
+  | head :: tail -&gt; fold f (f acc head) tail
+</code></pre>
+<p><strong>동작 원리:</strong></p>
+<ol>
+<li><strong>Base case</strong>: Empty list → return accumulator (결과)</li>
+<li><strong>Recursive case</strong>:
+<ul>
+<li>Apply <code>f</code> to <code>acc</code> and <code>head</code> → new accumulator</li>
+<li>Recursively fold over <code>tail</code> with new accumulator</li>
+</ul>
+</li>
+</ol>
+<p><strong>실행 trace:</strong></p>
+<pre><code class="language-fsharp">fold (+) 0 [1, 2, 3, 4, 5]
+→ fold (+) (0 + 1) [2, 3, 4, 5]
+→ fold (+) 1 [2, 3, 4, 5]
+→ fold (+) (1 + 2) [3, 4, 5]
+→ fold (+) 3 [3, 4, 5]
+→ fold (+) (3 + 3) [4, 5]
+→ fold (+) 6 [4, 5]
+→ fold (+) (6 + 4) [5]
+→ fold (+) 10 [5]
+→ fold (+) (10 + 5) []
+→ fold (+) 15 []
+→ 15
+</code></pre>
+<p><strong>Accumulator 패턴:</strong></p>
+<p>Accumulator는 중간 결과를 저장하는 변수다:</p>
+<ul>
+<li><strong>초기값</strong>: <code>acc = 0</code> (sum의 경우)</li>
+<li><strong>갱신</strong>: <code>acc = f acc head</code> (각 원소마다 업데이트)</li>
+<li><strong>최종값</strong>: 리스트가 empty일 때 accumulator 반환</li>
+</ul>
+<h3 id="fold-vs-mapfilter-비교"><a class="header" href="#fold-vs-mapfilter-비교">fold vs map/filter 비교</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>특성</th><th>map</th><th>filter</th><th>fold</th></tr>
+</thead>
+<tbody>
+<tr><td>타입</td><td><code>(a -&gt; b) -&gt; [a] -&gt; [b]</code></td><td><code>(a -&gt; bool) -&gt; [a] -&gt; [a]</code></td><td><code>(acc -&gt; a -&gt; acc) -&gt; acc -&gt; [a] -&gt; acc</code></td></tr>
+<tr><td>입력</td><td>리스트</td><td>리스트</td><td>리스트 + 초기값</td></tr>
+<tr><td>출력</td><td>리스트</td><td>리스트</td><td>단일 값</td></tr>
+<tr><td>함수 인자</td><td>1개 (원소)</td><td>1개 (원소)</td><td>2개 (누적값, 원소)</td></tr>
+<tr><td>일반성</td><td>특수</td><td>특수</td><td>일반 (map/filter 구현 가능)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="컴파일된-mlir-funlang-dialect-2"><a class="header" href="#컴파일된-mlir-funlang-dialect-2">컴파일된 MLIR: FunLang Dialect</a></h3>
+<pre><code class="language-mlir">// fold : (acc -&gt; T -&gt; acc) -&gt; acc -&gt; !funlang.list&lt;T&gt; -&gt; acc
+func.func @fold(%f: !funlang.closure&lt;(i32, i32) -&gt; i32&gt;,
+                %acc: i32,
+                %lst: !funlang.list&lt;i32&gt;) -&gt; i32 {
+  // match lst with ...
+  %result = funlang.match %lst : !funlang.list&lt;i32&gt; -&gt; i32 {
+    // Case 1: [] -&gt; acc
+    ^nil:
+      funlang.yield %acc : i32
+
+    // Case 2: head :: tail -&gt; fold f (f acc head) tail
+    ^cons(%head: i32, %tail: !funlang.list&lt;i32&gt;):
+      // f acc head
+      %new_acc = funlang.apply %f(%acc, %head)
+        : (!funlang.closure&lt;(i32, i32) -&gt; i32&gt;, i32, i32) -&gt; i32
+
+      // fold f new_acc tail (tail recursion!)
+      %final = func.call @fold(%f, %new_acc, %tail)
+        : (!funlang.closure&lt;(i32, i32) -&gt; i32&gt;, i32, !funlang.list&lt;i32&gt;) -&gt; i32
+
+      funlang.yield %final : i32
+  }
+
+  return %result : i32
+}
+</code></pre>
+<p><strong>핵심 포인트:</strong></p>
+<ol>
+<li><strong>Three arguments</strong>: 클로저 <code>f</code>, 누적값 <code>acc</code>, 리스트 <code>lst</code></li>
+<li><strong>Binary closure</strong>: <code>f</code>는 두 인자 (<code>acc</code>, <code>head</code>)를 받는다</li>
+<li><strong>Tail recursion</strong>: 재귀 호출이 함수의 마지막 operation (최적화 가능!)</li>
+<li><strong>Accumulator threading</strong>: <code>acc</code> → <code>new_acc</code> → <code>final</code>로 흐름</li>
+</ol>
+<h3 id="tail-recursion-분석"><a class="header" href="#tail-recursion-분석">Tail Recursion 분석</a></h3>
+<p><code>fold</code>는 <strong>tail recursive</strong>다:</p>
+<pre><code class="language-fsharp">// Tail recursive (good)
+let rec fold f acc lst =
+  match lst with
+  | [] -&gt; acc
+  | head :: tail -&gt; fold f (f acc head) tail
+  // ^^^ Recursive call is the LAST operation
+
+// NOT tail recursive (map, filter)
+let rec map f lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt; (f head) :: (map f tail)
+  // ^^^ Recursive call is NOT the last (cons follows)
+</code></pre>
+<p><strong>Tail recursion의 장점:</strong></p>
+<ol>
+<li><strong>Stack frame 재사용</strong>: 각 재귀 호출이 새 stack frame을 생성하지 않음</li>
+<li><strong>메모리 효율</strong>: O(1) stack space (vs O(n) for non-tail)</li>
+<li><strong>컴파일러 최적화</strong>: Loop로 변환 가능</li>
+</ol>
+<p><strong>LLVM optimization pass가 tail call을 감지하면:</strong></p>
+<pre><code class="language-mlir">// Before optimization (recursive)
+%result = func.call @fold(%f, %new_acc, %tail) : (...) -&gt; i32
+
+// After optimization (loop)
+// Stack frame 재사용, jump로 변환
+</code></pre>
+<h3 id="common-fold-patterns"><a class="header" href="#common-fold-patterns">Common Fold Patterns</a></h3>
+<p><strong>1. Sum (합계)</strong></p>
+<pre><code class="language-fsharp">let sum lst = fold (fun acc x -&gt; acc + x) 0 lst
+// Or simply: fold (+) 0 lst
+
+sum [1, 2, 3, 4, 5]  // 15
+</code></pre>
+<p>Compiled MLIR:</p>
+<pre><code class="language-mlir">func.func @sum(%lst: !funlang.list&lt;i32&gt;) -&gt; i32 {
+  // Create add closure
+  %add = funlang.closure @add_impl() : () -&gt; ((i32, i32) -&gt; i32)
+
+  // Initial accumulator
+  %zero = arith.constant 0 : i32
+
+  // Call fold
+  %result = func.call @fold(%add, %zero, %lst)
+    : (!funlang.closure&lt;(i32, i32) -&gt; i32&gt;, i32, !funlang.list&lt;i32&gt;) -&gt; i32
+
+  return %result : i32
+}
+
+func.func @add_impl(%acc: i32, %x: i32) -&gt; i32 {
+  %result = arith.addi %acc, %x : i32
+  return %result : i32
+}
+</code></pre>
+<p><strong>2. Product (곱셈)</strong></p>
+<pre><code class="language-fsharp">let product lst = fold (*) 1 lst
+
+product [1, 2, 3, 4]  // 24
+</code></pre>
+<p><strong>3. Length (길이)</strong></p>
+<pre><code class="language-fsharp">let length lst = fold (fun acc _ -&gt; acc + 1) 0 lst
+
+length [1, 2, 3]  // 3
+</code></pre>
+<p>이전에 재귀로 구현한 <code>length</code>와 같은 결과지만, fold를 사용하면 더 일반적이다.</p>
+<p><strong>4. Reverse (역순)</strong></p>
+<pre><code class="language-fsharp">let reverse lst = fold (fun acc x -&gt; x :: acc) [] lst
+
+reverse [1, 2, 3]  // [3, 2, 1]
+</code></pre>
+<p><strong>Trace:</strong></p>
+<pre><code>fold cons [] [1, 2, 3]
+→ fold cons (1 :: []) [2, 3]
+→ fold cons [1] [2, 3]
+→ fold cons (2 :: [1]) [3]
+→ fold cons [2, 1] [3]
+→ fold cons (3 :: [2, 1]) []
+→ fold cons [3, 2, 1] []
+→ [3, 2, 1]
+</code></pre>
+<p><strong>5. Maximum (최댓값)</strong></p>
+<pre><code class="language-fsharp">let max_list lst =
+  match lst with
+  | [] -&gt; error "empty list"
+  | head :: tail -&gt; fold (fun acc x -&gt; if x &gt; acc then x else acc) head tail
+
+max_list [3, 1, 4, 1, 5, 9, 2]  // 9
+</code></pre>
+<h3 id="테스트-프로그램-fold--0-1-2-3-4-5"><a class="header" href="#테스트-프로그램-fold--0-1-2-3-4-5">테스트 프로그램: fold (+) 0 [1, 2, 3, 4, 5]</a></h3>
+<pre><code class="language-fsharp">// FunLang source
+let add = fun acc x -&gt; acc + x
+
+let rec fold f acc lst =
+  match lst with
+  | [] -&gt; acc
+  | head :: tail -&gt; fold f (f acc head) tail
+
+let result = fold add 0 [1, 2, 3, 4, 5]
+// Expected: 15
+</code></pre>
+<p><strong>Compiled MLIR (main function):</strong></p>
+<pre><code class="language-mlir">func.func @main() -&gt; i32 {
+  // Create add closure
+  %add_fn = llvm.mlir.addressof @add_impl : !llvm.ptr
+  %null_env = llvm.mlir.null : !llvm.ptr
+  %closure_size = llvm.mlir.constant(16 : i64) : i64
+  %closure_mem = llvm.call @GC_malloc(%closure_size) : (i64) -&gt; !llvm.ptr
+
+  %fn_ptr_field = llvm.getelementptr %closure_mem[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+  llvm.store %add_fn, %fn_ptr_field : !llvm.ptr, !llvm.ptr
+
+  %env_ptr_field = llvm.getelementptr %closure_mem[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+  llvm.store %null_env, %env_ptr_field : !llvm.ptr, !llvm.ptr
+
+  %add = llvm.load %closure_mem : !llvm.ptr -&gt; !funlang.closure&lt;(i32, i32) -&gt; i32&gt;
+
+  // Initial accumulator
+  %zero = arith.constant 0 : i32
+
+  // Create list: [1, 2, 3, 4, 5]
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+  %c3 = arith.constant 3 : i32
+  %c4 = arith.constant 4 : i32
+  %c5 = arith.constant 5 : i32
+
+  %nil = funlang.nil : !funlang.list&lt;i32&gt;
+  %l5 = funlang.cons %c5, %nil : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+  %l4 = funlang.cons %c4, %l5 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+  %l3 = funlang.cons %c3, %l4 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+  %l2 = funlang.cons %c2, %l3 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+  %l1 = funlang.cons %c1, %l2 : (i32, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  // Call fold
+  %result = func.call @fold(%add, %zero, %l1)
+    : (!funlang.closure&lt;(i32, i32) -&gt; i32&gt;, i32, !funlang.list&lt;i32&gt;) -&gt; i32
+
+  return %result : i32
+}
+
+func.func @add_impl(%acc: i32, %x: i32) -&gt; i32 {
+  %result = arith.addi %acc, %x : i32
+  return %result : i32
+}
+</code></pre>
+<p><strong>검증:</strong></p>
+<pre><code class="language-fsharp">let testFoldSum() =
+    let ctx = MLIRContext.Create()
+    let module = compileProgram ctx foldSumSource
+
+    let pm = PassManager.Create(ctx)
+    pm.AddPass("convert-funlang-to-scf")
+    pm.AddPass("convert-scf-to-cf")
+    pm.AddPass("convert-funlang-to-llvm")
+    pm.Run(module)
+
+    let engine = ExecutionEngine.Create(module)
+    let result = engine.Invoke("main", [||])
+
+    assert (result = 15)
+    printfn "fold (+) 0 [1, 2, 3, 4, 5] = 15 ✓"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>fold (+) 0 [1, 2, 3, 4, 5] = 15 ✓
+</code></pre>
+<p>성공! <code>fold</code> 함수도 완전히 작동한다.</p>
+<h2 id="완전한-예제-sum-of-squares"><a class="header" href="#완전한-예제-sum-of-squares">완전한 예제: Sum of Squares</a></h2>
+<p>이제 모든 것을 조합하여 <strong>실전 함수형 프로그램</strong>을 작성한다.</p>
+<h3 id="문제-정의"><a class="header" href="#문제-정의">문제 정의</a></h3>
+<p>주어진 숫자 리스트의 <strong>제곱의 합</strong>을 계산한다:</p>
+<pre><code>sum_of_squares [1, 2, 3] = 1² + 2² + 3² = 1 + 4 + 9 = 14
+</code></pre>
+<h3 id="funlang-소스-코드-3"><a class="header" href="#funlang-소스-코드-3">FunLang 소스 코드</a></h3>
+<pre><code class="language-fsharp">// Helper: square function
+let square = fun x -&gt; x * x
+
+// Helper: add function
+let add = fun acc x -&gt; acc + x
+
+// map: transform each element
+let rec map f lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt; (f head) :: (map f tail)
+
+// fold: reduce to single value
+let rec fold f acc lst =
+  match lst with
+  | [] -&gt; acc
+  | head :: tail -&gt; fold f (f acc head) tail
+
+// Composition: sum of squares
+let sum_of_squares lst =
+  fold add 0 (map square lst)
+
+// Test
+let result = sum_of_squares [1, 2, 3]
+// Expected: 14
+</code></pre>
+<p><strong>함수 조합 분석:</strong></p>
+<pre><code>[1, 2, 3]
+  ↓ map square
+[1, 4, 9]
+  ↓ fold add 0
+14
+</code></pre>
+<p><strong>이것이 바로 함수형 프로그래밍의 핵심이다:</strong></p>
+<ul>
+<li>작은 함수들 (<code>square</code>, <code>add</code>, <code>map</code>, <code>fold</code>)</li>
+<li>조합하여 복잡한 동작 (<code>sum_of_squares</code>)</li>
+<li>선언적 스타일: “무엇을” 계산할지 명확</li>
+</ul>
+<h3 id="전체-컴파일-파이프라인-9-단계"><a class="header" href="#전체-컴파일-파이프라인-9-단계">전체 컴파일 파이프라인 (9 단계)</a></h3>
+<p>이 프로그램을 end-to-end로 컴파일하는 과정을 모두 추적한다.</p>
+<p><strong>Stage 1: FunLang Source (사용자 작성)</strong></p>
+<pre><code class="language-fsharp">let sum_of_squares lst =
+  fold add 0 (map square lst)
+</code></pre>
+<p><strong>Stage 2: FunLang AST (Parser 출력)</strong></p>
+<pre><code class="language-fsharp">Let("sum_of_squares",
+    Fun("lst",
+        App(App(App(Var "fold", Var "add"),
+                Int 0),
+            App(App(Var "map", Var "square"),
+                Var "lst"))),
+    ...)
+</code></pre>
+<p><strong>Stage 3: FunLang MLIR (Compiler.fs 출력)</strong></p>
+<pre><code class="language-mlir">func.func @sum_of_squares(%lst: !funlang.list&lt;i32&gt;) -&gt; i32 {
+  // square closure (defined elsewhere)
+  %square = ... : !funlang.closure&lt;(i32) -&gt; i32&gt;
+
+  // add closure (defined elsewhere)
+  %add = ... : !funlang.closure&lt;(i32, i32) -&gt; i32&gt;
+
+  // map square lst
+  %squared_list = func.call @map(%square, %lst)
+    : (!funlang.closure&lt;(i32) -&gt; i32&gt;, !funlang.list&lt;i32&gt;) -&gt; !funlang.list&lt;i32&gt;
+
+  // fold add 0 squared_list
+  %zero = arith.constant 0 : i32
+  %result = func.call @fold(%add, %zero, %squared_list)
+    : (!funlang.closure&lt;(i32, i32) -&gt; i32&gt;, i32, !funlang.list&lt;i32&gt;) -&gt; i32
+
+  return %result : i32
+}
+</code></pre>
+<p><strong>Stage 4: FunLang → SCF Lowering (FunLangToSCFPass)</strong></p>
+<p><code>funlang.match</code> operations이 <code>scf.if</code>로 변환된다:</p>
+<pre><code class="language-mlir">// @map function (simplified)
+func.func @map(...) -&gt; ... {
+  %is_nil = ... : i1
+  %result = scf.if %is_nil -&gt; ... {
+    // Nil case
+    scf.yield %empty : ...
+  } else {
+    // Cons case
+    %transformed = funlang.apply %f(%head) : ...
+    %mapped_tail = func.call @map(...) : ...
+    %new_list = funlang.cons %transformed, %mapped_tail : ...
+    scf.yield %new_list : ...
+  }
+  return %result : ...
+}
+</code></pre>
+<p><strong>Stage 5: FunLang Ops → LLVM (FunLangToLLVMPass)</strong></p>
+<p><code>funlang.cons</code>, <code>funlang.nil</code>, <code>funlang.apply</code> 등이 LLVM operations로 변환:</p>
+<pre><code class="language-mlir">// funlang.cons lowering
+%cell_size = llvm.mlir.constant(16 : i64) : i64
+%cell = llvm.call @GC_malloc(%cell_size) : (i64) -&gt; !llvm.ptr
+%head_ptr = llvm.getelementptr %cell[0, 0] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %head, %head_ptr : i32, !llvm.ptr
+%tail_ptr = llvm.getelementptr %cell[0, 1] : (!llvm.ptr) -&gt; !llvm.ptr
+llvm.store %tail, %tail_ptr : !llvm.struct&lt;(i32, ptr)&gt;, !llvm.ptr
+
+%cons_tag = arith.constant 1 : i32
+%list = llvm.mlir.undef : !llvm.struct&lt;(i32, ptr)&gt;
+%list1 = llvm.insertvalue %cons_tag, %list[0] : !llvm.struct&lt;(i32, ptr)&gt;
+%list2 = llvm.insertvalue %cell, %list1[1] : !llvm.struct&lt;(i32, ptr)&gt;
+</code></pre>
+<p><strong>Stage 6: SCF → CF Lowering (SCFToControlFlowPass)</strong></p>
+<p><code>scf.if</code> → <code>cf.cond_br</code>, <code>cf.br</code>:</p>
+<pre><code class="language-mlir">func.func @map(...) -&gt; ... {
+^entry:
+  %is_nil = ... : i1
+  cf.cond_br %is_nil, ^nil_case, ^cons_case
+
+^nil_case:
+  %empty = ...
+  cf.br ^exit(%empty : ...)
+
+^cons_case:
+  %transformed = ...
+  %mapped_tail = func.call @map(...) : ...
+  %new_list = ...
+  cf.br ^exit(%new_list : ...)
+
+^exit(%result: ...):
+  return %result : ...
+}
+</code></pre>
+<p><strong>Stage 7: Func → LLVM (ConvertFuncToLLVMPass)</strong></p>
+<p><code>func.func</code> → <code>llvm.func</code>, <code>func.call</code> → <code>llvm.call</code>:</p>
+<pre><code class="language-mlir">llvm.func @map(%f: !llvm.ptr, %lst: !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt; {
+  ...
+  %result = llvm.call @map(%f, %tail) : (!llvm.ptr, !llvm.struct&lt;(i32, ptr)&gt;) -&gt; !llvm.struct&lt;(i32, ptr)&gt;
+  ...
+}
+</code></pre>
+<p><strong>Stage 8: LLVM Dialect → LLVM IR (Translate to LLVM IR)</strong></p>
+<p>MLIR LLVM dialect를 실제 LLVM IR로 변환:</p>
+<pre><code class="language-llvm">define { i32, i8* } @map({ i8*, i8* }* %f, { i32, i8* } %lst) {
+entry:
+  %0 = extractvalue { i32, i8* } %lst, 0
+  %1 = icmp eq i32 %0, 0
+  br i1 %1, label %nil_case, label %cons_case
+
+nil_case:
+  %2 = insertvalue { i32, i8* } undef, i32 0, 0
+  %3 = insertvalue { i32, i8* } %2, i8* null, 1
+  br label %exit
+
+cons_case:
+  %4 = extractvalue { i32, i8* } %lst, 1
+  %5 = bitcast i8* %4 to { i32, { i32, i8* } }*
+  %6 = getelementptr { i32, { i32, i8* } }, { i32, { i32, i8* } }* %5, i32 0, i32 0
+  %7 = load i32, i32* %6
+  %8 = getelementptr { i32, { i32, i8* } }, { i32, { i32, i8* } }* %5, i32 0, i32 1
+  %9 = load { i32, i8* }, { i32, i8* }* %8
+  ; ... (apply closure, recursive call, cons)
+  br label %exit
+
+exit:
+  %result = phi { i32, i8* } [ %3, %nil_case ], [ %new_list, %cons_case ]
+  ret { i32, i8* } %result
+}
+</code></pre>
+<p><strong>Stage 9: LLVM IR → Machine Code (JIT 또는 AOT)</strong></p>
+<p>LLVM backend가 target architecture의 machine code 생성:</p>
+<pre><code class="language-asm">; x86-64 assembly (simplified)
+map:
+    push    rbp
+    mov     rbp, rsp
+    ; Extract tag
+    mov     eax, dword ptr [rsi]
+    test    eax, eax
+    je      .LBB0_1        ; Nil case
+    ; Cons case
+    mov     rdi, qword ptr [rsi + 8]
+    mov     ecx, dword ptr [rdi]     ; head
+    mov     rsi, qword ptr [rdi + 8]  ; tail
+    ; ... (apply f, recursive call)
+    jmp     .LBB0_2
+.LBB0_1:
+    ; Return empty list
+    xor     eax, eax
+    xor     edx, edx
+.LBB0_2:
+    pop     rbp
+    ret
+</code></pre>
+<h3 id="실행-및-검증"><a class="header" href="#실행-및-검증">실행 및 검증</a></h3>
+<pre><code class="language-fsharp">let testSumOfSquares() =
+    let ctx = MLIRContext.Create()
+    let module = compileProgram ctx sumOfSquaresSource
+
+    // Apply all passes
+    let pm = PassManager.Create(ctx)
+    pm.AddPass("convert-funlang-to-scf")
+    pm.AddPass("convert-scf-to-cf")
+    pm.AddPass("convert-funlang-to-llvm")
+    pm.AddPass("convert-func-to-llvm")
+    pm.Run(module)
+
+    // JIT compile and execute
+    let engine = ExecutionEngine.Create(module)
+    let result = engine.Invoke("main", [||])
+
+    // Verify
+    assert (result = 14)
+    printfn "sum_of_squares [1, 2, 3] = 14 ✓"
+
+    // Detailed trace
+    printfn "Pipeline trace:"
+    printfn "  [1, 2, 3]"
+    printfn "  → map square"
+    printfn "  [1, 4, 9]"
+    printfn "  → fold add 0"
+    printfn "  14 ✓"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>sum_of_squares [1, 2, 3] = 14 ✓
+Pipeline trace:
+  [1, 2, 3]
+  → map square
+  [1, 4, 9]
+  → fold add 0
+  14 ✓
+</code></pre>
+<p><strong>완전한 컴파일러가 작동한다!</strong></p>
+<p>9단계의 변환을 거쳐 FunLang 소스 코드가 실행 가능한 machine code가 되었다.</p>
+<h2 id="성능-고려사항"><a class="header" href="#성능-고려사항">성능 고려사항</a></h2>
+<h3 id="stack-usage-in-recursive-list-functions"><a class="header" href="#stack-usage-in-recursive-list-functions">Stack Usage in Recursive List Functions</a></h3>
+<p>리스트 함수는 재귀적이므로 stack 사용량이 중요하다.</p>
+<p><strong>Stack depth by function:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>함수</th><th>Stack depth</th><th>이유</th></tr>
+</thead>
+<tbody>
+<tr><td><code>map</code></td><td>O(n)</td><td>Non-tail recursive (cons 후에 return)</td></tr>
+<tr><td><code>filter</code></td><td>O(n)</td><td>Non-tail recursive (cons 후에 return)</td></tr>
+<tr><td><code>fold</code></td><td><strong>O(1)</strong></td><td><strong>Tail recursive (최적화 가능)</strong></td></tr>
+<tr><td><code>length</code></td><td>O(n)</td><td>Non-tail recursive</td></tr>
+<tr><td><code>append</code></td><td>O(n)</td><td>Non-tail recursive</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Non-tail recursion example (map):</strong></p>
+<pre><code class="language-fsharp">let rec map f lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt; (f head) :: (map f tail)
+  // ^^^ Cons operation AFTER recursive call
+  // Stack frame must be preserved until map returns
+</code></pre>
+<p>Call stack for <code>map square [1, 2, 3]</code>:</p>
+<pre><code>map [1, 2, 3]
+  map [2, 3]
+    map [3]
+      map []
+      return []
+    cons 9 []
+    return [9]
+  cons 4 [9]
+  return [4, 9]
+cons 1 [4, 9]
+return [1, 4, 9]
+</code></pre>
+<p><strong>각 frame은 다음을 저장해야 한다:</strong></p>
+<ul>
+<li>Return address</li>
+<li><code>head</code> value (cons를 위해)</li>
+<li><code>tail</code> pointer</li>
+</ul>
+<p><strong>Tail recursion example (fold):</strong></p>
+<pre><code class="language-fsharp">let rec fold f acc lst =
+  match lst with
+  | [] -&gt; acc
+  | head :: tail -&gt; fold f (f acc head) tail
+  // ^^^ Recursive call is LAST operation
+  // Stack frame can be REUSED
+</code></pre>
+<p>Call stack for <code>fold add 0 [1, 2, 3]</code>:</p>
+<pre><code>fold 0 [1, 2, 3]
+fold 1 [2, 3]      // Same stack frame, acc updated
+fold 3 [3]         // Same stack frame, acc updated
+fold 6 []          // Same stack frame, acc updated
+return 6
+</code></pre>
+<p><strong>Only ONE stack frame!</strong></p>
+<h3 id="tail-call-optimization-tco"><a class="header" href="#tail-call-optimization-tco">Tail Call Optimization (TCO)</a></h3>
+<p>LLVM은 tail call을 감지하여 최적화할 수 있다.</p>
+<p><strong>Before TCO:</strong></p>
+<pre><code class="language-llvm">define i32 @fold(...) {
+  ; ...
+  %new_acc = add i32 %acc, %head
+  %result = call i32 @fold(..., %new_acc, %tail)
+  ret i32 %result
+}
+</code></pre>
+<p><strong>After TCO:</strong></p>
+<pre><code class="language-llvm">define i32 @fold(...) {
+entry:
+  br label %loop
+
+loop:
+  ; ...
+  %new_acc = add i32 %acc, %head
+  ; Update arguments and jump (no new stack frame)
+  br label %loop
+}
+</code></pre>
+<p><strong>TCO 활성화:</strong></p>
+<pre><code class="language-fsharp">// PassManager.fs
+let pm = PassManager.Create(ctx)
+
+// Add standard LLVM optimization passes
+pm.AddPass("inline")              // Inline small functions
+pm.AddPass("simplifycfg")         // Simplify control flow
+pm.AddPass("tailcallelim")        // Tail call elimination
+pm.AddPass("mem2reg")             // Promote memory to registers
+pm.Run(module)
+</code></pre>
+<p><strong>결과:</strong></p>
+<ul>
+<li><code>fold</code>는 loop로 변환되어 O(1) stack 사용</li>
+<li>큰 리스트 (100,000+ elements)도 stack overflow 없이 처리 가능</li>
+</ul>
+<h3 id="gc-pressure"><a class="header" href="#gc-pressure">GC Pressure</a></h3>
+<p>리스트 연산은 많은 메모리를 할당한다.</p>
+<p><strong>Allocation counts:</strong></p>
+<pre><code class="language-fsharp">// Create list [1, 2, 3]
+// - 3 cons cells = 3 * 16 bytes = 48 bytes
+
+// map square [1, 2, 3]
+// - Input: 3 cells (48 bytes)
+// - Output: 3 NEW cells (48 bytes)
+// - Total alive: 96 bytes (both lists live)
+
+// fold add 0 (map square [1, 2, 3])
+// - Input: 3 cells (48 bytes) from map
+// - Output: i32 (4 bytes) - no new list!
+// - GC can collect input list after fold
+</code></pre>
+<p><strong>Allocation pattern by function:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>함수</th><th>할당량</th><th>설명</th></tr>
+</thead>
+<tbody>
+<tr><td><code>map</code></td><td>O(n) cons cells</td><td>새 리스트 생성</td></tr>
+<tr><td><code>filter</code></td><td>O(k) cons cells (k ≤ n)</td><td>조건 만족하는 원소만</td></tr>
+<tr><td><code>fold</code></td><td><strong>O(1)</strong></td><td>단일 값만 반환</td></tr>
+<tr><td><code>append</code></td><td>O(n) cons cells</td><td>첫 번째 리스트 복사</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>GC optimization:</strong></p>
+<pre><code class="language-fsharp">// BAD: 중간 리스트가 메모리에 남는다
+let result1 = map f1 lst
+let result2 = map f2 result1
+let result3 = map f3 result2
+// result1, result2, result3 모두 메모리에 존재
+
+// GOOD: Fusion으로 중간 리스트 제거 (Phase 7에서 다룸)
+let result = map (f3 &lt;&lt; f2 &lt;&lt; f1) lst
+// 단일 pass, 중간 리스트 없음
+</code></pre>
+<h3 id="phase-7-preview-optimization-opportunities"><a class="header" href="#phase-7-preview-optimization-opportunities">Phase 7 Preview: Optimization Opportunities</a></h3>
+<p>Phase 7에서 다룰 최적화:</p>
+<p><strong>1. List Fusion</strong></p>
+<pre><code class="language-fsharp">// Before: 두 번 순회
+map f (map g lst)
+
+// After fusion: 한 번만 순회
+map (f &lt;&lt; g) lst
+</code></pre>
+<p><strong>2. Deforestation</strong></p>
+<pre><code class="language-fsharp">// Before: 중간 리스트 생성
+fold h z (map f lst)
+
+// After deforestation: 직접 계산
+fold (fun acc x -&gt; h acc (f x)) z lst
+</code></pre>
+<p><strong>3. Tail Recursion Modulo Cons</strong></p>
+<pre><code class="language-fsharp">// map을 tail recursive로 변환
+let map f lst =
+  let rec loop acc lst =
+    match lst with
+    | [] -&gt; reverse acc
+    | head :: tail -&gt; loop ((f head) :: acc) tail
+  loop [] lst
+</code></pre>
+<p><strong>4. Parallel Map</strong></p>
+<p>큰 리스트에 대해 map을 병렬화:</p>
+<pre><code class="language-mlir">// Sequential
+%result = scf.for %i = 0 to %n step 1 iter_args(%acc = %init) -&gt; ... {
+  %elem = load %lst[%i]
+  %transformed = apply %f(%elem)
+  ...
+}
+
+// Parallel (MLIR scf.parallel)
+scf.parallel (%i) = (0) to (%n) step (1) {
+  %elem = load %lst[%i]
+  %transformed = apply %f(%elem)
+  store %transformed, %result[%i]
+}
+</code></pre>
+<p>이러한 최적화는 Phase 7에서 MLIR transformation passes로 구현할 것이다.</p>
+<h2 id="완전한-컴파일러-통합"><a class="header" href="#완전한-컴파일러-통합">완전한 컴파일러 통합</a></h2>
+<p>이제 모든 것을 통합하여 <strong>완전한 FunLang 컴파일러</strong>를 구축한다.</p>
+<h3 id="funlang-ast-type-extensions"><a class="header" href="#funlang-ast-type-extensions">FunLang AST Type Extensions</a></h3>
+<p>최종 AST 정의:</p>
+<pre><code class="language-fsharp">// Ast.fs
+module Ast
+
+type Expr =
+    // Phase 1-2: Basics
+    | Int of int
+    | Float of float
+    | Bool of bool
+    | Var of string
+    | Add of Expr * Expr
+    | Sub of Expr * Expr
+    | Mul of Expr * Expr
+    | Div of Expr * Expr
+    | Lt of Expr * Expr
+    | Gt of Expr * Expr
+    | Eq of Expr * Expr
+
+    // Phase 3: Control flow and functions
+    | Let of string * Expr * Expr
+    | If of Expr * Expr * Expr
+    | LetRec of string * Expr * Expr
+
+    // Phase 4: Closures and higher-order functions
+    | Fun of string * Expr              // lambda
+    | App of Expr * Expr                // application
+
+    // Phase 6: Lists and pattern matching
+    | Nil                                // []
+    | Cons of Expr * Expr                // head :: tail
+    | List of Expr list                  // [1, 2, 3] (syntactic sugar)
+    | Match of Expr * (Pattern * Expr) list
+
+and Pattern =
+    | PVar of string                     // x (variable binding)
+    | PNil                               // [] (empty list)
+    | PCons of Pattern * Pattern         // head :: tail (cons pattern)
+    | PWild                              // _ (wildcard)
+    | PInt of int                        // 42 (literal match)
+    | PBool of bool                      // true/false
+
+type Program = Expr
+</code></pre>
+<h3 id="compilerfs-compileexpr-complete-implementation"><a class="header" href="#compilerfs-compileexpr-complete-implementation">Compiler.fs: compileExpr Complete Implementation</a></h3>
+<pre><code class="language-fsharp">// Compiler.fs
+module Compiler
+
+open MLIR
+open Ast
+
+let rec compileExpr (builder: OpBuilder) (expr: Expr) (symbolTable: Map&lt;string, Value&gt;) : Value =
+    match expr with
+    // Phase 1-2: Arithmetic
+    | Int n -&gt;
+        let ty = builder.GetI32Type()
+        builder.CreateConstantInt(ty, n)
+
+    | Float f -&gt;
+        let ty = builder.GetF64Type()
+        builder.CreateConstantFloat(ty, f)
+
+    | Bool b -&gt;
+        let ty = builder.GetI1Type()
+        builder.CreateConstantBool(ty, b)
+
+    | Var name -&gt;
+        symbolTable.[name]
+
+    | Add (left, right) -&gt;
+        let lhs = compileExpr builder left symbolTable
+        let rhs = compileExpr builder right symbolTable
+        builder.CreateAddI(lhs, rhs)
+
+    | Mul (left, right) -&gt;
+        let lhs = compileExpr builder left symbolTable
+        let rhs = compileExpr builder right symbolTable
+        builder.CreateMulI(lhs, rhs)
+
+    // ... (other arithmetic ops)
+
+    // Phase 3: Let and If
+    | Let (name, value, body) -&gt;
+        let val_result = compileExpr builder value symbolTable
+        let newSymbolTable = symbolTable.Add(name, val_result)
+        compileExpr builder body newSymbolTable
+
+    | If (cond, thenExpr, elseExpr) -&gt;
+        let condVal = compileExpr builder cond symbolTable
+        let resultTy = inferType thenExpr symbolTable
+        builder.CreateScfIf(condVal, resultTy, fun thenBuilder -&gt;
+            let thenResult = compileExpr thenBuilder thenExpr symbolTable
+            thenBuilder.CreateScfYield(thenResult)
+        , fun elseBuilder -&gt;
+            let elseResult = compileExpr elseBuilder elseExpr symbolTable
+            elseBuilder.CreateScfYield(elseResult)
+        )
+
+    | LetRec (name, func, body) -&gt;
+        // Create named function for recursion
+        let funcName = sprintf "_%s" name
+        let funcOp = compileFunctionDefinition builder funcName func symbolTable
+        let funcRef = builder.CreateFuncRef(funcOp)
+        let newSymbolTable = symbolTable.Add(name, funcRef)
+        compileExpr builder body newSymbolTable
+
+    // Phase 4: Closures
+    | Fun (param, body) -&gt;
+        // Analyze free variables
+        let freeVars = analyzeFreeVars (Fun(param, body)) symbolTable
+
+        // Create closure implementation function
+        let implName = sprintf "_lambda_%d" (freshId())
+        let implFunc = createClosureImpl builder implName param body freeVars symbolTable
+
+        // Capture environment
+        let captures = freeVars |&gt; List.map (fun v -&gt; symbolTable.[v])
+
+        // Create closure object
+        builder.CreateClosure(implFunc, captures)
+
+    | App (func, arg) -&gt;
+        let funcVal = compileExpr builder func symbolTable
+        let argVal = compileExpr builder arg symbolTable
+        builder.CreateApply(funcVal, argVal)
+
+    // Phase 6: Lists
+    | Nil -&gt;
+        let elemTy = inferElementType expr symbolTable
+        let listTy = builder.GetListType(elemTy)
+        builder.CreateNil(listTy)
+
+    | Cons (head, tail) -&gt;
+        let headVal = compileExpr builder head symbolTable
+        let tailVal = compileExpr builder tail symbolTable
+        let headTy = headVal.GetType()
+        let listTy = builder.GetListType(headTy)
+        builder.CreateCons(headVal, tailVal, listTy)
+
+    | List exprs -&gt;
+        // Desugar to nested Cons
+        let desugared = desugarList exprs
+        compileExpr builder desugared symbolTable
+
+    | Match (scrutinee, cases) -&gt;
+        compileMatch builder scrutinee cases symbolTable
+
+and compileMatch (builder: OpBuilder) (scrutinee: Expr) (cases: (Pattern * Expr) list) (symbolTable: Map&lt;string, Value&gt;) : Value =
+    let scrutineeVal = compileExpr builder scrutinee symbolTable
+    let resultTy = inferType (snd cases.[0]) symbolTable
+
+    // Create funlang.match operation
+    builder.CreateMatch(scrutineeVal, resultTy, fun matchBuilder -&gt;
+        cases |&gt; List.map (fun (pattern, body) -&gt;
+            match pattern with
+            | PNil -&gt;
+                // Nil case: no block arguments
+                matchBuilder.CreateNilCase(fun caseBuilder -&gt;
+                    let result = compileExpr caseBuilder body symbolTable
+                    caseBuilder.CreateYield(result)
+                )
+
+            | PCons (PVar headName, PVar tailName) -&gt;
+                // Cons case: bind head and tail
+                let headTy = inferPatternType pattern symbolTable
+                let listTy = builder.GetListType(headTy)
+                matchBuilder.CreateConsCase(headTy, listTy, fun caseBuilder headArg tailArg -&gt;
+                    let newSymbolTable =
+                        symbolTable
+                            .Add(headName, headArg)
+                            .Add(tailName, tailArg)
+                    let result = compileExpr caseBuilder body newSymbolTable
+                    caseBuilder.CreateYield(result)
+                )
+
+            | _ -&gt; failwith "Unsupported pattern"
+        )
+    )
+
+and desugarList (exprs: Expr list) : Expr =
+    match exprs with
+    | [] -&gt; Nil
+    | head :: tail -&gt; Cons(head, desugarList tail)
+</code></pre>
+<h3 id="type-inference-for-list-types"><a class="header" href="#type-inference-for-list-types">Type Inference for List Types</a></h3>
+<p>리스트 타입 추론:</p>
+<pre><code class="language-fsharp">// TypeInfer.fs
+let rec inferType (expr: Expr) (symbolTable: Map&lt;string, Value&gt;) : MLIRType =
+    match expr with
+    | Int _ -&gt; builder.GetI32Type()
+    | Float _ -&gt; builder.GetF64Type()
+    | Bool _ -&gt; builder.GetI1Type()
+
+    | Var name -&gt;
+        let value = symbolTable.[name]
+        value.GetType()
+
+    | Nil -&gt;
+        // Need context to infer element type
+        // If context is unavailable, default to i32
+        builder.GetListType(builder.GetI32Type())
+
+    | Cons (head, tail) -&gt;
+        let headTy = inferType head symbolTable
+        builder.GetListType(headTy)
+
+    | List (head :: _) -&gt;
+        let headTy = inferType head symbolTable
+        builder.GetListType(headTy)
+
+    | Match (scrutinee, cases) -&gt;
+        // Result type is the type of first case body
+        inferType (snd cases.[0]) symbolTable
+
+    | Fun (param, body) -&gt;
+        // Function type: paramTy -&gt; returnTy
+        // Need type annotation or inference
+        let paramTy = inferParamType param
+        let returnTy = inferType body symbolTable
+        builder.GetFunctionType(paramTy, returnTy)
+
+    | _ -&gt; failwith "Type inference not implemented"
+</code></pre>
+<h3 id="end-to-end-compilation-function"><a class="header" href="#end-to-end-compilation-function">End-to-End Compilation Function</a></h3>
+<pre><code class="language-fsharp">// Pipeline.fs
+let compileProgram (source: string) : MLIRModule =
+    // 1. Parse
+    let ast = Parser.parse source
+
+    // 2. Desugar
+    let desugared = Desugar.desugar ast
+
+    // 3. Type check
+    TypeChecker.check desugared
+
+    // 4. Compile to MLIR
+    let ctx = MLIRContext.Create()
+    let module = MLIRModule.Create(ctx)
+    let builder = OpBuilder.Create(ctx)
+
+    let mainFunc = builder.CreateFunc("main", [], inferType desugared Map.empty, fun funcBuilder -&gt;
+        let result = Compiler.compileExpr funcBuilder desugared Map.empty
+        funcBuilder.CreateReturn(result)
+    )
+
+    module.AddFunction(mainFunc)
+
+    // 5. Apply lowering passes
+    let pm = PassManager.Create(ctx)
+    pm.AddPass("convert-funlang-to-scf")
+    pm.AddPass("convert-scf-to-cf")
+    pm.AddPass("convert-funlang-to-llvm")
+    pm.AddPass("convert-func-to-llvm")
+    pm.Run(module)
+
+    module
+
+// Execute
+let execute (module: MLIRModule) : obj =
+    let engine = ExecutionEngine.Create(module)
+    engine.Invoke("main", [||])
+
+// Complete pipeline
+let run (source: string) : obj =
+    let module = compileProgram source
+    execute module
+</code></pre>
+<h3 id="example-usage"><a class="header" href="#example-usage">Example Usage</a></h3>
+<pre><code class="language-fsharp">// Main.fs
+[&lt;EntryPoint&gt;]
+let main argv =
+    let source = """
+        let square = fun x -&gt; x * x
+        let add = fun acc x -&gt; acc + x
+
+        let rec map f lst =
+          match lst with
+          | [] -&gt; []
+          | head :: tail -&gt; (f head) :: (map f tail)
+
+        let rec fold f acc lst =
+          match lst with
+          | [] -&gt; acc
+          | head :: tail -&gt; fold f (f acc head) tail
+
+        let sum_of_squares lst =
+          fold add 0 (map square lst)
+
+        sum_of_squares [1, 2, 3]
+    """
+
+    let result = Pipeline.run source
+    printfn "Result: %A" result  // Result: 14
+
+    0
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Result: 14
+</code></pre>
+<p><strong>완전한 컴파일러가 작동한다!</strong></p>
+<h2 id="common-errors-and-debugging"><a class="header" href="#common-errors-and-debugging">Common Errors and Debugging</a></h2>
+<p>함수형 프로그램 작성 시 자주 발생하는 오류와 해결 방법.</p>
+<h3 id="1-infinite-recursion"><a class="header" href="#1-infinite-recursion">1. Infinite Recursion</a></h3>
+<p><strong>오류:</strong></p>
+<pre><code class="language-fsharp">let rec bad_map f lst =
+  match lst with
+  | [] -&gt; []
+  | head :: tail -&gt; (f head) :: (bad_map f lst)  // BUG: lst instead of tail
+</code></pre>
+<p><strong>증상:</strong></p>
+<pre><code>Stack overflow
+Segmentation fault
+Infinite loop
+</code></pre>
+<p><strong>해결:</strong></p>
+<ul>
+<li>재귀 호출이 “smaller” input을 사용하는지 확인</li>
+<li>Base case가 반드시 도달 가능한지 확인</li>
+</ul>
+<pre><code class="language-fsharp">// Correct
+| head :: tail -&gt; (f head) :: (map f tail)  // ✓ tail is smaller
+</code></pre>
+<h3 id="2-type-mismatch"><a class="header" href="#2-type-mismatch">2. Type Mismatch</a></h3>
+<p><strong>오류:</strong></p>
+<pre><code class="language-fsharp">let bad_fold f acc lst =
+  match lst with
+  | [] -&gt; 0  // BUG: should return acc, not 0
+  | head :: tail -&gt; fold f (f acc head) tail
+</code></pre>
+<p><strong>증상:</strong></p>
+<pre><code>Type error: Expected i32, found i64
+Type mismatch in match branches
+</code></pre>
+<p><strong>해결:</strong></p>
+<ul>
+<li>모든 match branch가 같은 타입 반환하는지 확인</li>
+<li>Accumulator 타입이 일관되는지 확인</li>
+</ul>
+<pre><code class="language-fsharp">// Correct
+| [] -&gt; acc  // ✓ Same type as recursive case
+</code></pre>
+<h3 id="3-wrong-accumulator-type"><a class="header" href="#3-wrong-accumulator-type">3. Wrong Accumulator Type</a></h3>
+<p><strong>오류:</strong></p>
+<pre><code class="language-fsharp">// Want to reverse a list
+let reverse lst = fold (fun acc x -&gt; acc :: x) [] lst  // BUG: wrong cons order
+</code></pre>
+<p><strong>증상:</strong></p>
+<pre><code>Type error: Cannot cons list to element
+Expected: element :: list
+Found: list :: element
+</code></pre>
+<p><strong>해결:</strong></p>
+<ul>
+<li>Cons operator는 <code>element :: list</code> 순서</li>
+<li>Accumulator 타입 확인</li>
+</ul>
+<pre><code class="language-fsharp">// Correct
+let reverse lst = fold (fun acc x -&gt; x :: acc) [] lst  // ✓ x :: acc
+</code></pre>
+<h3 id="4-stack-overflow"><a class="header" href="#4-stack-overflow">4. Stack Overflow</a></h3>
+<p><strong>오류:</strong></p>
+<pre><code class="language-fsharp">// Large list
+let big_list = [1..100000]
+let result = map square big_list  // Stack overflow!
+</code></pre>
+<p><strong>증상:</strong></p>
+<pre><code>Segmentation fault (core dumped)
+Stack overflow at recursion depth 100000
+</code></pre>
+<p><strong>해결:</strong></p>
+<ul>
+<li>Tail recursive 버전 사용</li>
+<li>TCO 활성화</li>
+<li>Iteration으로 변환 (Phase 7)</li>
+</ul>
+<pre><code class="language-fsharp">// Tail recursive version
+let map_tailrec f lst =
+  let rec loop acc lst =
+    match lst with
+    | [] -&gt; reverse acc
+    | head :: tail -&gt; loop ((f head) :: acc) tail
+  loop [] lst
+</code></pre>
+<h3 id="5-debugging-strategies"><a class="header" href="#5-debugging-strategies">5. Debugging Strategies</a></h3>
+<p><strong>전략 1: Trace execution</strong></p>
+<pre><code class="language-fsharp">let rec map f lst =
+  printfn "map called with list of length %d" (length lst)
+  match lst with
+  | [] -&gt;
+      printfn "  -&gt; returning []"
+      []
+  | head :: tail -&gt;
+      printfn "  -&gt; transforming %A" head
+      let transformed = f head
+      printfn "  -&gt; recursing on tail"
+      let mapped_tail = map f tail
+      printfn "  -&gt; cons %A onto result" transformed
+      transformed :: mapped_tail
+</code></pre>
+<p><strong>전략 2: Unit tests</strong></p>
+<pre><code class="language-fsharp">let test_map() =
+    assert (map square [] = [])
+    assert (map square [1] = [1])
+    assert (map square [1, 2] = [1, 4])
+    assert (map square [1, 2, 3] = [1, 4, 9])
+    printfn "map tests passed ✓"
+</code></pre>
+<p><strong>전략 3: MLIR inspection</strong></p>
+<pre><code class="language-fsharp">let module = compileProgram source
+printfn "%s" (module.ToString())  // Print MLIR before lowering
+
+let pm = PassManager.Create(ctx)
+pm.EnableIRPrinting()  // Print after each pass
+pm.AddPass("convert-funlang-to-scf")
+pm.Run(module)
+</code></pre>
+<p><strong>전략 4: GDB debugging</strong></p>
+<pre><code class="language-bash"># Compile with debug info
+mlir-opt --debug-only=funlang-to-scf input.mlir
+
+# Run under GDB
+gdb --args mlir-opt ...
+(gdb) break FunLangToSCFPass::runOnOperation
+(gdb) run
+</code></pre>
+<h2 id="리터럴-패턴-예제-fizzbuzz"><a class="header" href="#리터럴-패턴-예제-fizzbuzz">리터럴 패턴 예제: fizzbuzz</a></h2>
+<p>지금까지 리스트에 대한 constructor pattern (Nil, Cons)을 다뤘다. 이제 <strong>리터럴 패턴</strong>을 사용하는 실전 예제를 살펴본다.</p>
+<h3 id="fizzbuzz-문제"><a class="header" href="#fizzbuzz-문제">FizzBuzz 문제</a></h3>
+<p><strong>FizzBuzz 규칙:</strong></p>
+<ul>
+<li>3의 배수: “Fizz”</li>
+<li>5의 배수: “Buzz”</li>
+<li>15의 배수: “FizzBuzz”</li>
+<li>그 외: 숫자 그대로</li>
+</ul>
+<p><strong>FunLang 구현:</strong></p>
+<pre><code class="language-fsharp">let fizzbuzz n =
+    match (n % 3, n % 5) with
+    | (0, 0) -&gt; "FizzBuzz"
+    | (0, _) -&gt; "Fizz"
+    | (_, 0) -&gt; "Buzz"
+    | (_, _) -&gt; string_of_int n
+</code></pre>
+<p><strong>패턴 분석:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Row</th><th>n % 3</th><th>n % 5</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>0</td><td>0</td><td>“FizzBuzz”</td></tr>
+<tr><td>2</td><td>0</td><td>_</td><td>“Fizz”</td></tr>
+<tr><td>3</td><td>_</td><td>0</td><td>“Buzz”</td></tr>
+<tr><td>4</td><td>_</td><td>_</td><td>n</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="컴파일된-mlir-리터럴-패턴"><a class="header" href="#컴파일된-mlir-리터럴-패턴">컴파일된 MLIR: 리터럴 패턴</a></h3>
+<pre><code class="language-mlir">func.func @fizzbuzz(%n: i32) -&gt; !llvm.ptr&lt;i8&gt; {
+  // Compute remainders
+  %c3 = arith.constant 3 : i32
+  %c5 = arith.constant 5 : i32
+  %c0 = arith.constant 0 : i32
+
+  %mod3 = arith.remsi %n, %c3 : i32
+  %mod5 = arith.remsi %n, %c5 : i32
+
+  // Pattern matching: sequential arith.cmpi chain
+  %is_div3 = arith.cmpi eq, %mod3, %c0 : i32
+  %result = scf.if %is_div3 -&gt; !llvm.ptr&lt;i8&gt; {
+    // First column is 0 (n % 3 == 0)
+    %is_div5 = arith.cmpi eq, %mod5, %c0 : i32
+    %inner = scf.if %is_div5 -&gt; !llvm.ptr&lt;i8&gt; {
+      // Case (0, 0): FizzBuzz
+      scf.yield %fizzbuzz_str : !llvm.ptr&lt;i8&gt;
+    } else {
+      // Case (0, _): Fizz
+      scf.yield %fizz_str : !llvm.ptr&lt;i8&gt;
+    }
+    scf.yield %inner : !llvm.ptr&lt;i8&gt;
+  } else {
+    // First column is not 0 (n % 3 != 0)
+    %is_div5_2 = arith.cmpi eq, %mod5, %c0 : i32
+    %inner2 = scf.if %is_div5_2 -&gt; !llvm.ptr&lt;i8&gt; {
+      // Case (_, 0): Buzz
+      scf.yield %buzz_str : !llvm.ptr&lt;i8&gt;
+    } else {
+      // Case (_, _): n as string
+      %str = func.call @int_to_string(%n) : (i32) -&gt; !llvm.ptr&lt;i8&gt;
+      scf.yield %str : !llvm.ptr&lt;i8&gt;
+    }
+    scf.yield %inner2 : !llvm.ptr&lt;i8&gt;
+  }
+
+  return %result : !llvm.ptr&lt;i8&gt;
+}
+</code></pre>
+<p><strong>핵심 관찰:</strong></p>
+<ol>
+<li><strong><code>arith.cmpi eq</code></strong>: 리터럴 0과의 비교</li>
+<li><strong>Nested <code>scf.if</code></strong>: Decision tree 구조</li>
+<li><strong>Wildcard <code>_</code></strong>: else branch로 fallthrough (테스트 없음)</li>
+</ol>
+<h3 id="classify-함수-숫자-분류"><a class="header" href="#classify-함수-숫자-분류">classify 함수: 숫자 분류</a></h3>
+<p><strong>숫자를 여러 카테고리로 분류하는 예제:</strong></p>
+<pre><code class="language-fsharp">let classify n =
+    match n with
+    | 0 -&gt; "zero"
+    | 1 -&gt; "one"
+    | 2 -&gt; "two"
+    | _ -&gt; if n &lt; 0 then "negative" else "many"
+</code></pre>
+<p><strong>컴파일된 MLIR:</strong></p>
+<pre><code class="language-mlir">func.func @classify(%n: i32) -&gt; !llvm.ptr&lt;i8&gt; {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+
+  // Sequential literal comparisons
+  %is_zero = arith.cmpi eq, %n, %c0 : i32
+  %result = scf.if %is_zero -&gt; !llvm.ptr&lt;i8&gt; {
+    scf.yield %zero_str : !llvm.ptr&lt;i8&gt;
+  } else {
+    %is_one = arith.cmpi eq, %n, %c1 : i32
+    %r1 = scf.if %is_one -&gt; !llvm.ptr&lt;i8&gt; {
+      scf.yield %one_str : !llvm.ptr&lt;i8&gt;
+    } else {
+      %is_two = arith.cmpi eq, %n, %c2 : i32
+      %r2 = scf.if %is_two -&gt; !llvm.ptr&lt;i8&gt; {
+        scf.yield %two_str : !llvm.ptr&lt;i8&gt;
+      } else {
+        // Default case with guard
+        %is_neg = arith.cmpi slt, %n, %c0 : i32
+        %r3 = scf.if %is_neg -&gt; !llvm.ptr&lt;i8&gt; {
+          scf.yield %negative_str : !llvm.ptr&lt;i8&gt;
+        } else {
+          scf.yield %many_str : !llvm.ptr&lt;i8&gt;
+        }
+        scf.yield %r3 : !llvm.ptr&lt;i8&gt;
+      }
+      scf.yield %r2 : !llvm.ptr&lt;i8&gt;
+    }
+    scf.yield %r1 : !llvm.ptr&lt;i8&gt;
+  }
+
+  return %result : !llvm.ptr&lt;i8&gt;
+}
+</code></pre>
+<h3 id="최적화-dense-range-switch"><a class="header" href="#최적화-dense-range-switch">최적화: Dense Range Switch</a></h3>
+<p>리터럴이 0, 1, 2 연속일 때 <code>scf.index_switch</code> 최적화 가능:</p>
+<pre><code class="language-mlir">// Optimized: range check + index_switch
+%in_range = arith.cmpi ult, %n, %c3 : i32
+%result = scf.if %in_range -&gt; !llvm.ptr&lt;i8&gt; {
+  %idx = arith.index_cast %n : i32 to index
+  %r = scf.index_switch %idx : index -&gt; !llvm.ptr&lt;i8&gt;
+  case 0 { scf.yield %zero_str : !llvm.ptr&lt;i8&gt; }
+  case 1 { scf.yield %one_str : !llvm.ptr&lt;i8&gt; }
+  case 2 { scf.yield %two_str : !llvm.ptr&lt;i8&gt; }
+  default { scf.yield %unreachable : !llvm.ptr&lt;i8&gt; }
+  scf.yield %r : !llvm.ptr&lt;i8&gt;
+} else {
+  // n &gt;= 3: check if negative
+  %is_neg = arith.cmpi slt, %n, %c0 : i32
+  %r2 = scf.if %is_neg -&gt; !llvm.ptr&lt;i8&gt; {
+    scf.yield %negative_str : !llvm.ptr&lt;i8&gt;
+  } else {
+    scf.yield %many_str : !llvm.ptr&lt;i8&gt;
+  }
+  scf.yield %r2 : !llvm.ptr&lt;i8&gt;
+}
+</code></pre>
+<p><strong>최적화 효과:</strong></p>
+<ul>
+<li><strong>Before:</strong> O(n) sequential comparisons</li>
+<li><strong>After:</strong> O(1) jump table for dense range</li>
+</ul>
+<h3 id="wildcard-default-case-최적화"><a class="header" href="#wildcard-default-case-최적화">Wildcard Default Case 최적화</a></h3>
+<p><strong>Wildcard <code>_</code>는 테스트를 생성하지 않는다:</strong></p>
+<pre><code class="language-fsharp">match x with
+| 0 -&gt; handle_zero()
+| 1 -&gt; handle_one()
+| _ -&gt; handle_default()  // No comparison needed!
+</code></pre>
+<pre><code class="language-mlir">%is_zero = arith.cmpi eq, %x, %c0 : i32
+scf.if %is_zero {
+  // case 0
+} else {
+  %is_one = arith.cmpi eq, %x, %c1 : i32
+  scf.if %is_one {
+    // case 1
+  } else {
+    // _ case: NO arith.cmpi, just fallthrough
+    // All other cases exhausted, this is the default
+  }
+}
+</code></pre>
+<p><strong>핵심 원칙:</strong></p>
+<ul>
+<li>마지막 else branch는 이전 모든 테스트가 실패한 경우</li>
+<li>추가 비교 없이 바로 default 코드 실행</li>
+<li>이것이 wildcard의 <strong>zero-cost abstraction</strong></li>
+</ul>
+<h3 id="리터럴--constructor-혼합-예제"><a class="header" href="#리터럴--constructor-혼합-예제">리터럴 + Constructor 혼합 예제</a></h3>
+<p><strong>리스트와 숫자를 함께 매칭:</strong></p>
+<pre><code class="language-fsharp">let take_first_n lst n =
+    match (lst, n) with
+    | (_, 0) -&gt; []
+    | ([], _) -&gt; []
+    | (head :: tail, n) -&gt; head :: take_first_n tail (n - 1)
+</code></pre>
+<p><strong>컴파일된 MLIR:</strong></p>
+<pre><code class="language-mlir">func.func @take_first_n(%lst: !funlang.list&lt;i32&gt;, %n: i32) -&gt; !funlang.list&lt;i32&gt; {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+
+  // Check n == 0 first (literal pattern)
+  %is_n_zero = arith.cmpi eq, %n, %c0 : i32
+  %result = scf.if %is_n_zero -&gt; !funlang.list&lt;i32&gt; {
+    // Case (_, 0): return empty
+    %empty = funlang.nil : !funlang.list&lt;i32&gt;
+    scf.yield %empty : !funlang.list&lt;i32&gt;
+  } else {
+    // Check list constructor (constructor pattern)
+    %struct = builtin.unrealized_conversion_cast %lst : ... to !llvm.struct&lt;(i32, ptr)&gt;
+    %tag = llvm.extractvalue %struct[0] : !llvm.struct&lt;(i32, ptr)&gt;
+    %tag_index = arith.index_cast %tag : i32 to index
+
+    %inner = scf.index_switch %tag_index : index -&gt; !funlang.list&lt;i32&gt;
+    case 0 {
+      // Case ([], _): return empty
+      %empty = funlang.nil : !funlang.list&lt;i32&gt;
+      scf.yield %empty : !funlang.list&lt;i32&gt;
+    }
+    case 1 {
+      // Case (head :: tail, n): recursive
+      %data = llvm.extractvalue %struct[1] : !llvm.struct&lt;(i32, ptr)&gt;
+      %head = llvm.load %data : !llvm.ptr -&gt; i32
+      %tail_ptr = llvm.getelementptr %data[1] : (!llvm.ptr) -&gt; !llvm.ptr
+      %tail = llvm.load %tail_ptr : !llvm.ptr -&gt; !funlang.list&lt;i32&gt;
+
+      %n_minus_1 = arith.subi %n, %c1 : i32
+      %rest = func.call @take_first_n(%tail, %n_minus_1) : (...) -&gt; !funlang.list&lt;i32&gt;
+      %new_list = funlang.cons %head, %rest : ...
+      scf.yield %new_list : !funlang.list&lt;i32&gt;
+    }
+    default { scf.yield %unreachable : !funlang.list&lt;i32&gt; }
+
+    scf.yield %inner : !funlang.list&lt;i32&gt;
+  }
+
+  return %result : !funlang.list&lt;i32&gt;
+}
+</code></pre>
+<p><strong>혼합 패턴 lowering 전략:</strong></p>
+<ol>
+<li><strong>Literal column first</strong>: <code>arith.cmpi</code> + <code>scf.if</code></li>
+<li><strong>Constructor column inside</strong>: <code>scf.index_switch</code></li>
+<li><strong>Wildcard</strong>: test 없이 fallthrough</li>
+</ol>
+<h3 id="검증-및-테스트"><a class="header" href="#검증-및-테스트">검증 및 테스트</a></h3>
+<pre><code class="language-fsharp">let testFizzBuzz() =
+    // Test fizzbuzz
+    assert (fizzbuzz 3 = "Fizz")
+    assert (fizzbuzz 5 = "Buzz")
+    assert (fizzbuzz 15 = "FizzBuzz")
+    assert (fizzbuzz 7 = "7")
+    printfn "fizzbuzz tests passed"
+
+    // Test classify
+    assert (classify 0 = "zero")
+    assert (classify 1 = "one")
+    assert (classify 2 = "two")
+    assert (classify 42 = "many")
+    assert (classify (-5) = "negative")
+    printfn "classify tests passed"
+
+    // Test take_first_n
+    assert (take_first_n [1, 2, 3, 4, 5] 3 = [1, 2, 3])
+    assert (take_first_n [1, 2, 3] 0 = [])
+    assert (take_first_n [] 5 = [])
+    printfn "take_first_n tests passed"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>fizzbuzz tests passed
+classify tests passed
+take_first_n tests passed
+</code></pre>
+<h3 id="key-takeaways"><a class="header" href="#key-takeaways">Key Takeaways</a></h3>
+<ol>
+<li><strong>리터럴 패턴</strong>: <code>arith.cmpi eq</code> + <code>scf.if</code> chain</li>
+<li><strong>Constructor 패턴</strong>: <code>scf.index_switch</code>로 O(1) dispatch</li>
+<li><strong>Wildcard</strong>: else branch로 fallthrough (테스트 없음)</li>
+<li><strong>Dense range</strong>: <code>scf.index_switch</code>로 최적화 가능</li>
+<li><strong>혼합 패턴</strong>: 각 column의 패턴 타입에 맞는 dispatch 사용</li>
+</ol>
+<hr>
+<h2 id="튜플-예제-zip과-unzip-tuple-examples-zip-and-unzip"><a class="header" href="#튜플-예제-zip과-unzip-tuple-examples-zip-and-unzip">튜플 예제: zip과 unzip (Tuple Examples: zip and unzip)</a></h2>
+<p>Chapter 18에서 <code>!funlang.tuple&lt;T1, T2, ...&gt;</code> 타입과 <code>funlang.make_tuple</code> 연산을, Chapter 19에서 튜플 패턴 매칭을 구현했다. 이제 튜플을 활용하는 실제 프로그램을 작성하고 컴파일해보자.</p>
+<h3 id="zip-함수-두-리스트를-쌍의-리스트로"><a class="header" href="#zip-함수-두-리스트를-쌍의-리스트로">zip 함수: 두 리스트를 쌍의 리스트로</a></h3>
+<p><strong>zip의 개념:</strong></p>
+<p>두 리스트를 받아 각 위치의 원소들을 튜플로 묶은 리스트를 반환한다.</p>
+<pre><code class="language-fsharp">// zip의 타입
+zip : [a] -&gt; [b] -&gt; [(a, b)]
+
+// zip의 동작
+zip [1, 2, 3] ["a", "b", "c"] = [(1, "a"), (2, "b"), (3, "c")]
+
+// 길이가 다르면 짧은 쪽에 맞춤
+zip [1, 2] ["a", "b", "c"] = [(1, "a"), (2, "b")]
+</code></pre>
+<p><strong>FunLang 구현:</strong></p>
+<pre><code class="language-fsharp">let rec zip xs ys =
+  match xs with
+  | [] -&gt; []
+  | x :: xs' -&gt;
+      match ys with
+      | [] -&gt; []
+      | y :: ys' -&gt; make_tuple(x, y) :: zip xs' ys'
+</code></pre>
+<p><strong>동작 원리:</strong></p>
+<ol>
+<li>첫 번째 리스트가 비어있으면 빈 리스트 반환</li>
+<li>두 번째 리스트가 비어있으면 빈 리스트 반환</li>
+<li>둘 다 원소가 있으면:
+<ul>
+<li>각 head로 튜플 생성: <code>make_tuple(x, y)</code></li>
+<li>tail들로 재귀 호출: <code>zip xs' ys'</code></li>
+<li>결과를 cons: <code>pair :: rest</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="zip-함수-컴파일-funlang-mlir"><a class="header" href="#zip-함수-컴파일-funlang-mlir">zip 함수 컴파일: FunLang MLIR</a></h3>
+<pre><code class="language-mlir">// zip : !funlang.list&lt;i32&gt; -&gt; !funlang.list&lt;f64&gt; -&gt; !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+func.func @zip(%xs: !funlang.list&lt;i32&gt;, %ys: !funlang.list&lt;f64&gt;)
+    -&gt; !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt; {
+
+  // 첫 번째 리스트 패턴 매칭
+  %result = funlang.match %xs : !funlang.list&lt;i32&gt;
+      -&gt; !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt; {
+
+    ^nil:
+      // xs가 비어있으면 빈 리스트 반환
+      %empty = funlang.nil : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+      funlang.yield %empty : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+
+    ^cons(%x: i32, %xs_tail: !funlang.list&lt;i32&gt;):
+      // xs = x :: xs_tail, 이제 ys 패턴 매칭
+      %inner = funlang.match %ys : !funlang.list&lt;f64&gt;
+          -&gt; !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt; {
+
+        ^nil:
+          // ys가 비어있으면 빈 리스트 반환
+          %empty2 = funlang.nil : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+          funlang.yield %empty2 : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+
+        ^cons(%y: f64, %ys_tail: !funlang.list&lt;f64&gt;):
+          // ys = y :: ys_tail
+          // 튜플 생성: (x, y)
+          %pair = funlang.make_tuple(%x, %y) : !funlang.tuple&lt;i32, f64&gt;
+
+          // 재귀 호출: zip xs_tail ys_tail
+          %rest = func.call @zip(%xs_tail, %ys_tail)
+              : (!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;)
+              -&gt; !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+
+          // cons: pair :: rest
+          %cons_result = funlang.cons %pair, %rest
+              : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+
+          funlang.yield %cons_result : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+      }
+      funlang.yield %inner : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+  }
+
+  return %result : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+}
+</code></pre>
+<p><strong>핵심 포인트:</strong></p>
+<ol>
+<li><strong>중첩 패턴 매칭</strong>: 먼저 xs를 매칭하고, Cons case 안에서 ys를 매칭</li>
+<li><strong>make_tuple 사용</strong>: <code>funlang.make_tuple(%x, %y)</code> 로 쌍 생성</li>
+<li><strong>결과 타입</strong>: <code>!funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;</code> - 튜플의 리스트</li>
+</ol>
+<h3 id="fst와-snd-함수-튜플-원소-추출"><a class="header" href="#fst와-snd-함수-튜플-원소-추출">fst와 snd 함수: 튜플 원소 추출</a></h3>
+<p><strong>fst와 snd의 정의:</strong></p>
+<pre><code class="language-fsharp">// 첫 번째 원소 추출
+let fst pair = match pair with (x, _) -&gt; x
+
+// 두 번째 원소 추출
+let snd pair = match pair with (_, y) -&gt; y
+</code></pre>
+<p><strong>MLIR 구현:</strong></p>
+<pre><code class="language-mlir">// fst : !funlang.tuple&lt;i32, f64&gt; -&gt; i32
+func.func @fst(%pair: !funlang.tuple&lt;i32, f64&gt;) -&gt; i32 {
+  %result = funlang.match %pair : !funlang.tuple&lt;i32, f64&gt; -&gt; i32 {
+    ^case(%x: i32, %y: f64):
+      funlang.yield %x : i32
+  }
+  return %result : i32
+}
+
+// snd : !funlang.tuple&lt;i32, f64&gt; -&gt; f64
+func.func @snd(%pair: !funlang.tuple&lt;i32, f64&gt;) -&gt; f64 {
+  %result = funlang.match %pair : !funlang.tuple&lt;i32, f64&gt; -&gt; f64 {
+    ^case(%x: i32, %y: f64):
+      funlang.yield %y : f64
+  }
+  return %result : f64
+}
+</code></pre>
+<p><strong>Lowering 결과:</strong></p>
+<pre><code class="language-mlir">// fst after lowering - 분기 없이 직접 추출
+func.func @fst(%pair: !llvm.struct&lt;(i32, f64)&gt;) -&gt; i32 {
+  %x = llvm.extractvalue %pair[0] : !llvm.struct&lt;(i32, f64)&gt;
+  return %x : i32
+}
+
+// snd after lowering
+func.func @snd(%pair: !llvm.struct&lt;(i32, f64)&gt;) -&gt; f64 {
+  %y = llvm.extractvalue %pair[1] : !llvm.struct&lt;(i32, f64)&gt;
+  return %y : f64
+}
+</code></pre>
+<p><strong>핵심:</strong></p>
+<ul>
+<li>튜플 패턴 매칭은 <strong>scf.index_switch 없이</strong> 바로 extractvalue로 lowering</li>
+<li>와일드카드 <code>_</code>는 해당 위치의 extractvalue를 생략 (dead code elimination)</li>
+</ul>
+<h3 id="unzip-함수-쌍의-리스트를-두-리스트로"><a class="header" href="#unzip-함수-쌍의-리스트를-두-리스트로">unzip 함수: 쌍의 리스트를 두 리스트로</a></h3>
+<p><strong>unzip의 개념:</strong></p>
+<p>zip의 역연산. 튜플 리스트를 두 개의 리스트로 분리한다.</p>
+<pre><code class="language-fsharp">// unzip의 타입
+unzip : [(a, b)] -&gt; ([a], [b])
+
+// unzip의 동작
+unzip [(1, "a"), (2, "b")] = ([1, 2], ["a", "b"])
+</code></pre>
+<p><strong>FunLang 구현:</strong></p>
+<pre><code class="language-fsharp">let rec unzip pairs =
+  match pairs with
+  | [] -&gt; ([], [])
+  | p :: ps -&gt;
+      let (x, y) = p in
+      let (xs, ys) = unzip ps in
+      (x :: xs, y :: ys)
+</code></pre>
+<p><strong>MLIR 구현:</strong></p>
+<pre><code class="language-mlir">// unzip : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+//       -&gt; !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt;
+func.func @unzip(%pairs: !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;)
+    -&gt; !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt; {
+
+  %result = funlang.match %pairs
+      : !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;
+      -&gt; !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt; {
+
+    ^nil:
+      // 빈 리스트 → ([], [])
+      %empty_ints = funlang.nil : !funlang.list&lt;i32&gt;
+      %empty_floats = funlang.nil : !funlang.list&lt;f64&gt;
+      %empty_pair = funlang.make_tuple(%empty_ints, %empty_floats)
+          : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt;
+      funlang.yield %empty_pair
+          : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt;
+
+    ^cons(%p: !funlang.tuple&lt;i32, f64&gt;, %ps: !funlang.list&lt;!funlang.tuple&lt;i32, f64&gt;&gt;):
+      // p = (x, y), 튜플 분해
+      %xy = funlang.match %p : !funlang.tuple&lt;i32, f64&gt;
+          -&gt; !funlang.tuple&lt;i32, f64&gt; {
+        ^case(%x: i32, %y: f64):
+          funlang.yield %p : !funlang.tuple&lt;i32, f64&gt;
+      }
+      // 실제로는 직접 extractvalue 사용
+      %x = ... extractvalue [0] ...
+      %y = ... extractvalue [1] ...
+
+      // 재귀: unzip ps
+      %rest = func.call @unzip(%ps) : ...
+      %xs = ... fst rest ...
+      %ys = ... snd rest ...
+
+      // 결과: (x :: xs, y :: ys)
+      %new_xs = funlang.cons %x, %xs : !funlang.list&lt;i32&gt;
+      %new_ys = funlang.cons %y, %ys : !funlang.list&lt;f64&gt;
+      %result_pair = funlang.make_tuple(%new_xs, %new_ys)
+          : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt;
+      funlang.yield %result_pair
+          : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt;
+  }
+
+  return %result : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;f64&gt;&gt;
+}
+</code></pre>
+<h3 id="point-조작-예제-2d-좌표"><a class="header" href="#point-조작-예제-2d-좌표">Point 조작 예제: 2D 좌표</a></h3>
+<p><strong>Point 타입:</strong></p>
+<pre><code class="language-fsharp">// Point = (int, int) 튜플
+type point = int * int
+
+let origin = (0, 0)
+let p1 = (3, 4)
+</code></pre>
+<p><strong>기본 연산들:</strong></p>
+<pre><code class="language-fsharp">// 오른쪽으로 이동
+let move_right pt =
+  match pt with (x, y) -&gt; (x + 1, y)
+
+// 위로 이동
+let move_up pt =
+  match pt with (x, y) -&gt; (x, y + 1)
+
+// 두 점 사이의 거리 (맨해튼)
+let manhattan_distance p1 p2 =
+  match (p1, p2) with ((x1, y1), (x2, y2)) -&gt;
+    abs(x2 - x1) + abs(y2 - y1)
+
+// 점 리스트의 중심점
+let centroid points =
+  let sum_pts = fold (fun (sx, sy) (x, y) -&gt; (sx + x, sy + y)) (0, 0) points
+  let n = length points
+  match sum_pts with (sx, sy) -&gt; (sx / n, sy / n)
+</code></pre>
+<p><strong>MLIR 구현 - move_right:</strong></p>
+<pre><code class="language-mlir">// move_right : !funlang.tuple&lt;i32, i32&gt; -&gt; !funlang.tuple&lt;i32, i32&gt;
+func.func @move_right(%pt: !funlang.tuple&lt;i32, i32&gt;) -&gt; !funlang.tuple&lt;i32, i32&gt; {
+  %result = funlang.match %pt : !funlang.tuple&lt;i32, i32&gt; -&gt; !funlang.tuple&lt;i32, i32&gt; {
+    ^case(%x: i32, %y: i32):
+      %c1 = arith.constant 1 : i32
+      %new_x = arith.addi %x, %c1 : i32
+      %new_pt = funlang.make_tuple(%new_x, %y) : !funlang.tuple&lt;i32, i32&gt;
+      funlang.yield %new_pt : !funlang.tuple&lt;i32, i32&gt;
+  }
+  return %result : !funlang.tuple&lt;i32, i32&gt;
+}
+</code></pre>
+<p><strong>Lowering 결과:</strong></p>
+<pre><code class="language-mlir">func.func @move_right(%pt: !llvm.struct&lt;(i32, i32)&gt;) -&gt; !llvm.struct&lt;(i32, i32)&gt; {
+  %x = llvm.extractvalue %pt[0] : !llvm.struct&lt;(i32, i32)&gt;
+  %y = llvm.extractvalue %pt[1] : !llvm.struct&lt;(i32, i32)&gt;
+  %c1 = arith.constant 1 : i32
+  %new_x = arith.addi %x, %c1 : i32
+  %0 = llvm.mlir.undef : !llvm.struct&lt;(i32, i32)&gt;
+  %1 = llvm.insertvalue %new_x, %0[0] : !llvm.struct&lt;(i32, i32)&gt;
+  %result = llvm.insertvalue %y, %1[1] : !llvm.struct&lt;(i32, i32)&gt;
+  return %result : !llvm.struct&lt;(i32, i32)&gt;
+}
+</code></pre>
+<p><strong>중첩 튜플 - manhattan_distance:</strong></p>
+<pre><code class="language-mlir">// manhattan_distance : !funlang.tuple&lt;i32, i32&gt; -&gt; !funlang.tuple&lt;i32, i32&gt; -&gt; i32
+func.func @manhattan_distance(%p1: !funlang.tuple&lt;i32, i32&gt;, %p2: !funlang.tuple&lt;i32, i32&gt;) -&gt; i32 {
+  // 두 점을 하나의 튜플로 묶어서 패턴 매칭
+  %combined = funlang.make_tuple(%p1, %p2)
+      : !funlang.tuple&lt;!funlang.tuple&lt;i32, i32&gt;, !funlang.tuple&lt;i32, i32&gt;&gt;
+
+  // 중첩 튜플 분해
+  %result = funlang.match %combined
+      : !funlang.tuple&lt;!funlang.tuple&lt;i32, i32&gt;, !funlang.tuple&lt;i32, i32&gt;&gt; -&gt; i32 {
+
+    ^case(%pt1: !funlang.tuple&lt;i32, i32&gt;, %pt2: !funlang.tuple&lt;i32, i32&gt;):
+      // 첫 번째 점 분해
+      %xy1 = funlang.match %pt1 : !funlang.tuple&lt;i32, i32&gt; -&gt; !funlang.tuple&lt;i32, i32&gt; {
+        ^case(%x1: i32, %y1: i32):
+          funlang.yield %pt1 : !funlang.tuple&lt;i32, i32&gt;
+      }
+      // 실제로는 extractvalue 연쇄
+      // %x1 = extractvalue %pt1[0]
+      // %y1 = extractvalue %pt1[1]
+      // %x2 = extractvalue %pt2[0]
+      // %y2 = extractvalue %pt2[1]
+
+      // 거리 계산
+      // %dx = abs(x2 - x1)
+      // %dy = abs(y2 - y1)
+      // %result = dx + dy
+      ...
+      funlang.yield %distance : i32
+  }
+
+  return %result : i32
+}
+</code></pre>
+<h3 id="튜플--고차-함수-결합"><a class="header" href="#튜플--고차-함수-결합">튜플 + 고차 함수 결합</a></h3>
+<p><strong>튜플을 사용한 map_with_index:</strong></p>
+<pre><code class="language-fsharp">// 리스트의 각 원소에 인덱스와 함께 함수 적용
+let map_with_index f lst =
+  let indexed = zip [0..length lst - 1] lst
+  map (fun (i, x) -&gt; f i x) indexed
+</code></pre>
+<p><strong>enumerate 함수:</strong></p>
+<pre><code class="language-fsharp">// 리스트에 인덱스를 붙여서 튜플 리스트로
+let rec enumerate_from n lst =
+  match lst with
+  | [] -&gt; []
+  | x :: xs -&gt; (n, x) :: enumerate_from (n + 1) xs
+
+let enumerate = enumerate_from 0
+
+// 사용 예
+enumerate ["a", "b", "c"]  // [(0, "a"), (1, "b"), (2, "c")]
+</code></pre>
+<p><strong>partition 함수 (튜플 반환):</strong></p>
+<pre><code class="language-fsharp">// 리스트를 조건에 따라 두 리스트로 분리
+let rec partition pred lst =
+  match lst with
+  | [] -&gt; ([], [])
+  | x :: xs -&gt;
+      let (yes, no) = partition pred xs
+      if pred x then
+        (x :: yes, no)
+      else
+        (yes, x :: no)
+
+// 사용 예
+partition (fun x -&gt; x &gt; 0) [-1, 2, -3, 4]  // ([2, 4], [-1, -3])
+</code></pre>
+<p><strong>MLIR 구현 - partition:</strong></p>
+<pre><code class="language-mlir">func.func @partition(%pred: !funlang.closure&lt;(i32) -&gt; i1&gt;,
+                      %lst: !funlang.list&lt;i32&gt;)
+    -&gt; !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt; {
+
+  %result = funlang.match %lst : !funlang.list&lt;i32&gt;
+      -&gt; !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt; {
+
+    ^nil:
+      %empty1 = funlang.nil : !funlang.list&lt;i32&gt;
+      %empty2 = funlang.nil : !funlang.list&lt;i32&gt;
+      %pair = funlang.make_tuple(%empty1, %empty2)
+          : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt;
+      funlang.yield %pair : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt;
+
+    ^cons(%x: i32, %xs: !funlang.list&lt;i32&gt;):
+      // 재귀: partition pred xs
+      %rest = func.call @partition(%pred, %xs) : ...
+      %yes = ... fst rest ...
+      %no = ... snd rest ...
+
+      // pred x 평가
+      %test = funlang.apply %pred(%x) : (i32) -&gt; i1
+
+      // 조건부 cons
+      %new_pair = scf.if %test -&gt; !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt; {
+        %new_yes = funlang.cons %x, %yes : !funlang.list&lt;i32&gt;
+        %pair = funlang.make_tuple(%new_yes, %no)
+            : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt;
+        scf.yield %pair : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt;
+      } else {
+        %new_no = funlang.cons %x, %no : !funlang.list&lt;i32&gt;
+        %pair = funlang.make_tuple(%yes, %new_no)
+            : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt;
+        scf.yield %pair : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt;
+      }
+
+      funlang.yield %new_pair : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt;
+  }
+
+  return %result : !funlang.tuple&lt;!funlang.list&lt;i32&gt;, !funlang.list&lt;i32&gt;&gt;
+}
+</code></pre>
+<h3 id="summary-튜플-예제"><a class="header" href="#summary-튜플-예제">Summary: 튜플 예제</a></h3>
+<p><strong>구현한 함수들:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>함수</th><th>타입</th><th>설명</th></tr>
+</thead>
+<tbody>
+<tr><td>zip</td><td><code>[a] -&gt; [b] -&gt; [(a,b)]</code></td><td>두 리스트를 쌍으로 묶기</td></tr>
+<tr><td>fst</td><td><code>(a,b) -&gt; a</code></td><td>첫 번째 원소 추출</td></tr>
+<tr><td>snd</td><td><code>(a,b) -&gt; b</code></td><td>두 번째 원소 추출</td></tr>
+<tr><td>unzip</td><td><code>[(a,b)] -&gt; ([a], [b])</code></td><td>쌍 리스트를 두 리스트로 분리</td></tr>
+<tr><td>move_right</td><td><code>point -&gt; point</code></td><td>좌표 변환</td></tr>
+<tr><td>manhattan_distance</td><td><code>point -&gt; point -&gt; int</code></td><td>두 점 사이 거리</td></tr>
+<tr><td>enumerate</td><td><code>[a] -&gt; [(int, a)]</code></td><td>인덱스 붙이기</td></tr>
+<tr><td>partition</td><td><code>(a -&gt; bool) -&gt; [a] -&gt; ([a], [a])</code></td><td>조건에 따라 분리</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>핵심 패턴:</strong></p>
+<ol>
+<li><strong>make_tuple로 튜플 생성</strong>: <code>funlang.make_tuple(%a, %b)</code></li>
+<li><strong>패턴 매칭으로 분해</strong>: <code>^case(%x, %y):</code> 또는 extractvalue 직접 사용</li>
+<li><strong>중첩 가능</strong>: 튜플 안에 리스트, 리스트 안에 튜플</li>
+<li><strong>다중 반환값</strong>: 함수에서 튜플 반환하여 여러 값 리턴</li>
+<li><strong>고차 함수와 결합</strong>: map, fold 등과 함께 사용</li>
+</ol>
+<p><strong>Lowering 특성:</strong></p>
+<ul>
+<li>튜플 패턴: <strong>분기 없이</strong> extractvalue 체인</li>
+<li>리스트 패턴: scf.index_switch 사용</li>
+<li>중첩: 외부에서 내부로 순차 처리</li>
+</ul>
+<hr>
+<h2 id="phase-6-complete-summary"><a class="header" href="#phase-6-complete-summary">Phase 6 Complete Summary</a></h2>
+<p><strong>축하한다! Phase 6를 완료했다.</strong></p>
+<h3 id="chapter-17-20-복습"><a class="header" href="#chapter-17-20-복습">Chapter 17-20 복습</a></h3>
+<p><strong>Chapter 17: Pattern Matching Theory</strong></p>
+<ul>
+<li>Decision tree 알고리즘으로 패턴 매칭을 효율적으로 컴파일</li>
+<li>Exhaustiveness checking으로 빠진 case 감지</li>
+<li>Unreachable case detection으로 중복 제거</li>
+</ul>
+<p><strong>Chapter 18: List Operations</strong></p>
+<ul>
+<li><code>!funlang.list&lt;T&gt;</code> parameterized type</li>
+<li>Tagged union representation: <code>!llvm.struct&lt;(i32, ptr)&gt;</code></li>
+<li><code>funlang.nil</code>과 <code>funlang.cons</code> operations</li>
+<li>TypeConverter와 lowering patterns</li>
+</ul>
+<p><strong>Chapter 19: Match Compilation</strong></p>
+<ul>
+<li><code>funlang.match</code> operation 정의</li>
+<li>Multi-stage lowering: FunLang → SCF → CF → LLVM</li>
+<li>IRMapping으로 block argument remapping</li>
+<li>Region-based IR structure</li>
+</ul>
+<p><strong>Chapter 20: Functional Programs (this chapter)</strong></p>
+<ul>
+<li>FunLang AST extensions for lists</li>
+<li>Compiler integration (compileExpr, type inference)</li>
+<li>Core list functions: map, filter, fold, length, append</li>
+<li>Complete example: sum_of_squares</li>
+<li>End-to-end compilation pipeline (9 stages)</li>
+<li>Performance analysis and optimization preview</li>
+</ul>
+<h3 id="what-you-can-now-compile"><a class="header" href="#what-you-can-now-compile">What You Can Now Compile</a></h3>
+<p><strong>Phase 6 종료 시점에 컴파일 가능한 프로그램:</strong></p>
+<pre><code class="language-fsharp">// 1. List construction
+let list = [1, 2, 3, 4, 5]
+
+// 2. Pattern matching
+let rec sum lst =
+  match lst with
+  | [] -&gt; 0
+  | head :: tail -&gt; head + sum tail
+
+// 3. Higher-order functions
+let map f lst = ...
+let filter pred lst = ...
+let fold combiner acc lst = ...
+
+// 4. Function composition
+let sum_of_squares lst =
+  fold (+) 0 (map (fun x -&gt; x * x) lst)
+
+// 5. Complex functional programs
+let process data =
+  data
+  |&gt; filter is_valid
+  |&gt; map transform
+  |&gt; fold aggregate initial
+
+// 6. Nested data structures
+let nested = [[1, 2], [3, 4], [5, 6]]
+let flattened = fold append [] nested
+</code></pre>
+<p><strong>이것은 실제 함수형 언어와 동등한 표현력이다!</strong></p>
+<h3 id="technical-achievements"><a class="header" href="#technical-achievements">Technical Achievements</a></h3>
+<p><strong>Phase 6에서 구현한 기술:</strong></p>
+<ol>
+<li><strong>Parameterized types</strong>: <code>!funlang.list&lt;T&gt;</code> with element type parameter</li>
+<li><strong>Tagged unions</strong>: Efficient runtime representation of ADTs</li>
+<li><strong>Pattern matching</strong>: Decision tree compilation for performance</li>
+<li><strong>Multi-stage lowering</strong>: Progressive refinement through dialects</li>
+<li><strong>Type conversion</strong>: Consistent type mapping across lowering stages</li>
+<li><strong>Region-based IR</strong>: Structured control flow with scoped bindings</li>
+<li><strong>Tail recursion</strong>: Optimization opportunity for fold</li>
+<li><strong>GC integration</strong>: Automatic memory management for lists</li>
+<li><strong>Complete pipeline</strong>: Source → AST → MLIR → LLVM IR → Machine code</li>
+</ol>
+<h3 id="phase-7-preview-optimization"><a class="header" href="#phase-7-preview-optimization">Phase 7 Preview: Optimization</a></h3>
+<p>Phase 7에서 다룰 내용:</p>
+<p><strong>1. List Fusion</strong></p>
+<p>중간 리스트 제거:</p>
+<pre><code class="language-fsharp">// Before
+map f (map g lst)  // Two passes, intermediate list
+
+// After fusion
+map (f &lt;&lt; g) lst   // One pass, no intermediate
+</code></pre>
+<p><strong>2. Deforestation</strong></p>
+<p>Tree 구조 중간 생성 제거:</p>
+<pre><code class="language-fsharp">// Before
+fold h z (map f lst)  // Creates intermediate list
+
+// After deforestation
+fold (fun acc x -&gt; h acc (f x)) z lst  // Direct
+</code></pre>
+<p><strong>3. Inlining</strong></p>
+<p>Small 함수 inline:</p>
+<pre><code class="language-mlir">// Before
+%result = func.call @square(%x) : (i32) -&gt; i32
+
+// After inlining
+%result = arith.muli %x, %x : i32
+</code></pre>
+<p><strong>4. Loop Unrolling</strong></p>
+<p>재귀를 explicit loop로 변환:</p>
+<pre><code class="language-mlir">// Before (recursive)
+func.func @map(...) {
+  %result = funlang.match %lst : ... {
+    ^nil: ...
+    ^cons(...): %mapped = func.call @map(...) ...
+  }
+}
+
+// After (loop)
+func.func @map(...) {
+  scf.for %i = 0 to %n step 1 iter_args(%acc = %init) -&gt; ... {
+    %elem = load %lst[%i]
+    %transformed = apply %f(%elem)
+    ...
+  }
+}
+</code></pre>
+<p><strong>5. Parallel Map</strong></p>
+<p>데이터 병렬성 활용:</p>
+<pre><code class="language-mlir">scf.parallel (%i) = (0) to (%n) step (1) {
+  %elem = load %lst[%i]
+  %result = apply %f(%elem)
+  store %result, %output[%i]
+}
+</code></pre>
+<p><strong>6. Constant Folding</strong></p>
+<p>컴파일 시간에 계산:</p>
+<pre><code class="language-fsharp">// Before
+let result = sum [1, 2, 3, 4, 5]
+
+// After constant folding
+let result = 15  // Computed at compile time
+</code></pre>
+<p>이러한 최적화는 MLIR의 <strong>transformation passes</strong>로 구현되며, Phase 7에서 자세히 다룬다.</p>
+<h3 id="congratulations"><a class="header" href="#congratulations">Congratulations!</a></h3>
+<p><strong>Phase 6 완료를 축하한다!</strong></p>
+<p>이제 여러분은:</p>
+<ul>
+<li>✓ 완전한 함수형 프로그래밍 언어를 컴파일할 수 있다</li>
+<li>✓ 리스트, 패턴 매칭, 고차 함수를 지원한다</li>
+<li>✓ Multi-stage lowering pipeline을 이해한다</li>
+<li>✓ End-to-end 컴파일 (source to machine code)을 할 수 있다</li>
+<li>✓ 성능 특성과 최적화 기회를 안다</li>
+</ul>
+<p><strong>다음 단계:</strong> Phase 7 (Optimization)에서 더 빠르고 효율적인 코드 생성을 배운다.</p>
+<p>Happy functional programming! 🎉</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="19-match-compilation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="appendix-custom-dialect.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="19-match-compilation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="appendix-custom-dialect.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
