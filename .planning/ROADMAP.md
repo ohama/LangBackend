@@ -137,10 +137,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Project setup, handle types, string marshalling, core P/Invoke declarations
-- [ ] 07-02-PLAN.md — Complete P/Invoke declarations (types, operations, regions, blocks)
-- [ ] 07-03-PLAN.md — IDisposable wrappers (Context, Module, Location) and fluent OpBuilder
-- [ ] 07-04-PLAN.md — Smoke tests and end-to-end validation
+- [x] 07-01-PLAN.md — Project setup, handle types, string marshalling, core P/Invoke declarations
+- [x] 07-02-PLAN.md — Complete P/Invoke declarations (types, operations, regions, blocks)
+- [x] 07-03-PLAN.md — IDisposable wrappers (Context, Module, Location) and fluent OpBuilder
+- [x] 07-04-PLAN.md — Smoke tests and end-to-end validation
 
 #### Phase 8: Core Expressions
 **Goal**: Developer can compile arithmetic expressions, comparisons, booleans, let bindings, and if-else to MLIR
@@ -153,10 +153,13 @@ Plans:
   4. Developer can compile let bindings with shadowing support, mapping to SSA values
   5. Developer can compile if-then-else expressions to scf.if operations with block arguments
   6. Compiled programs can execute simple expressions and print results
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 08-01: TBD during planning
+- [ ] 08-01-PLAN.md — Comparison operators and boolean expressions (arith.cmpi, arith.andi/ori)
+- [ ] 08-02-PLAN.md — Let bindings with environment tracking (Env, Var, Let)
+- [ ] 08-03-PLAN.md — If-else expressions (scf.if with regions and scf.yield)
+- [ ] 08-04-PLAN.md — Comprehensive E2E tests for all Phase 8 features
 
 #### Phase 9: Functions
 **Goal**: Developer can compile named function definitions, calls, and recursive functions to MLIR
@@ -225,8 +228,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 7. Foundation Infrastructure | 0/4 | Planning complete | - |
-| 8. Core Expressions | 0/TBD | Not started | - |
+| 7. Foundation Infrastructure | 4/4 | Complete | 2026-02-12 |
+| 8. Core Expressions | 0/4 | Not started | - |
 | 9. Functions | 0/TBD | Not started | - |
 | 10. Closures | 0/TBD | Not started | - |
 | 11. Pipeline & Testing | 0/TBD | Not started | - |
