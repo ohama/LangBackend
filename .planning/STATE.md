@@ -4,17 +4,17 @@
 
 See: .planning/PROJECT.md (updated 2026-02-11)
 
-**Core value:** Implement working FunLang → MLIR compiler based on tutorial
-**Current focus:** v2.0 Compiler Implementation - Phase 7 (Foundation Infrastructure)
+**Core value:** Implement working FunLang -> MLIR compiler based on tutorial
+**Current focus:** v2.0 Compiler Implementation - Phase 8 (Core Expressions)
 
 ## Current Position
 
-Phase: 7 of 11 (Foundation Infrastructure)
-Plan: 3 of 4 complete
+Phase: 8 of 11 (Core Expressions)
+Plan: 1 of 4 complete
 Status: In progress
-Last activity: 2026-02-12 — Completed 07-03-PLAN.md
+Last activity: 2026-02-12 - Completed 08-01 (Comparison and Boolean Operators)
 
-Progress: [■■■■■■░░░░░] 64% (23/36 plans complete)
+Progress: [########░░░] 69% (25/36 plans complete)
 
 ## Performance Metrics
 
@@ -40,19 +40,20 @@ Progress: [■■■■■■░░░░░] 64% (23/36 plans complete)
 - Trend: Consistent 8-12min for documentation plans
 
 **v2.0 Compiler Implementation:**
-- Status: Phase 7 in progress
+- Status: Phase 8 in progress
 - Estimated phases: 5 (Phases 7-11)
-- Plans completed: 3/4 (Phase 7)
+- Plans completed: 5/16
 
 **By Phase (v2.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 7 - Foundation Infrastructure | 3/4 | 7 min | 2.3 min |
+| 7 - Foundation Infrastructure | 4/4 | 12 min | 3 min |
+| 8 - Core Expressions | 1/4 | 6 min | 6 min |
 
 **Recent Trend (v2.0):**
-- Last plan: 07-03 (3 min, MLIR wrapper abstraction layer)
-- Trend: Consistent 2-3min execution for infrastructure code
+- Last plan: 08-01 (6 min, comparison and boolean operators)
+- Build passing, MLIR-C library required for test execution
 
 *Updated after each plan completion*
 
@@ -65,7 +66,7 @@ Recent decisions affecting v2.0 work:
 
 - [v1.0]: F# implementation using P/Invoke to MLIR-C API
 - [v1.0]: Custom MLIR Dialect approach for FunLang-specific operations
-- [v1.0]: Progressive lowering: FunLang AST → High-Level MLIR → LLVM Dialect → LLVM IR → Native
+- [v1.0]: Progressive lowering: FunLang AST -> High-Level MLIR -> LLVM Dialect -> LLVM IR -> Native
 - [v1.0]: Boehm GC for memory management (integrated in Phase 2)
 - [v1.0]: CallingConvention.Cdecl for all MLIR-C API P/Invoke declarations
 - [v1.0]: Context/Module/OpBuilder implement IDisposable for automatic cleanup
@@ -78,6 +79,8 @@ Recent decisions affecting v2.0 work:
 - [07-03]: Location is discriminated union without IDisposable (value type owned by Context)
 - [07-03]: Module stores contextRef field to prevent premature Context GC
 - [07-03]: NativePtr.toNativeInt for converting fixed array pointers in P/Invoke calls
+- [08-01]: Comparison predicates use i64 type attribute (MLIR ArithOps.td requirement)
+- [08-01]: Boolean operations use non-short-circuit evaluation (arith.andi/ori)
 
 ### Pending Todos
 
@@ -86,14 +89,14 @@ None yet.
 ### Blockers/Concerns
 
 **v2.0 Implementation:**
-- ✅ RESOLVED: src/ directory structure established (07-01)
-- ✅ RESOLVED: Build system determined (dotnet CLI with fsproj, 07-01)
-- PENDING: MLIR-C library linkage verification (planned for 07-04 smoke tests)
+- RESOLVED: src/ directory structure established (07-01)
+- RESOLVED: Build system determined (dotnet CLI with fsproj, 07-01)
+- ACTIVE: MLIR-C library not available - tests require libMLIR-C.so to be built/installed
 - Tutorial documentation provides theory; implementation validating practicality
 
 ## Session Continuity
 
-Last session: 2026-02-12T04:16:07Z
-Stopped at: Completed 07-03-PLAN.md (MLIR Builder Abstraction)
+Last session: 2026-02-12
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
-Next: Execute 07-04-PLAN.md (MLIR Smoke Tests)
+Next: Execute Phase 8 Plan 02 (Let Bindings and Variables)
