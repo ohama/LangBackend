@@ -19,6 +19,7 @@ module CodeGen =
         Builder: OpBuilder
         Location: Location
         Block: MlirBlock  // Current block to append operations to
+        Env: Map<string, MlirValue>  // Variable name -> SSA value mapping
     }
 
     /// Create operation, append to block, return result value
@@ -191,6 +192,7 @@ module CodeGen =
             Builder = builder
             Location = loc
             Block = entryBlock
+            Env = Map.empty  // Start with empty environment
         }
         let resultVal = compileExpr compileCtx expr
 
