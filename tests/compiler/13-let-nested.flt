@@ -1,0 +1,6 @@
+// Test: nested let bindings
+// --- Command: dotnet run --project src/FunLang.Compiler.Cli -- %input
+// --- Input:
+let a = 1 in let b = 2 in let c = 3 in a + b + c
+// --- Output:
+6

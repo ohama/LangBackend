@@ -1,0 +1,6 @@
+// Test: simple let binding
+// --- Command: dotnet run --project src/FunLang.Compiler.Cli -- %input
+// --- Input:
+let x = 5 in x + 10
+// --- Output:
+15
