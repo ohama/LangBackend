@@ -145,6 +145,29 @@ module CodeGen =
                         [||]
             builder.GetResult(op, 0)
 
+        // Boolean literals and logical operators
+        | Bool(b, _) ->
+            let i1Type = builder.I1Type()
+            let value = if b then 1L else 0L
+            let valueAttr = builder.IntegerAttr(value, i1Type)
+            let op = emitOp ctx "arith.constant" [| i1Type |] [||]
+                        [| builder.NamedAttr("value", valueAttr) |] [||]
+            builder.GetResult(op, 0)
+
+        | And(left, right, _) ->
+            let leftVal = compileExpr ctx left
+            let rightVal = compileExpr ctx right
+            let i1Type = builder.I1Type()
+            let op = emitOp ctx "arith.andi" [| i1Type |] [| leftVal; rightVal |] [||] [||]
+            builder.GetResult(op, 0)
+
+        | Or(left, right, _) ->
+            let leftVal = compileExpr ctx left
+            let rightVal = compileExpr ctx right
+            let i1Type = builder.I1Type()
+            let op = emitOp ctx "arith.ori" [| i1Type |] [| leftVal; rightVal |] [||] [||]
+            builder.GetResult(op, 0)
+
         | _ ->
             failwithf "CodeGen: unsupported expression type"
 
