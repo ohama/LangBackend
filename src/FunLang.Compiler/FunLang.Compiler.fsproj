@@ -5,5 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="MlirBindings.fs" />
+    <Compile Include="MlirWrapper.fs" />
   </ItemGroup>
 </Project>
