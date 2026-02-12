@@ -2,6 +2,7 @@ namespace FunLang.Compiler
 
 open System
 open System.Runtime.InteropServices
+open FSharp.NativeInterop
 
 //=============================================================================
 // Context Wrapper
@@ -104,3 +105,117 @@ type Module(context: Context, location: Location) =
             if not disposed then
                 MlirNative.mlirModuleDestroy(handle)
                 disposed <- true
+
+//=============================================================================
+// OpBuilder - Fluent API for Operation Construction
+//=============================================================================
+
+/// Fluent builder for MLIR operations.
+/// Wraps verbose operation state construction with convenient methods.
+type OpBuilder(context: Context) =
+    let ctx = context
+
+    // ==================== Type Helpers ====================
+
+    /// Get i32 type
+    member _.I32Type() = MlirNative.mlirIntegerTypeGet(ctx.Handle, 32u)
+
+    /// Get i64 type
+    member _.I64Type() = MlirNative.mlirIntegerTypeGet(ctx.Handle, 64u)
+
+    /// Get i1 (boolean) type
+    member _.I1Type() = MlirNative.mlirIntegerTypeGet(ctx.Handle, 1u)
+
+    /// Get index type
+    member _.IndexType() = MlirNative.mlirIndexTypeGet(ctx.Handle)
+
+    /// Get LLVM pointer type (opaque pointer)
+    member _.PtrType() = MlirNative.mlirLLVMPointerTypeGet(ctx.Handle, 0u)
+
+    /// Create function type
+    member _.FunctionType(inputs: MlirType[], results: MlirType[]) =
+        use inputsPin = fixed inputs
+        use resultsPin = fixed results
+        MlirNative.mlirFunctionTypeGet(
+            ctx.Handle,
+            nativeint inputs.Length, NativePtr.toNativeInt inputsPin,
+            nativeint results.Length, NativePtr.toNativeInt resultsPin)
+
+    // ==================== Attribute Helpers ====================
+
+    /// Create integer attribute
+    member _.IntegerAttr(value: int64, typ: MlirType) =
+        MlirNative.mlirIntegerAttrGet(typ, value)
+
+    /// Create string attribute
+    member _.StringAttr(value: string) =
+        MlirStringRef.WithString(value, fun strRef ->
+            MlirNative.mlirStringAttrGet(ctx.Handle, strRef))
+
+    /// Create flat symbol reference attribute
+    member _.SymbolRefAttr(name: string) =
+        MlirStringRef.WithString(name, fun nameRef ->
+            MlirNative.mlirFlatSymbolRefAttrGet(ctx.Handle, nameRef))
+
+    /// Create named attribute
+    member _.NamedAttr(name: string, attr: MlirAttribute) =
+        MlirStringRef.WithString(name, fun nameRef ->
+            let id = MlirNative.mlirIdentifierGet(ctx.Handle, nameRef)
+            MlirNative.mlirNamedAttributeGet(id, attr))
+
+    // ==================== Operation Helpers ====================
+
+    /// Get result value from operation at given index
+    member _.GetResult(op: MlirOperation, index: int) =
+        MlirNative.mlirOperationGetResult(op, nativeint index)
+
+    /// Create a block with given argument types
+    member _.CreateBlock(argTypes: MlirType[], location: Location) =
+        let locs = Array.create argTypes.Length location.Handle
+        use typesPin = fixed argTypes
+        use locsPin = fixed locs
+        MlirNative.mlirBlockCreate(nativeint argTypes.Length, NativePtr.toNativeInt typesPin, NativePtr.toNativeInt locsPin)
+
+    /// Create an empty region
+    member _.CreateRegion() =
+        MlirNative.mlirRegionCreate()
+
+    /// Append block to region
+    member _.AppendBlockToRegion(region: MlirRegion, block: MlirBlock) =
+        MlirNative.mlirRegionAppendOwnedBlock(region, block)
+
+    /// Append operation to block
+    member _.AppendOperationToBlock(block: MlirBlock, op: MlirOperation) =
+        MlirNative.mlirBlockAppendOwnedOperation(block, op)
+
+    // ==================== Generic Operation Creation ====================
+
+    /// Create operation with given name, results, operands, attributes, and regions
+    member _.CreateOperation(
+        name: string,
+        location: Location,
+        resultTypes: MlirType[],
+        operands: MlirValue[],
+        attributes: MlirNamedAttribute[],
+        regions: MlirRegion[]) =
+
+        let mutable state = MlirStringRef.WithString(name, fun nameRef ->
+            MlirNative.mlirOperationStateGet(nameRef, location.Handle))
+
+        if resultTypes.Length > 0 then
+            use typesPin = fixed resultTypes
+            MlirNative.mlirOperationStateAddResults(&state, nativeint resultTypes.Length, NativePtr.toNativeInt typesPin)
+
+        if operands.Length > 0 then
+            use operandsPin = fixed operands
+            MlirNative.mlirOperationStateAddOperands(&state, nativeint operands.Length, NativePtr.toNativeInt operandsPin)
+
+        if attributes.Length > 0 then
+            use attrsPin = fixed attributes
+            MlirNative.mlirOperationStateAddAttributes(&state, nativeint attributes.Length, NativePtr.toNativeInt attrsPin)
+
+        if regions.Length > 0 then
+            use regionsPin = fixed regions
+            MlirNative.mlirOperationStateAddOwnedRegions(&state, nativeint regions.Length, NativePtr.toNativeInt regionsPin)
+
+        MlirNative.mlirOperationCreate(&state)
