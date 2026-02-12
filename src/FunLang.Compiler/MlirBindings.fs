@@ -229,3 +229,47 @@ module MlirNative =
     /// Print a module to a callback (via module operation)
     [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
     extern void mlirModulePrint(MlirModule m, MlirStringCallback callback, nativeint userData)
+
+    //==========================================================================
+    // Type System
+    //==========================================================================
+
+    /// Create an integer type with specified bit width
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirIntegerTypeGet(MlirContext ctx, uint32 bitwidth)
+
+    /// Create a signed integer type
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirIntegerTypeSignedGet(MlirContext ctx, uint32 bitwidth)
+
+    /// Create an unsigned integer type
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirIntegerTypeUnsignedGet(MlirContext ctx, uint32 bitwidth)
+
+    /// Create the index type (platform-dependent integer for indexing)
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirIndexTypeGet(MlirContext ctx)
+
+    /// Create a 32-bit floating-point type
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirF32TypeGet(MlirContext ctx)
+
+    /// Create a 64-bit floating-point type
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirF64TypeGet(MlirContext ctx)
+
+    /// Create a function type
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirFunctionTypeGet(MlirContext ctx, nativeint numInputs, nativeint inputs, nativeint numResults, nativeint results)
+
+    /// Create an LLVM pointer type
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern MlirType mlirLLVMPointerTypeGet(MlirContext ctx, uint32 addressSpace)
+
+    /// Check if a type is null
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern bool mlirTypeIsNull(MlirType typ)
+
+    /// Check if two types are equal
+    [<DllImport("MLIR-C", CallingConvention = CallingConvention.Cdecl)>]
+    extern bool mlirTypeEqual(MlirType t1, MlirType t2)
