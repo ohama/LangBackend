@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 8 of 11 (Core Expressions)
-Plan: 2 of 4 complete
+Plan: 3 of 4 complete
 Status: In progress
-Last activity: 2026-02-12 - Completed 08-02 (Let Bindings and Variables)
+Last activity: 2026-02-12 - Completed 08-03 (If-Then-Else Expressions)
 
-Progress: [#########░░] 72% (26/36 plans complete)
+Progress: [#########░░] 75% (27/36 plans complete)
 
 ## Performance Metrics
 
@@ -42,17 +42,17 @@ Progress: [#########░░] 72% (26/36 plans complete)
 **v2.0 Compiler Implementation:**
 - Status: Phase 8 in progress
 - Estimated phases: 5 (Phases 7-11)
-- Plans completed: 5/16
+- Plans completed: 7/16
 
 **By Phase (v2.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 7 - Foundation Infrastructure | 4/4 | 12 min | 3 min |
-| 8 - Core Expressions | 2/4 | 10 min | 5 min |
+| 8 - Core Expressions | 3/4 | 14 min | 5 min |
 
 **Recent Trend (v2.0):**
-- Last plan: 08-02 (4 min, let bindings and variables)
+- Last plan: 08-03 (4 min, if-then-else expressions)
 - Build passing, MLIR-C library required for test execution
 
 *Updated after each plan completion*
@@ -83,6 +83,9 @@ Recent decisions affecting v2.0 work:
 - [08-01]: Boolean operations use non-short-circuit evaluation (arith.andi/ori)
 - [08-02]: Immutable F# Map for environment - Map.Add handles shadowing naturally
 - [08-02]: Let compilation: compile binding, extend env, compile body with extended env
+- [08-03]: If result type fixed to i32 (FunLang well-typed assumption)
+- [08-03]: Region compilation pattern: create region+block, compile body, add scf.yield
+- [08-03]: Pass pipeline order: scf->cf, arith->llvm, cf->llvm, func->llvm
 
 ### Pending Todos
 
@@ -99,6 +102,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 08-02-PLAN.md
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
-Next: Execute Phase 8 Plan 03 (If-Then-Else Expressions)
+Next: Execute Phase 8 Plan 04 (Function Support)
